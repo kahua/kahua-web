@@ -1,3 +1,9 @@
+2004-07-09  Nobuo Yamashita  <nobsun@sampou.org>
+	
+	* kahua-web/macro.kahua:
+	Added rest args to img macro in order to allow to specify attributes
+        other than src.	
+		
 2004-05-17  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* kahua-web/kahua-web.kahua:
