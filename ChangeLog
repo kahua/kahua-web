@@ -1,5 +1,9 @@
 2004-11-05  Nobuo Yamashita  <nobsun@sampou.org>
 
+	* Release 0.2.1:
+	
+2004-11-05  Nobuo Yamashita  <nobsun@sampou.org>
+
 	* kahua-web/macro.kahua: Modified img macro to use 
 	kahua-static-document-url.
 	
