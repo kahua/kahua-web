@@ -1,3 +1,21 @@
+2004-05-17  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* kahua-web/kahua-web.kahua:
+	Added supporting for non-member editing pages.
+	You can allow non-member editing pages by giving
+	(non-member-edit) to :arguments in app-servers.
+
+	* kahua-web/login.kahua: added support for non-registered
+	member login. 
+	
+2004-04-20  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* configure.ac, Makefile.in: 
+	modified for making kahua-web-adduser and kahua-web-lsuser commands.
+
+	* mkscript: added. This script makes
+	kahua-web-adduser and kahua-web-lsuser commands.
+	
 2004-03-10  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* README: Requirements updated.

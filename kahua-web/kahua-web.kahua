@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.20 2004/03/09 10:35:27 ko1 Exp $
+;; $Id: kahua-web.kahua,v 1.21 2004/05/18 08:59:01 nobsun Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -158,9 +158,9 @@
                     (else (get-new-page/check (ref page 'key))))))
     (set! (ref data 'content) (ref page 'content))
     (unless (ref page 'persistent-id)
-      (set! (ref data 'cuser) (ref (kahua-current-user) 'login-name)))
+      (set! (ref data 'cuser) (kahua-current-user-name)))
     (set! (ref data 'mtime) (sys-time))
-    (set! (ref data 'muser) (ref (kahua-current-user) 'login-name))
+    (set! (ref data 'muser) (kahua-current-user-name))
     (kahua-db-sync)
     (if (ref page 'persistent-id)
       (cont page)
@@ -337,11 +337,13 @@
               ((ref page 'mtime)
                => (lambda (t) (format "Modified: ~a" (fmt-time t))))
               ((ref page 'muser) => (cut format " by ~a" <>))))
-      (div (@ (id "edit-menu"))
-           (@@ (require-role admin developer))
-           (a/cont (@@ (cont ,edit ,@(pagename-split (ref page 'key))))
-                   "[Edit]")
-           "[History]")))
+      ,@(if (and-let* ((name (kahua-current-user-name)))
+             (not (string-null? name)))
+           `((div (@ (id "edit-menu"))
+                  (a/cont (@@ (cont ,edit ,@(pagename-split (ref page 'key))))
+                          "[Edit]")
+                  "[History]"))
+           '())))
 
   (parameterize ((current-page page))
     `((html
@@ -480,42 +482,50 @@
                    (when (equal? addtonews "on")
                      (page-set-push-unique! (page-set:news) page))
                    (redirect-to page)))))
-  (let1 epage
-      (make <page>
-        :title #`"Editing ,(ref page 'title)" :key (ref page 'key)
-        :content
-        `(,@extra-contents
-          (div
-           (@@ (require-role admin developer))
-           (form/cont
-            (@@ (cont ,commit (donttouch) (content)))
-            (textarea (@ (name "content") (rows 30) (cols 80))
-                      ,(ref page 'content))
-            (br)
-            (div (@ (class "edit-inputs"))
-                 (input (@ (type "submit") (name "commit") (value "Commit")))
-                 " "
-                 (input (@ (type "checkbox") (name "donttouch") (value "on")
-                           (id "donttouch")))
-                 (label (@ (for "donttouch")) "Don't update 'Recent Changes'")
-                 " "
-                 (input (@ (type "checkbox") (name "addtonews") (value "on")
-                           (id "addtonews")))
-                 (label (@ (for "addtonews")) "Add to news item")
-                 (br)
-                 "Change Page Name : "
-                 (input (@ (type "entry") (name "changename") (width 20)
-                           (value ,(ref page 'key))))
-                 " "
-                 (input (@ (type "checkbox") (name "confirmchange") (value "on")
-                           (id "confirmchange")))
-                 (label (@ (for "confirmchange")) "I'm sure"))
-            (br)
-            (div (@ (class "edit-help"))
-                 ,@(use-page "/$admin/edit-help"))
-            ))))
-    (standard-page epage)))
+  (if (and-let* ((name (kahua-current-user-name)))
+        (not (string-null? name)))
+      (let1 epage
+        (make <page>
+          :title #`"Editing ,(ref page 'title)" :key (ref page 'key)
+          :content
+          `(,@extra-contents
+            (div
+             (form/cont
+              (@@ (cont ,commit (donttouch) (content)))
+              (textarea (@ (name "content") (rows 30) (cols 80))
+                        ,(ref page 'content))
+              (br)
+              (div (@ (class "edit-inputs"))
+                   (input (@ (type "submit") (name "commit") (value "Commit")))
+                   " "
+                   (input (@ (type "checkbox") (name "donttouch") (value "on")
+                             (id "donttouch")))
+                   (label (@ (for "donttouch")) "Don't update 'Recent Changes'")
+                   " "
+                   (input (@ (type "checkbox") (name "addtonews") (value "on")
+                             (id "addtonews")))
+                   (label (@ (for "addtonews")) "Add to news item")
+                   (br)
+                   "Change Page Name : "
+                   (input (@ (type "entry") (name "changename") (width 20)
+                             (value ,(ref page 'key))))
+                   " "
+                   (input (@ (type "checkbox") (name "confirmchange") (value "on")
+                             (id "confirmchange")))
+                   (label (@ (for "confirmchange")) "I'm sure"))
+              (br)
+              (div (@ (class "edit-help"))
+                   ,@(use-page "/$admin/edit-help"))
 
+              ))))
+        (standard-page epage))
+      
+      (let1 epage
+        (make-error-page "Error: Not login"
+                         `(p (@ (class "warning"))
+                             "To edit a page you have to login!"))
+        (standard-page epage))))
+        
 ;; canonicalize EOL to #\newline
 (define (canon-content content)
   (string-join (call-with-input-string content port->string-list)
