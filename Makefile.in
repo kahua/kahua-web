@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.17 2004/10/19 07:54:12 shiro Exp $
+# $Id: Makefile.in,v 1.18 2005/01/18 06:59:24 nobsun Exp $
 
 package	          = kahua-web
 kahua		  = kahua
@@ -44,6 +44,8 @@ SCRIPTFILES = kahua-web/kahua-web.kahua \
 	      kahua-web/comment.kahua \
 	      kahua-web/rss.kahua
 
+LOCALSCRIPTFILES = kahua-web/local.kahua
+
 STATICFILES = kahua-web/kahua-web.css
 
 SOURCEDIR   = kahua-web
@@ -70,6 +72,7 @@ clean:
 
 install: 
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t script $(SCRIPTFILES)
+	$(KAHUA_INSTALL) $(KAHUACONFIG) -t script --no-overwrite $(LOCALSCRIPTFILES)
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t static --no-overwrite $(STATICFILES)
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t plugin -r $(PLUGINFILE) \
                                         $(SOURCEDIR)/$(PLUGINFILE)
@@ -84,7 +87,6 @@ uninstall :
 	$(KAHUA_INSTALL) -U $(KAHUACONFIG) -t static $(STATICFILES)
 	$(KAHUA_INSTALL) -U $(KAHUACONFIG) -t plugin -r $(PLUGINFILE) \
                                         $(SOURCEDIR)/$(PLUGINFILE)
-
 
 distclean: clean
 	rm -rf $(CONFIG_GENERATED)

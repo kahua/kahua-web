@@ -1,3 +1,17 @@
+2005-01-18  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* kahua-web/local.kahua: 
+	Newly added for loading local macro defining file.
+	This includes no load script.  It is users that write load script
+	in it.
+
+	* kahua-web/kahua-web.kahua:
+	Modified to load kahua-web/local.kahua which loaded user defined
+	wiki-macro file.
+
+	* Makefile.in:
+	Modified to install kahua-web/local.kahua.
+	
 2004-11-05  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* Release 0.2.1:
