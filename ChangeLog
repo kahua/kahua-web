@@ -1,10 +1,12 @@
 2004-03-03  Shiro Kawai  <shiro@acm.org>
 
-	* kaua-web/kahua-web.kahua:
+	* kahua-web/kahua-web.kahua:
 	(canon-path): use current-page instead of wiliki:current-page
 	to resolve relative page path.
 	(standard-page): avoid setting current-page globally---it may
 	leak information!
+	(format-wikiname): a bug in the path when absolute page path
+	isn't resolved.
 	* kahua-web/macro.kahua:
 	(pdf-page): avoid getting the page from (current-page) within
 	closure, since it may not contain the exact page we want to print.
