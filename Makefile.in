@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.9 2004/04/05 02:35:14 nobsun Exp $
+# $Id: Makefile.in,v 1.10 2004/04/20 07:45:08 nobsun Exp $
 
 package	          = kahua-web
 kahua		  = kahua
@@ -26,6 +26,7 @@ top_srcdir        = @top_srcdir@
 DESTDIR  =
 
 GOSH = @GOSH@
+INSTALL = @INSTALL@
 KAHUA_INSTALL = @KAHUA_INSTALL@
 KAHUA_SERVER  = @KAHUA_SERVER@
 KAHUA_WORKING = $(localstatedir)
@@ -34,6 +35,8 @@ KAHUA_LIB     = $(libdir)
 
 # specify -c ../kahua.conf etc. to give an alternative conf file
 KAHUACONFIG = -c $(sysconfdir)/kahua.conf
+
+SCRIPTS	= adduser lsuser
 
 SCRIPTFILES = kahua-web/kahua-web.kahua \
               kahua-web/macro.kahua \
@@ -50,7 +53,10 @@ CONFIG_GENERATED = Makefile VERSION test/test.scm \
 		   config.log config.status autom4* \
 .PHONY: all check clean distclean install maintainer-clean
 
-all:	test/test.scm
+all:	test/test.scm $(SCRIPTS)
+
+$(SCRIPTS): 
+	$(top_srcdir)/mkscript $(GOSH) $(libdir) $(libexecdir) $@
 
 test/test.scm:	test/test.scm.in
 	sed -e "s@##GOSH##@$(GOSH)@" -e "s@##KAHUA_SERVER##@$(libexecdir)/kahua-server.scm@" -e "s@##KAHUA_WORKING##@$(KAHUA_WORKING)@" -e "s@##KAHUA_LIB##@$(KAHUA_LIB)@" $< > $@
@@ -60,7 +66,7 @@ check:  test/test.scm
 	cd test; $(GOSH) -I$(KAHUA_LIB) ./test.scm > test.log
 
 clean:
-	rm -rf core *~ kahua-web/*~ test/*~ test/_* test/test.log
+	rm -rf core *~ kahua-web/*~ test/*~ test/_* test/test.log $(SCRIPTS)
 
 install: 
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t script $(SCRIPTFILES)
@@ -68,6 +74,10 @@ install:
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t plugin -r $(PLUGINFILE) \
                                         $(SOURCEDIR)/$(PLUGINFILE)
 	$(GOSH) -I$(libdir) ./init.scm $(KAHUACONFIG)
+	@for f in $(SCRIPTS); do \
+	  $(INSTALL) -m 555 $$f $(bindir)/kahua-web-$$f; \
+	  $(INSTALL) -m 555 $$f.scm $(libexecdir)/$$f.scm; \
+	done
 
 uninstall :
 	$(KAHUA_INSTALL) -U $(KAHUACONFIG) -t script $(SCRIPTFILES)

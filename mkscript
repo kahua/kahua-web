@@ -1,0 +1,9 @@
+#!/bin/sh
+GOSH="$1"
+LIB="$2"
+EXE="$3"
+SCRIPT="$4"
+echo '#!/bin/sh' > $SCRIPT.sh && \
+echo "$GOSH -I$LIB $EXE/$SCRIPT.scm" ' $@' >> $SCRIPT.sh && \
+mv $SCRIPT.sh $SCRIPT && \
+chmod +x $SCRIPT
