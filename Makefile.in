@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.5 2004/02/20 10:59:27 tahara Exp $
+# $Id: Makefile.in,v 1.6 2004/02/26 10:20:03 ko1 Exp $
 
 SHELL       = @SHELL@
 prefix      = @prefix@
@@ -47,7 +47,7 @@ install:
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t static $(STATICFILES)
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t plugin -r $(PLUGINFILE) \
                                         $(SOURCEDIR)/$(PLUGINFILE)
-	$(GOSH) ./init.scm
+	$(GOSH) ./init.scm $(KAHUACONFIG)
 
 uninstall :
 	$(KAHUA_INSTALL) -U $(KAHUACONFIG) -t script $(SCRIPTFILES)

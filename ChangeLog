@@ -1,3 +1,7 @@
+2004-02-26  Koichi Sasada <sasada@namikilab.tuat.ac.jp>
+
+	* Makefile.in: added '$(KAHUACONFIG)' to 'init.scm' option.
+
 2004-02-20  Yusei Tahara  <tahara@timedia.co.jp>
 
 	* Makefile.in: added plugin to 'install' and 'uninstall' make target.
