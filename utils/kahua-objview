@@ -6,7 +6,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-objview,v 1.14 2004/03/02 02:24:36 shiro Exp $
+;; $Id: kahua-objview,v 1.15 2004/03/02 02:32:13 shiro Exp $
 
 ;; Requires:
 ;;  Gauche-gl
@@ -338,7 +338,7 @@
       ;; Simple quit button -----------------------------
       (let1 button (gtk-button-new-with-label "Quit")
         (gtk-box-pack-start vbox button #f #f 0)
-        (g-signal-connect button "clicked" (lambda _ (gtk-main-quit)))
+        (g-signal-connect button "clicked" (lambda _ (app-exit app)))
         (gtk-widget-show button)))
 
     (set! (ref app 'menu-bg)  (make <menu-bg>))
@@ -442,7 +442,24 @@
       (when (eqv? res GTK_RESPONSE_OK)
         (graph-delete-selected (ref app 'graph))))))
 
-         
+(define-method app-exit ((app <app-objview>))
+  (if (not (db-dirty? (the-db)))
+    (gtk-main-quit)
+    (let* ((confirm (gtk-dialog-new-with-buttons "Quit confirm"
+                                                 (ref app 'window)
+                                                 GTK_DIALOG_MODAL
+                                                 GTK_STOCK_CANCEL
+                                                 GTK_RESPONSE_REJECT
+                                                 GTK_STOCK_QUIT
+                                                 GTK_RESPONSE_OK))
+           (label (gtk-label-new "Change(s) are not committed.  Are you sure to quit?")))
+      (gtk-container-add (ref confirm 'vbox) label)
+      (gtk-misc-set-padding label 30 30)
+      (gtk-widget-show label)
+      (let1 res (gtk-dialog-run confirm)
+        (gtk-widget-destroy confirm)
+        (when (eqv? res GTK_RESPONSE_OK)
+          (gtk-main-quit))))))
 
 ;;----------------------------------------------------------------------
 ;; Editor dialog
@@ -773,7 +790,7 @@
   (when (= (ref event 'type) GDK_KEY_PRESS)
     (let1 kv (ref event 'keyval)
       (cond
-       ((= kv GDK_Escape) (gtk-main-quit))
+       ((= kv GDK_Escape) (app-exit (the-app)))
        ((= kv GDK_Control_L) (set! (ref (the-app) 'ctrl-held) #t))
        ((= kv GDK_Control_R) (set! (ref (the-app) 'ctrl-held) #t))
        ((= kv GDK_Shift_L) (set! (ref (the-app) 'shift-held) #t))
