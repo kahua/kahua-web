@@ -1,3 +1,12 @@
+2004-02-20  Yusei Tahara  <tahara@timedia.co.jp>
+
+	* Makefile.in: added plugin to 'install' and 'uninstall' make target.
+	* kahua-web/mailform.kahua: replace sendmail definition to
+	use-plugin form.
+	* kahua-web/wiliki.scm: added wiliki plugin.
+	* test/test.scm.in: make plugins directory in working directory and
+	copy plugin files to it.
+
 2004-02-04  Shiro Kawai  <shiro@acm.org>
 
 	* kahua-web/kahua-web.kahua (redirect-to): checks if the passed page

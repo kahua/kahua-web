@@ -1,6 +1,6 @@
 ;; -*-Scheme-*-
 ;; test kahua-web script.
-;; $Id: test.scm.in,v 1.1 2004/01/21 13:42:06 shiro Exp $
+;; $Id: test.scm.in,v 1.2 2004/02/20 10:59:27 tahara Exp $
 
 (use srfi-2)
 (use srfi-11)
@@ -23,6 +23,11 @@
 (sys-system "rm -rf _tmp _work")
 (sys-mkdir "_tmp" #o755)
 (sys-mkdir "_work" #o755)
+(sys-mkdir "_work/plugins" #o755)
+(copy-file "../kahua-web/wiliki.scm"  "_work/plugins/wiliki.scm")
+(copy-file "/var/lib/kahua/plugins/allow-module.scm"
+           "_work/plugins/allow-module.scm")
+(copy-file "/var/lib/kahua/plugins/sendmail.scm"  "_work/plugins/sendmail.scm")
 
 (define *config* "./test.conf")
 

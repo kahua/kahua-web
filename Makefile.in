@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.4 2004/01/30 09:59:59 tahara Exp $
+# $Id: Makefile.in,v 1.5 2004/02/20 10:59:27 tahara Exp $
 
 SHELL       = @SHELL@
 prefix      = @prefix@
@@ -26,6 +26,9 @@ SCRIPTFILES = kahua-web/kahua-web.kahua \
 
 STATICFILES = kahua-web/kahua-web.css
 
+SOURCEDIR   = kahua-web
+PLUGINFILE  = wiliki.scm
+
 CONFIG_GENERATED = Makefile VERSION test/test.scm \
 		   config.log config.status autom4* \
 .PHONY: all check clean distclean install maintainer-clean
@@ -42,11 +45,16 @@ clean:
 install: 
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t script $(SCRIPTFILES)
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t static $(STATICFILES)
+	$(KAHUA_INSTALL) $(KAHUACONFIG) -t plugin -r $(PLUGINFILE) \
+                                        $(SOURCEDIR)/$(PLUGINFILE)
 	$(GOSH) ./init.scm
 
 uninstall :
 	$(KAHUA_INSTALL) -U $(KAHUACONFIG) -t script $(SCRIPTFILES)
 	$(KAHUA_INSTALL) -U $(KAHUACONFIG) -t static $(STATICFILES)
+	$(KAHUA_INSTALL) -U $(KAHUACONFIG) -t plugin -r $(PLUGINFILE) \
+                                        $(SOURCEDIR)/$(PLUGINFILE)
+
 
 distclean: clean
 	rm -rf $(CONFIG_GENERATED)
