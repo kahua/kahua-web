@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.12 2004/07/09 07:42:36 nobsun Exp $
+;; $Id: macro.kahua,v 1.13 2004/09/02 06:30:06 nobsun Exp $
 
 (use gauche.collection)
 
@@ -119,12 +119,6 @@
 
 (define-wiki-macro (imgid url id)
   `((img (@ (src ,(x->string url)) (id ,(x->string id))))))
-
-;;---------------------------------------------------------
-;; Seminor form
-;;
-(define-wiki-macro (seminar-order)
-  (mailform-link))
 
 ;;---------------------------------------------------------
 ;; generate PDF

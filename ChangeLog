@@ -1,3 +1,16 @@
+2004-09-02  Nobuo Yamashita  <nobsun@sampou.org>
+	
+	* kahua-web/macro.kahua: removed seminar-form macro.
+
+	* kahua-web/mailform.kahua: removed since it was only for
+	the first Kahua seminar on Feb. 2004.
+
+	* kahua-web/kahua-web.kahua: remove expression loading 
+	kahua-web/mailform.kahua
+	
+	* Makefile.in: remove kahua-web/mailform.kahua entry
+	
+	
 2004-07-09  Nobuo Yamashita  <nobsun@sampou.org>
 	
 	* kahua-web/macro.kahua:

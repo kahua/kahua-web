@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.24 2004/06/25 11:48:57 nobsun Exp $
+;; $Id: kahua-web.kahua,v 1.25 2004/09/02 06:30:06 nobsun Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -23,10 +23,10 @@
  (build-path (ref (kahua-config) 'working-directory) "kahua-web"))
 
 (log-open (kahua-logpath "kahua-web.log"))
+
 (load "kahua-web/macro.kahua")
 (load "kahua-web/login.kahua")
 (load "kahua-web/search.kahua")
-(load "kahua-web/mailform.kahua")
 
 ;;========================================================
 ;; Application error handling
