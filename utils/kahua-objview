@@ -6,7 +6,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-objview,v 1.10 2004/03/01 09:56:10 shiro Exp $
+;; $Id: kahua-objview,v 1.11 2004/03/01 11:42:14 shiro Exp $
 
 ;; Requires:
 ;;  Gauche-gl
@@ -84,15 +84,26 @@
   ((name     :init-keyword :name)
    (pclass   :init-keyword :pclass)
    (pages    :init-keyword :pages)
+   (deleted-pages :init-value '())
    ))
 
 (define the-db (make-parameter #f))
+
+(define-method write-object ((page <page>) port)
+  (format port "#<<page> ~a>" (ref page 'key)))
 
 (define-method mark-dirty! ((self <page>))
   (set! (ref self 'dirty) #t))
 (define-method clear-dirty! ((self <page>))
   (set! (ref self 'dirty) #f))
 
+(define-method page-delete! ((self <page>))
+  (set! (ref self 'hidden) #t)
+  (push! (ref (the-db) 'deleted-pages) self))
+
+(define-method db-dirty? ((db <db>))
+  (or (not (null? (ref db 'deleted-pages)))
+      (find (cut ref <> 'dirty) (ref db 'pages))))
 
 ;; Read kahua-web contents and creates an in-memory copy
 (define (db-init dbname)
@@ -102,6 +113,7 @@
       :id (ref data 'id) :key (ref data 'name)
       :basename (sys-basename (ref data 'name))
       :content (ref data 'content) :children '() :links '()
+      :hidden (safe-ref data 'hidden)
       :ctime (safe-ref data 'ctime) :cuser (safe-ref data 'cuser)
       :mtime (safe-ref data 'mtime) :muser (safe-ref data 'muser)))
   
@@ -160,8 +172,9 @@
   (define (ensure-link link all)
     (find (lambda (p) (equal? (ref p 'key) link)) all))
 
-  (set! (ref db 'pages)
-        (map (cut setup-links <> pages) pages))
+  (let1 active-pages (filter (lambda (x) (not (ref x 'hidden))) pages)
+    (set! (ref db 'pages)
+          (map (cut setup-links <> active-pages) active-pages)))
   db)
 
 ;; commit any changes
@@ -170,13 +183,15 @@
     (for-each (lambda (slot)
                 (set! (ref obj (car slot)) (ref page (cadr slot))))
               '((name key)
+                (hidden hidden)
                 (ctime ctime)
                 (cuser cuser)
                 (mtime mtime)
                 (muser muser)))
     (clear-dirty! page))
   
-  (let1 modified (filter (cut ref <> 'dirty) (ref (the-db) 'pages))
+  (let1 modified (append (filter (cut ref <> 'dirty) (ref (the-db) 'pages))
+                         (ref (the-db) 'deleted-pages))
     (unless (null? modified)
       (with-db (db (ref (the-db) 'name))
         (let1 objs (make-kahua-collection (ref (the-db) 'pclass))
@@ -186,7 +201,8 @@
                     objs)
               => (cut page-save page <>))
              (else
-              (page-create page)))))))
+              (page-create page))))))
+      (set! (ref (the-db) 'deleted-pages) '()))
     ))
 
 ;;================================================================
@@ -720,6 +736,7 @@
    (edit-data) ;; menu-item
    (reparent)  ;; menu-item
    (commit)    ;; menu-item
+   (delete)    ;; menu-item
    ))
 
 (define-method initialize ((self <menu-bg>) initargs)
@@ -755,6 +772,24 @@
 
   (define (menu-cb-save event . _)
     (db-commit) #t)
+
+  (define (menu-cb-delete event . _)
+    (let* ((confirm (gtk-dialog-new-with-buttons "Delete confirm"
+                                                 (ref (the-app) 'window)
+                                                 GTK_DIALOG_MODAL
+                                                 GTK_STOCK_CANCEL
+                                                 GTK_RESPONSE_NONE
+                                                 GTK_STOCK_OK
+                                                 GTK_RESPONSE_OK))
+           (label (gtk-label-new "Are you sure to delete selected page(s)?")))
+      (gtk-container-add (ref confirm 'vbox) label)
+      (gtk-misc-set-padding label 30 30)
+      (gtk-widget-show label)
+      (let1 res (gtk-dialog-run confirm)
+        (gtk-widget-destroy confirm)
+        (when (eqv? res GTK_RESPONSE_OK)
+          (graph-delete-selected (ref (the-app) 'graph)))))
+    #t)
 
   (let1 menu-item (gtk-menu-item-new-with-label "Frame all")
     (gtk-menu-shell-append menu menu-item)
@@ -801,6 +836,15 @@
     (g-signal-connect menu-item "activate" menu-cb-save)
     (gtk-widget-set-sensitive menu-item #f)
     (gtk-widget-show menu-item))
+  (let1 separator (gtk-separator-menu-item-new)
+    (gtk-menu-shell-append menu separator)
+    (gtk-widget-show separator))
+  (let1 menu-item (gtk-menu-item-new-with-label "Delete selected")
+    (gtk-menu-shell-append menu menu-item)
+    (set! (ref menu 'delete) menu-item)
+    (g-signal-connect menu-item "activate" menu-cb-delete)
+    (gtk-widget-set-sensitive menu-item #f)
+    (gtk-widget-show menu-item))
   #t)
 
 (define-method menu-popup ((self <menu-bg>) event)
@@ -809,10 +853,9 @@
     (gtk-widget-set-sensitive (ref self 'show-data) (= nsels 1))
     (gtk-widget-set-sensitive (ref self 'edit-data) (> nsels 0))
     (gtk-widget-set-sensitive (ref self 'reparent)  (> nsels 0))
+    (gtk-widget-set-sensitive (ref self 'delete)    (> nsels 0))
     )
-  (gtk-widget-set-sensitive
-   (ref self 'commit)
-   (not (not (find (cut ref <> 'dirty) (ref (the-db) 'pages)))))
+  (gtk-widget-set-sensitive (ref self 'commit) (db-dirty? (the-db)))
   (gtk-menu-popup self #f #f #f (ref event 'button) (ref event 'time)))
 
 ;;----------------------------------------------------------
@@ -879,6 +922,16 @@
                            ((glgd-node-is-selected node)))
                   node))
               (iota (glgd-graph-node-count graph))))
+
+(define (graph-delete-selected graph)
+  (let1 nodes (graph-selection-get graph)
+    (unless (null? nodes)
+      (for-each (lambda (node)
+                  (and-let* ((page (glgd-node-data-get node)))
+                    (page-delete! page)))
+                nodes)
+      (graph-selection-clear graph)
+      (app-refresh (the-app)))))
 
 (define (graph-reparent graph node)
 
