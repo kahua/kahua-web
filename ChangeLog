@@ -1,3 +1,17 @@
+2004-09-03  Nobuo Yamashita  <nobsun@sampou.org>
+	
+	* kahua-web/comment.kahua:
+	Newly added for providing simple comment form.
+	(originally by sasada)
+
+	* kahua-web/macro.kahua: added simple-comment-form macro.
+
+	* kahua-web/kahua-web.kahua: loading comment.kahua.
+
+	* kahua-web/kahua-web.css: added styles for comment.
+
+	* Makefile.in: added kahua-web/comment.kahua entry.
+
 2004-09-02  Nobuo Yamashita  <nobsun@sampou.org>
 	
 	* kahua-web/macro.kahua: modified img macro to allow only
@@ -12,7 +26,7 @@
 
 	* kahua-web/kahua-web.kahua: remove expression loading 
 	kahua-web/mailform.kahua
-	
+
 	* Makefile.in: remove kahua-web/mailform.kahua entry
 	
 	

@@ -1,0 +1,89 @@
+;;-*-Scheme-*-
+;; Kahua web commenting
+;;
+;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
+;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
+;;  See COPYING for terms and conditions of using this software
+;;
+;; $Id: comment.kahua,v 1.1 2004/09/02 23:23:44 nobsun Exp $
+
+(define-class <simple-comment-set> (<kahua-persistent-base>)
+  ((name     :allocation   :persistent 
+	     :init-keyword :name
+	     :init-form #f)
+   (comments :allocation :persistent
+	     :init-form '())
+   (comment-count :allocation :persistent
+		  :init-form 0))
+  )
+
+(define-method key-of ((self <simple-comment-set>))
+  (x->string (ref self 'name)))
+
+(define-class <simple-comment> (<kahua-persistent-base>)
+  ((author   :allocation   :persistent
+	     :init-keyword :author)
+   (contents :allocation   :persistent
+	     :init-keyword :contents)
+   (date     :allocation   :persistent
+	     :init-keyword :date
+	     :init-form    (sys-time))
+   (visible  :allocation   :persistent
+	     :init-form    #t
+	     :getter       visible?))
+  )
+
+(define (make-sf-edit-page ttl body)
+  (make <page> :title ttl 
+	       :content body 
+               :key "/EditSimpleFormComment"))
+
+(define-entry (modify-visibility-of-comment)
+  (let ((sets (make-kahua-collection <simple-comment-set>)))
+    (define (edit-set-commit set)
+      (for-each
+       (lambda (c)
+	 (let* ((val (kahua-context-ref (x->string (ref c 'id))))
+		(val (if (equal? val "true") #t #f)))
+	   (set! (ref c 'visible) val)))
+       (ref set 'comments))
+      (edit-set set)
+      )
+    (define (edit-set set)
+      (standard-page
+       (make-sf-edit-page
+	(format "Edit visibility of comment ~A" (ref set 'name))
+	`(div (form/cont
+	  (@@ (cont ,(lambda () (edit-set-commit set))))
+	  (table (@ (border 1))
+	   ,@(map (lambda (c)
+		    `(tr (td ,(ref c 'author))
+			 (td ,(ref c 'contents))
+			 (td (input 
+			      (@ (type "checkbox") 
+				 (name  ,(ref c 'id))
+				 (value "true")
+				 ,@(if (visible? c)
+				      '((checked checked)) '()))))))
+		  (ref set 'comments)))
+	  (input (@ (type "submit") (name "submit") (value "commit")))
+	  )))))
+    (define (edit-set-link set)
+      `(a/cont (@@ (cont ,(lambda () (edit-set set))))
+	       ,(x->string (ref set 'name))))
+    (if (and-let* ((name (kahua-current-user-name)))
+          (not (string-null? name)))
+	(standard-page 
+	 (make-sf-edit-page 
+	  "List of Comments"
+	  (if sets
+	      `(ol
+		,@(map (lambda (set)
+			 `(li ,(edit-set-link set))) sets))
+	      '(div "There is no comment."))))
+	
+	(let1 epage (make-error-page "Error: Not login"
+				     `(p (@ (class "warning"))
+					 "To modify visibility of a comment  you have to login!"))
+	  (standard-page epage)))))
+

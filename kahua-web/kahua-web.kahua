@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.25 2004/09/02 06:30:06 nobsun Exp $
+;; $Id: kahua-web.kahua,v 1.26 2004/09/02 23:23:44 nobsun Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -27,6 +27,7 @@
 (load "kahua-web/macro.kahua")
 (load "kahua-web/login.kahua")
 (load "kahua-web/search.kahua")
+(load "kahua-web/comment.kahua")
 
 ;;========================================================
 ;; Application error handling
