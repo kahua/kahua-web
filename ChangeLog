@@ -1,5 +1,10 @@
 2004-09-02  Nobuo Yamashita  <nobsun@sampou.org>
 	
+	* kahua-web/macro.kahua: modified img macro to allow only
+	limited attributes.
+
+2004-09-02  Nobuo Yamashita  <nobsun@sampou.org>
+	
 	* kahua-web/macro.kahua: removed seminar-form macro.
 
 	* kahua-web/mailform.kahua: removed since it was only for

@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.13 2004/09/02 06:30:06 nobsun Exp $
+;; $Id: macro.kahua,v 1.14 2004/09/02 07:31:33 nobsun Exp $
 
 (use gauche.collection)
 
@@ -115,10 +115,14 @@
 ;; Inline image
 ;;
 (define-wiki-macro (img url . attrs)
-  `((img (@ (src ,(x->string url)) ,@attrs))))
+  `((img (@ (src ,(x->string url)) ,@(filter allowed-img-attr? attrs)))))
 
-(define-wiki-macro (imgid url id)
-  `((img (@ (src ,(x->string url)) (id ,(x->string id))))))
+(define allowed-img-attrs 
+  (append '(class id title)
+          '(alt longdesc width height)))
+
+(define (allowed-img-attr? attr)
+  (memq (car attr) allowed-img-attrs))
 
 ;;---------------------------------------------------------
 ;; generate PDF
