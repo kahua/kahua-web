@@ -6,7 +6,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-objview,v 1.9 2004/03/01 07:27:12 shiro Exp $
+;; $Id: kahua-objview,v 1.10 2004/03/01 09:56:10 shiro Exp $
 
 ;; Requires:
 ;;  Gauche-gl
@@ -182,7 +182,7 @@
         (let1 objs (make-kahua-collection (ref (the-db) 'pclass))
           (dolist (page modified)
             (cond
-             ((find (lambda (obj) (equal? (ref page 'key) (ref obj 'name)))
+             ((find (lambda (obj) (equal? (ref page 'id) (ref obj 'id)))
                     objs)
               => (cut page-save page <>))
              (else
@@ -884,6 +884,7 @@
 
   (define (do-reparent parent-key page)
     (set! (ref page 'key) (build-path parent-key (ref page 'basename)))
+    (mark-dirty! page)
     (for-each (lambda (child-key)
                 (do-reparent (ref page 'key)
                              (find (lambda (p) (equal? (ref p 'key) child-key))
