@@ -1,3 +1,8 @@
+2004-02-04  Shiro Kawai  <shiro@acm.org>
+
+	* kahua-web/kahua-web.kahua (redirect-to): checks if the passed page
+	  is #f, and redirect to top-page in such a case.
+
 2004-02-03  Shiro Kawai  <shiro@acm.org>
 
 	* kahua-web/macro.kahua : replaced obsoleted open-input-string/private.
