@@ -1,5 +1,8 @@
 2004-01-24  Shiro Kawai  <shiro@acm.org>
 
+	* adduser.scm, lsuser.scm : simple scripts for user management
+	(just for now).
+	
 	* init.scm, Makefile.in : runs database initialization routine
 	at install stage.  It asks the admin password if there hasn't been
 	an admin user.
