@@ -1,3 +1,15 @@
+2004-09-13  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* Makefile.in:
+	modified not to overwrite kahua-web.oss while installing.
+
+	* README:
+	Added some description for installing. There are still
+	much to describe.
+
+	* DIST, DIST_EXECLUDE:
+	newly added for making tarball.
+	
 2004-09-03  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* kahua-web/macro.kahua:
