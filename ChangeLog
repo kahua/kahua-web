@@ -1,3 +1,8 @@
+2004-02-28  Shiro Kawai  <shiro@acm.org>
+
+	* kahua-web/kahua-web.kahua (<page-data>): fixed typo in a slot
+	option.
+
 2004-02-27  Koichi Sasada <sasada@namikilab.tuat.ac.jp>
 
 	* kahua-web/kahua-web.kahua : fixed content-type keyword.

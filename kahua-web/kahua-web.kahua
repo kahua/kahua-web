@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.14 2004/02/26 18:56:08 ko1 Exp $
+;; $Id: kahua-web.kahua,v 1.15 2004/02/29 02:24:23 shiro Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -51,7 +51,7 @@
                :init-value "")
    (ctime      :allocation :persistent :init-keyword :ctime
                :init-value (sys-time))
-   (cuser      :allocaiton :persistent :init-keyword :cuser
+   (cuser      :allocation :persistent :init-keyword :cuser
                :init-value #f)
    (mtime      :allocation :persistent :init-keyword :mtime
                :init-value #f)
