@@ -1,3 +1,8 @@
+2004-02-29  Shiro Kawai  <shiro@acm.org>
+
+	* kahua-web/macro.kahua (tree-index): added ##(tree-index prefix)
+	macro.
+
 2004-02-28  Shiro Kawai  <shiro@acm.org>
 
 	* kahua-web/kahua-web.kahua (<page-data>): fixed typo in a slot

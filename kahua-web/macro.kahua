@@ -5,7 +5,9 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.6 2004/02/04 11:28:43 nobsun Exp $
+;; $Id: macro.kahua,v 1.7 2004/03/01 09:25:22 shiro Exp $
+
+(use gauche.collection)
 
 (define *macro-alist* '())
 
@@ -30,7 +32,7 @@
                  "Error in expanding macro: "
                  (strong ,(write-to-string expr))
                  "\n"
-                 ,(kahua-error-string e))))
+                 ,(kahua-error-string e #t))))
       (cut handler (cdr expr))))
   (cond ((assq-ref *macro-alist* (car expr)) => safe-apply)
         (else (unhandled-macro (car expr) (cdr expr)))))
@@ -73,6 +75,44 @@
                             (cons delim seed))))
                 '()
                 (sort pages pagename<?))))
+
+(define-wiki-macro (tree-index prefix)
+  (define (render forest)
+    `((ul ,@(map (lambda (tree)
+                   `(li ,@(format-wikiname (car tree))
+                        ,@(if (null? (cddr tree)) '()
+                              (render (cddr tree)))))
+                 (sort forest (lambda (a b) (string<? (car a) (car b)))))
+          )))
+
+  (define (find-parent me forest)
+    (find (lambda (x)
+            (and (not (eq? me x))
+                 (string-prefix? #`",(car x)/" (car me))
+                 (not (string-scan (string-drop (car me)
+                                                (+ (string-length (car x)) 1))
+                                   #\/))))
+          forest))
+  
+  (let1 page-data  ;; ((name root? . children) ...)
+      (filter-map (lambda (data)
+                    (and (string-prefix? (x->string prefix) (ref data 'name))
+                         (list (ref data 'name) #t)))
+                  (map identity (all-page-data)))
+    (let loop ((pages page-data))
+      (cond
+       ((null? pages)
+        (let1 r (render (filter (cut cadr <>) page-data))
+          (log-format "~s" r)
+          r))
+       ((find-parent (car pages) page-data)
+        => (lambda (parent)
+             (set! (cadr (car pages)) #f)
+             (push! (cddr parent) (car pages))
+             (loop (cdr pages))))
+       (else (loop (cdr pages)))))
+    ))
+  
 
 ;;---------------------------------------------------------
 ;; Inline image
