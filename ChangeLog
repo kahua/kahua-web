@@ -1,3 +1,10 @@
+2004-01-22  Shiro Kawai  <shiro@acm.org>
+
+	* kahua-web/kahua-web.kahua : added page-set object to support
+	recent-changes etc.
+	(edit-page): adapted to the new form/cont.
+	* kahua-web/macro.kahua (page-set): new macro.
+
 2004-01-21  Shiro Kawai  <shiro@acm.org>
 
 	* kahua-web/macro.kahua : support index, cindex, include, img and

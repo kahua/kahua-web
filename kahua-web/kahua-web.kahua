@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.2 2004/01/22 09:54:37 shiro Exp $
+;; $Id: kahua-web.kahua,v 1.3 2004/01/22 15:32:53 shiro Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -109,6 +109,49 @@
  (lambda (name)
    (make <transient-page>
      :title "Kahua home" :key "/" :content (use-page "/$admin/home"))))
+
+;;========================================================
+;; Page set
+;;
+
+(define-class <page-set> (<kahua-persistent-base>)
+  ((name       :init-keyword :name :init-value #f
+               :allocation :persistent)
+   (max-pages  :init-keyword :max-pages :init-value #f
+               :allocation :persistent)
+   (page-names :init-keyword :pages :init-value '()
+               :allocation :persistent)
+   ))
+
+(define-method key-of ((self <page-set>))
+  (x->string (ref self 'name)))
+
+;; assume pagename is canonicalized
+(define-method page-set-push-unique! ((self <page-set>) (pagename <string>))
+  (let1 lis
+      (cons pagename (remove (pa$ equal? pagename) (ref self 'page-names)))
+    (set! (ref self 'page-names)
+          (cond ((ref self 'max-pages) => (cut take* lis <>))
+                (else lis)))))
+
+;; (<page-set>) -> [<page>]
+(define-method page-set->pages ((self <page-set>))
+  (filter get-page (ref self 'page-names)))
+
+;; (String, Bool=#f, MaxPages=#f) -> <page-set>
+;; second arg specifies whether it should create a new page set if
+;; the named one doesn't exist.
+(define (get-page-set page-set-name . opts)
+  (let-optionals* opts ((create? #f) (maxpages #f))
+    (or (find-kahua-instance <page-set> page-set-name)
+        (and create?
+             (make <page-set>
+               :name page-set-name
+               :max-pages maxpages)))))
+
+;; Default page sets.  recent-changes and news
+(define (page-set:recent-changes) (get-page-set "recent-changes" #t 50))
+(define (page-set:news)           (get-page-set "news" #t 50))
 
 ;;========================================================
 ;; Page paths
@@ -300,24 +343,45 @@
   (make <transient-page> :title title :key "/Error" :content body))
 
 (define (edit-page page)
-  (let1 epage
-      (make <transient-page>
-        :title #`"Editing ,(ref page 'title)" :key (ref page 'key)
-        :content
-        `((form/cont
-           (@@ (cont ,(cut commit-page page)))
-           (textarea (@ (name "content") (rows 20) (cols 60))
-                     ,(ref page 'content))
-           (br)
-           (input (@ (type "submit") (name "commit") (value "Commit")))
-           )))
-    (standard-page epage)))
-
-(define (commit-page page)
-  (let ((content (canon-content (kahua-context-ref "content" ""))))
-    (set! (ref page 'content) content)
-    (save-page page)
-    (redirect-to page)))
+  (let1 commit (entry-lambda (:keyword content donttouch addtonews
+                                       changename confirmchange)
+                 (set! (ref page 'content) (canon-content content))
+                 (and-let* (((equal? confirmchange "on"))
+                            (newname (canon-pagename changename)))
+                   (set! (ref page 'key) newname))
+                 (unless (equal? donttouch "on")
+                   (page-set-push-unique! (page-set:recent-changes)
+                                          (ref page 'key)))
+                 (when (equal? addtonews "on")
+                   (page-set-push-unique! (page-set:news)
+                                          (ref page 'key)))
+                 (save-page page)
+                 (redirect-to page))
+    (let1 epage
+        (make <transient-page>
+          :title #`"Editing ,(ref page 'title)" :key (ref page 'key)
+          :content
+          `((form/cont
+             (@@ (cont ,commit (donttouch) (content)))
+             (textarea (@ (name "content") (rows 20) (cols 60))
+                       ,(ref page 'content))
+             (br)
+             (input (@ (type "submit") (name "commit") (value "Commit")))
+             (input (@ (type "checkbox") (name "donttouch") (value "on")
+                       (id "donttouch")))
+             (label (@ (for "donttouch")) "Don't update 'Recent Changes'")
+             (input (@ (type "checkbox") (name "addtonews") (value "on")
+                       (id "addtonews")))
+             (label (@ (for "addtonews")) "Add to news item")
+             (br)
+             "Change Page Name"
+             (input (@ (type "entry") (name "changename") (width 20)
+                       (value ,(ref page 'key))))
+             (input (@ (type "checkbox") (name "confirmchange") (value "on")
+                       (id "confirmchange")))
+             (label (@ (for "confirmchange")) "I'm sure")
+             )))
+      (standard-page epage))))
 
 ;; canonicalize EOL to #\newline
 (define (canon-content content)

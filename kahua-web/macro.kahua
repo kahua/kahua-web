@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.1 2004/01/22 09:54:37 shiro Exp $
+;; $Id: macro.kahua,v 1.2 2004/01/22 15:32:53 shiro Exp $
 
 (define *macro-alist* '())
 
@@ -23,20 +23,37 @@
     ))
 
 (define (format-macro expr _)
-  (cond ((assq-ref *macro-alist* (car expr)) => (cut <> (cdr expr)))
+  (define (safe-apply handler)
+    (with-error-handler
+        (lambda (e)
+          `((pre (@ (class "macro-error"))
+                 "Error in expanding macro: "
+                 (strong ,(write-to-string expr))
+                 "\n"
+                 ,(kahua-error-string e))))
+      (cut handler (cdr expr))))
+  (cond ((assq-ref *macro-alist* (car expr)) => safe-apply)
         (else (unhandled-macro (car expr) (cdr expr)))))
 
 (define (unhandled-macro name expr)
   `("##" ,(write-to-string (cons name expr))))
 
-;;-------------------------------------
+;;=========================================================
+;; Macros
+;;
 
+;;---------------------------------------------------------
+;; A couple of test macros
+;;
 (define-wiki-macro (test-macro . args) ;; to see if macro is working
   `(,(format "Test macro output ~s" args)))
 
 (define-wiki-macro (test-error . args) ;; to see if macro error is handled
   (error "test-error: " args))
 
+;;---------------------------------------------------------
+;; Index, cindex
+;;
 (define-wiki-macro (index prefix)
   (let1 pages (filter (lambda (data)
                          (string-prefix? (x->string prefix) (ref data 'name)))
@@ -57,14 +74,37 @@
                 '()
                 (sort pages pagename<?))))
 
+;;---------------------------------------------------------
+;; Inline image
+;;
 (define-wiki-macro (img url)
   `((img (@ (src ,(x->string url))))))
 
+;;---------------------------------------------------------
+;; Include
+;;
 (define-wiki-macro (include pagename)
   (let1 name (canon-pagename pagename)
     (cond ((and name (get-page name)) => wiliki:format-content)
           (else (unhandled-macro 'include (list pagename))))))
 
+;;---------------------------------------------------------
+;; Page-set list
+;;
+(define-wiki-macro (page-set setname . opts)
+  (or (and-let* ((set   (get-page-set (x->string setname)))
+                 (num-items (x->integer (get-optional opts 0)))
+                 (pages (if (zero? num-items)
+                          (ref set 'page-names)
+                          (take* (ref set 'page-names) num-items))))
+        `((ul ,@(map (lambda (page)
+                       `(li ,@(format-wikiname page)))
+                     pages))))
+      (unhandled-macro 'page-set (cons setname opts))))
+
+;;---------------------------------------------------------
+;; Table of contents
+;;
 (define-wiki-macro (toc . maybe-pagename)
   (let1 page (or (and-let* ((name (get-optional maybe-pagename #f))
                             (cname (canon-pagename name)))

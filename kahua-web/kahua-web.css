@@ -1,5 +1,5 @@
 /* style sheet for kahua-web */
-/* $Id: kahua-web.css,v 1.1 2004/01/21 13:42:06 shiro Exp $ */
+/* $Id: kahua-web.css,v 1.2 2004/01/22 15:32:53 shiro Exp $ */
 
 /*
  * Common stuff
@@ -100,10 +100,16 @@ td#side-pane ul {
 td#side-pane > h2 {
   font-size: 100%;
   font-weight: bold;
-  margin: 1pt;
+  margin: 0pt 1pt 0pt 1pt;
+  padding: 0pt;
   text-align: center;
   background: solid;
   background-color: #aaddbb;
+}
+
+td#side-pane p {
+  margin: 0pt 0pt 1pt 0pt;
+  padding: 1pt;
 }
 
 /*
@@ -120,3 +126,9 @@ div#bottom-pane p {
   margin: 5px;
 }
 
+/*
+ * Error display
+ */
+.macro-error {
+    background-color: #ee5555;
+}
