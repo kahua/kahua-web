@@ -5,13 +5,14 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.21 2004/05/18 08:59:01 nobsun Exp $
+;; $Id: kahua-web.kahua,v 1.22 2004/06/25 11:16:20 nobsun Exp $
 
 (use srfi-1)
 (use srfi-2)
 (use srfi-13)
 (use file.util)
 (use util.list)
+(use rfc.uri)
 (use gauche.logger)
 (use gauche.sequence)
 (use gauche.parameter)
@@ -352,6 +353,8 @@
        (head (title "Kahua"
                     ,(string-join (pagename-split (ref page 'key))
                                   "|" 'prefix))
+	     (meta (@ (http-equiv "Content-type")
+		      (content "text/html; charset=euc-jp")))
              (link (@ (rel "stylesheet") (type "text/css")
                       (href ,(kahua-static-document-url
                               "kahua-web/kahua-web.css")))))
@@ -420,12 +423,15 @@
                   :content (get-source page-path)))))
 
 (define (redirect-to page)
-  (let1 page (or page (get-page "/"))
+  (let* ((page (or page (get-page "/"))))
     `((html ;; Needed to make a single SXML node. Will be unnecessary in future.
        (extra-header (@ (name "Status") (value "302 Moved")))
        (extra-header (@ (name "Location")
                         (value ,(kahua-self-uri-full
-                                 #`"show,(ref page 'key)"))))))))
+                                 #`"show,(pagename-join 
+                                          (map uri-encode-string
+                                               (pagename-split
+                                                 (ref page 'key))))"))))))))
 
 (let ((formatter (wiliki:formatter)))
   (set! (ref formatter 'bracket) format-wikiname)
