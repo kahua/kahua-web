@@ -1,0 +1,175 @@
+;;-*-Scheme-*-
+;; Kahua website macro handling
+;;
+;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
+;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
+;;  See COPYING for terms and conditions of using this software
+;;
+;; $Id: macro.kahua,v 1.1 2004/01/22 09:54:37 shiro Exp $
+
+(define *macro-alist* '())
+
+(define-syntax define-wiki-macro 
+  (syntax-rules ()
+    ((_ (name . args) . body)
+     (set! *macro-alist*
+           (let ((handler (lambda args . body)))
+             (acons 'name
+                    (lambda (expr)
+                      (if (procedure-arity-includes? handler (length expr))
+                        (apply handler expr)
+                        (unhandled-macro 'name expr)))
+                    *macro-alist*))))
+    ))
+
+(define (format-macro expr _)
+  (cond ((assq-ref *macro-alist* (car expr)) => (cut <> (cdr expr)))
+        (else (unhandled-macro (car expr) (cdr expr)))))
+
+(define (unhandled-macro name expr)
+  `("##" ,(write-to-string (cons name expr))))
+
+;;-------------------------------------
+
+(define-wiki-macro (test-macro . args) ;; to see if macro is working
+  `(,(format "Test macro output ~s" args)))
+
+(define-wiki-macro (test-error . args) ;; to see if macro error is handled
+  (error "test-error: " args))
+
+(define-wiki-macro (index prefix)
+  (let1 pages (filter (lambda (data)
+                         (string-prefix? (x->string prefix) (ref data 'name)))
+                      (all-page-data))
+    `((ul ,@(map (lambda (data) `(li ,@(format-wikiname (ref data 'name))))
+                 (sort pages pagename<?))))))
+
+(define-wiki-macro (cindex prefix . maybe-delimiter)
+  (let ((delim (get-optional maybe-delimiter " "))
+        (pages (filter (lambda (data)
+                         (string-prefix? (x->string prefix) (ref data 'name)))
+                       (all-page-data))))
+    (fold-right (lambda (data seed)
+                  (if (null? seed)
+                    (format-wikiname (ref data 'name))
+                    (append (format-wikiname (ref data 'name))
+                            (cons delim seed))))
+                '()
+                (sort pages pagename<?))))
+
+(define-wiki-macro (img url)
+  `((img (@ (src ,(x->string url))))))
+
+(define-wiki-macro (include pagename)
+  (let1 name (canon-pagename pagename)
+    (cond ((and name (get-page name)) => wiliki:format-content)
+          (else (unhandled-macro 'include (list pagename))))))
+
+(define-wiki-macro (toc . maybe-pagename)
+  (let1 page (or (and-let* ((name (get-optional maybe-pagename #f))
+                            (cname (canon-pagename name)))
+                   (get-page cname))
+                 (wiliki:current-page))
+    (if (not page)
+      (unhandled-macro 'toc maybe-pagename)
+      (let1 pagename (and page (ref page 'key))
+        ;; NB: hs is a _reverse_ ordered list of all headings (level . text).
+        ;; Since it's reversed, we can scan forward to find the heading
+        ;; nesting.
+        (define (make-ul hs cur items cont)
+          (cond ((null? hs)
+                 (cont '() `(ul ,@items)))
+                ((= (caar hs) cur)
+                 (make-ul (cdr hs) cur
+                          (cons (make-anchor (nestings hs)) items)
+                          cont))
+                ((< (caar hs) cur)
+                 (cont hs `(ul ,@items)))
+                (else
+                 (make-ul hs (caar hs)'()
+                          (lambda (hs ul)
+                            (make-ul hs cur (cons ul items) cont))))))
+
+        (define (nestings hs)
+          (reverse!
+           (cdr
+            (fold (lambda (elt seed)
+                    (let ((level (car elt))
+                          (cur-level (car seed)))
+                      (if (< level cur-level)
+                        (list* level (cdr elt) (cdr seed))
+                        seed)))
+                  '(6)
+                  hs))))
+
+        (define (make-anchor headings)
+          (let ((id (wiliki:calculate-heading-id headings)))
+            `(li ,@(wiliki:format-line-plainly (car headings)))))
+
+        (let1 headings
+            (page-lines-fold
+             page
+             (lambda (l r)
+               (cond ((#/^(\*{1,}) / l)
+                      => (lambda (m)
+                           (acons (string-length (m 1)) (m 'after) r)))
+                     (else r)))
+             '()
+             :follow-includes? #t
+             :skip-verbatim? #t)
+          (make-ul headings 1 '() (lambda (_ ul) (list ul))))
+        ))))
+
+;; Copied from wiliki and modified.
+;; The issue here is that this procedure has to recognize include form.
+;; It strongly suggest that 'include' shouldn't be a normal macro---rather,
+;; it has to be a markup.  I haven't decided how WiLiKi should handle this.
+;; So I keep a copy locally for the time being --SK
+
+(define (page-lines-fold page proc seed . keys)
+  (let-keywords* keys ((follow-includes? #f)
+                       (skip-verbatim? #f))
+
+    (define (content-fold line seed)
+      (cond ((eof-object? line) seed)
+            ((string=? line "{{{") (verb-fold line seed))
+            ((and follow-includes?
+                  (#/##(\(include .*)/ line))
+             => (lambda (m)
+                  (let* ((s (open-input-string/private (m 1)))
+                         (expr (call-with-input-tring s read)))
+                    ;; NB: we ignore the rest of macros.  dont' write
+                    ;; two ##(include)'s in one lnie.
+                    (if (null? (cdr expr))
+                      (content-fold (read-line) seed)
+                      (handle-include (x->string (cadr x)) seed)))))
+            (else (content-fold (read-line) (proc line seed)))))
+
+    (define (handle-include pagename seed)
+      (let1 page (get-page (canon-pagename pagename))
+        (content-fold (read-line)
+                      (if page
+                        (handle-page page seed)
+                        seed))))
+
+    (define (handle-page page seed)
+      (if (or (not (is-a? page <wiliki-page>))
+              (not (string? (ref page 'content))))
+        seed
+        (with-input-from-string (ref page 'content)
+          (cut with-port-locking (current-input-port)
+               (cut content-fold (read-line) seed)))))
+
+    (define (verb-fold line seed)
+      (cond ((eof-object? line) seed)
+            ((string=? line "}}}")
+             (content-fold (read-line)
+                           (if skip-verbatim? seed (proc line seed))))
+            (else
+             (verb-fold (read-line)
+                        (if skip-verbatim? seed (proc line seed))))))
+
+    (handle-page page seed)))
+
+
+                        

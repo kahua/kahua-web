@@ -1,11 +1,11 @@
 ;;-*-Scheme-*-
 ;; Kahua website
 ;;
-;;  Copyright (c) 2003 Scheme Arts, L.L.C., All rights reserved.
-;;  Copyright (c) 2003 Time Intermedia Corporation, All rights reserved.
+;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
+;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.1 2004/01/21 13:42:06 shiro Exp $
+;; $Id: kahua-web.kahua,v 1.2 2004/01/22 09:54:37 shiro Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -20,6 +20,7 @@
  (build-path (ref (kahua-config) 'working-directory) "kahua-web"))
 
 (log-open (kahua-logpath "kahua-web.log"))
+(load "kahua-web/macro.kahua")
 
 ;;========================================================
 ;; Page-data
@@ -37,17 +38,22 @@
                :init-value #f)
    (muser      :allocation :persistent :init-keyword :muser
                :init-value #f)
-   (change-log :allocation :persistent :init-keyword :change-log
-               :init-value '())
    ))
 
+;; [<page-data>]
+(define (all-page-data)
+  (make-kahua-collection <page-data>))  
+
 ;; pagename -> Maybe <page-data>
+;; pagename must be canonicalized.
 (define (get-page-data pagename)
-  (find (lambda (p) (equal? (ref p 'name) pagename))
-        (make-kahua-collection <page-data>)))
+  (find (lambda (p) (equal? (ref p 'name) pagename)) (all-page-data)))
 
 (define (page-data-exists? pagename)
   (not (not (get-page-data pagename)))) ;; for now
+
+(define-method pagename<? ((a <page-data>) (b <page-data>))
+  (string<? (ref a 'name) (ref b 'name)))
 
 ;;========================================================
 ;; Page
@@ -67,19 +73,24 @@
 (define (lookup-virtual-page pagename)
   (assoc-ref (class-slot-ref <page> 'virtual-pages) pagename))
 
+;; <page-data> -> <persistent-page>
+(define (page-data->page data)
+  (make <persistent-page>
+    :title (base-pagename (ref data 'name))
+    :key   (ref data 'name)
+    :content (ref data 'content)
+    :ctime (ref data 'ctime) :cuser (ref data 'cuser)
+    :mtime (ref data 'mtime) :muser (ref data 'muser)))
+
 ;; pagename -> Maybe <wiliki-page>
+;; pagename must be canonicalized.
 (define (get-page pagename)
-  (cond ((lookup-virtual-page pagename) => (cut <> pagename))
-        ((get-page-data pagename)
-         => (lambda (data)
-              (make <persistent-page>
-                :title (base-pagename (ref data 'name))
-                :key   (ref data 'name)
-                :content (ref data 'content)
-                :ctime (ref data 'ctime) :cuser (ref data 'cuser)
-                :mtime (ref data 'mtime) :muser (ref data 'muser))))
+  (cond ((not pagename) #f) ;; for safety
+        ((lookup-virtual-page pagename) => (cut <> pagename))
+        ((get-page-data pagename) => page-data->page)
         (else #f)))
 
+;; save page.
 (define (save-page page)
   (when (is-a? page <persistent-page>)
     (let ((data (or (get-page-data (ref page 'key))
@@ -90,6 +101,14 @@
 
 (define (front-page? page)
   (equal? (ref page 'key) "/"))
+
+;; NB: front page is a virtual page.  contents is created by
+;; "/$admin/home"
+(add-virtual-page!
+ "/"
+ (lambda (name)
+   (make <transient-page>
+     :title "Kahua home" :key "/" :content (use-page "/$admin/home"))))
 
 ;;========================================================
 ;; Page paths
@@ -174,11 +193,6 @@
                   "?")))
       (#`"[[,name]]"))))
 
-;; A common routine to format a customizable pane
-(define (use-page pagename)
-  (cond ((get-page pagename) => wiliki:format-content)
-        (else (format-wikiname pagename))))
-
 ;;========================================================
 ;; Page formatters
 ;;
@@ -216,9 +230,11 @@
            (td (@ (id "main-pane"))
                ,@(if (front-page? page) '() `((h1 ,(ref page 'title))))
                ,@(wiliki:format-content page)
-               (div (@ (id "edit-menu"))
-                    (a/cont (@@ (cont ,(cut edit-page page))) "[Edit]")
-                    "[History]"))
+               ,@(cond-list
+                  ((is-a? page <persistent-page>)
+                   `(div (@ (id "edit-menu"))
+                         (a/cont (@@ (cont ,(cut edit-page page))) "[Edit]")
+                         "[History]"))))
            ))
       (hr)
       (div (@ (id "bottom-pane")) ,@(use-page "/$admin/bottom-pane"))
@@ -258,7 +274,13 @@
 
 (let ((formatter (wiliki:formatter)))
   (set! (ref formatter 'bracket) format-wikiname)
+  (set! (ref formatter 'macro) format-macro)
   )
+
+;; A common routine to format a customizable pane
+(define (use-page pagename)
+  (cond ((get-page pagename) => wiliki:format-content)
+        (else (format-wikiname pagename))))
 
 ;;========================================================
 ;; Main application
