@@ -1,3 +1,7 @@
+2004-01-25  Shiro Kawai  <shiro@acm.org>
+
+	* kahua-web.kahua (edit-page): extend edit textarea.
+
 2004-01-24  Shiro Kawai  <shiro@acm.org>
 
 	* adduser.scm, lsuser.scm : simple scripts for user management
