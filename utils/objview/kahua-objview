@@ -6,7 +6,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-objview,v 1.4 2004/03/02 09:42:17 shiro Exp $
+;; $Id: kahua-objview,v 1.5 2004/03/02 11:09:21 shiro Exp $
 
 ;; Requires:
 ;;  Gauche-gl
@@ -680,6 +680,7 @@
 (define-class <menu-bg> (<gtk-menu>)
   ((edit-data) ;; menu-item
    (reparent)  ;; menu-item
+   (unparent)  ;; menu-item
    (commit)    ;; menu-item
    (delete)    ;; menu-item
    ))
@@ -706,6 +707,10 @@
                        (lambda (node select event)
                          (graph-reparent (ref (the-app) 'graph) node))
                        #f)
+    #t)
+
+  (define (menu-cb-unparent event . _)
+    (graph-unparent (ref (the-app) 'graph))
     #t)
 
   (define (menu-cb-save event . _)
@@ -738,6 +743,12 @@
     (g-signal-connect menu-item "activate" menu-cb-reparent)
     (gtk-widget-set-sensitive menu-item #f)
     (gtk-widget-show menu-item))
+  (let1 menu-item (gtk-menu-item-new-with-label "Unparent")
+    (gtk-menu-shell-append menu menu-item)
+    (set! (ref menu 'unparent) menu-item)
+    (g-signal-connect menu-item "activate" menu-cb-unparent)
+    (gtk-widget-set-sensitive menu-item #f)
+    (gtk-widget-show menu-item))
   (let1 separator (gtk-separator-menu-item-new)
     (gtk-menu-shell-append menu separator)
     (gtk-widget-show separator))
@@ -763,6 +774,7 @@
          (nsels (glgd-graph-node-select-count graph)))
     (gtk-widget-set-sensitive (ref self 'edit-data) (> nsels 0))
     (gtk-widget-set-sensitive (ref self 'reparent)  (> nsels 0))
+    (gtk-widget-set-sensitive (ref self 'unparent)  (> nsels 0))
     (gtk-widget-set-sensitive (ref self 'delete)    (> nsels 0))
     )
   (gtk-widget-set-sensitive (ref self 'commit) (db-dirty? (the-db)))
@@ -846,8 +858,7 @@
   (define (do-reparent parent-key page)
     (set! (ref page 'key) (build-path parent-key (ref page 'basename)))
     (mark-dirty! page)
-    (for-each (lambda (child)
-                (do-reparent (ref page 'key) child))
+    (for-each (lambda (child) (do-reparent (ref page 'key) child))
               (ref page 'children)))
 
   ;; return #t if node is one of descendants of selections
@@ -881,6 +892,36 @@
                    GTK_STOCK_CLOSE GTK_RESPONSE_OK))
      (else
       (for-each (cute do-reparent (ref parent 'key) <>) selected)
+      (graph-selection-clear graph)
+      (app-refresh (the-app))))))
+
+(define (graph-unparent graph)
+  
+  (define (do-unparent page prefix)
+    (set! (ref page 'key) #`",|prefix|/,(ref page 'basename)")
+    (mark-dirty! page)
+    (for-each (lambda (child) (do-unparent child (ref page 'key)))
+              (ref page 'children)))
+  
+  (define (nonunique? pages)
+    (let* ((paths (map (lambda (page) #`"/,(ref page 'basename)") pages))
+           (tops  (lset-difference eq?
+                                   (filter (lambda (page)
+                                             (#/^\/[^\/]*$/ (ref page 'key)))
+                                           (ref (the-db) 'pages))
+                                   pages))
+           (all   (append paths (map (cut ref <> 'key) tops))))
+      (not (= (length all) (length (delete-duplicates all string=?))))))
+
+  
+  (let ((selected (filter-map glgd-node-data-get (graph-selection-get graph))))
+    (cond
+     ((nonunique? selected)
+      (app-message (the-app) "Invalid operation"
+                   "Can't unparent, for it would create non-unique path."
+                   GTK_STOCK_CLOSE GTK_RESPONSE_OK))
+     (else
+      (for-each (cute do-unparent <> "") selected)
       (graph-selection-clear graph)
       (app-refresh (the-app))))))
 
