@@ -5,14 +5,13 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.22 2004/06/25 11:16:20 nobsun Exp $
+;; $Id: kahua-web.kahua,v 1.23 2004/06/25 11:37:17 nobsun Exp $
 
 (use srfi-1)
 (use srfi-2)
 (use srfi-13)
 (use file.util)
 (use util.list)
-(use rfc.uri)
 (use gauche.logger)
 (use gauche.sequence)
 (use gauche.parameter)
