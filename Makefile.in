@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.13 2004/09/02 23:23:44 nobsun Exp $
+# $Id: Makefile.in,v 1.14 2004/09/13 03:20:51 nobsun Exp $
 
 package	          = kahua-web
 kahua		  = kahua
@@ -49,7 +49,7 @@ STATICFILES = kahua-web/kahua-web.css
 SOURCEDIR   = kahua-web
 PLUGINFILE  = wiliki.scm
 
-CONFIG_GENERATED = Makefile VERSION test/test.scm \
+CONFIG_GENERATED = Makefile test/test.scm \
 		   config.log config.status autom4* \
 .PHONY: all check clean distclean install maintainer-clean
 
@@ -70,7 +70,7 @@ clean:
 
 install: 
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t script $(SCRIPTFILES)
-	$(KAHUA_INSTALL) $(KAHUACONFIG) -t static $(STATICFILES)
+	$(KAHUA_INSTALL) $(KAHUACONFIG) -t static --no-overwrite $(STATICFILES)
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t plugin -r $(PLUGINFILE) \
                                         $(SOURCEDIR)/$(PLUGINFILE)
 	$(GOSH) -I$(libdir) ./init.scm $(KAHUACONFIG)
