@@ -6,7 +6,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-objview,v 1.8 2004/03/01 06:55:23 shiro Exp $
+;; $Id: kahua-objview,v 1.9 2004/03/01 07:27:12 shiro Exp $
 
 ;; Requires:
 ;;  Gauche-gl
@@ -121,14 +121,19 @@
 (define (db-setup-data db pages)
 
   (define (setup-links page all)
-    (set! (ref page 'children)
-          (map (cut ref <> 'key)
-               (filter (lambda (p)
-                         (string-prefix? #`",(ref page 'key)/" (ref p 'key)))
-                       all)))
-    (set! (ref page 'links)
-          (scan-links (ref page 'key) (ref page 'content) all))
-    page)
+    (let* ((kstr #`",(ref page 'key)/")
+           (kstrlen (string-length kstr)))
+      (set! (ref page 'children)
+            (map (cut ref <> 'key)
+                 (filter (lambda (p)
+                           (let1 k (ref p 'key)
+                             (and (string-prefix? kstr k)
+                                  (not (string-scan (string-drop k kstrlen)
+                                                    #\/)))))
+                         all)))
+      (set! (ref page 'links)
+            (scan-links (ref page 'key) (ref page 'content) all))
+      page))
 
   (define (scan-links self content all)
     (let loop ((content content)
@@ -876,6 +881,15 @@
               (iota (glgd-graph-node-count graph))))
 
 (define (graph-reparent graph node)
+
+  (define (do-reparent parent-key page)
+    (set! (ref page 'key) (build-path parent-key (ref page 'basename)))
+    (for-each (lambda (child-key)
+                (do-reparent (ref page 'key)
+                             (find (lambda (p) (equal? (ref p 'key) child-key))
+                                   (ref (the-db) 'pages))))
+              (ref page 'children)))
+  
   (let ((parent    (and node (glgd-node-data-get node)))
         (selection (graph-selection-get graph)))
     (cond
@@ -885,16 +899,15 @@
      (else
       (let1 parent-key (ref parent 'key)
         (dolist (n selection)
-          (and-let* ((rec (glgd-node-data-get n)))
-            (set! (ref rec 'key) (build-path parent-key (ref rec 'basename)))
-            ))
+          (and-let* ((page (glgd-node-data-get n)))
+            (do-reparent parent-key page)))
         (graph-selection-clear graph)
         (app-refresh (the-app))))))
   #f)
 
-;; ===================================
-;; Kahua Data to <glgdGraph> functions
-;; ===================================
+;;
+;; Constract node&links from kahua data
+;;
 (define (kahua-record-by-key kahua-data key)
   (find (lambda (record) (equal? (ref record 'key) key)) kahua-data))
 
