@@ -1,5 +1,5 @@
 /* style sheet for kahua-web */
-/* $Id: kahua-web.css,v 1.5 2004/01/25 14:40:47 shiro Exp $ */
+/* $Id: kahua-web.css,v 1.6 2004/03/01 13:11:37 shiro Exp $ */
 
 /*
  * Common stuff
@@ -97,7 +97,14 @@ td#main-pane {
 div#edit-menu {
   text-align: right;
   font-size: 90%;
-  color: #555555;
+  color: #777777;
+}
+
+div#page-footer { 
+  text-align: right;
+  font-size: 80%;
+  line-height: 0.5;
+  color: #777777;
 }
 
 td#side-pane {

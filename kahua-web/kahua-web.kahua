@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.16 2004/03/01 10:19:33 shiro Exp $
+;; $Id: kahua-web.kahua,v 1.17 2004/03/01 13:11:37 shiro Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -156,7 +156,10 @@
   (let ((data (cond ((ref page 'persistent-id) => get-page-data/check)
                     (else (get-new-page/check (ref page 'key))))))
     (set! (ref data 'content) (ref page 'content))
+    (unless (ref page 'persistent-id)
+      (set! (ref data 'cuser) (ref (kahua-current-user) 'login-name)))
     (set! (ref data 'mtime) (sys-time))
+    (set! (ref data 'muser) (ref (kahua-current-user) 'login-name))
     (kahua-db-sync)
     (if (ref page 'persistent-id)
       (cont page)
@@ -319,6 +322,26 @@
 ;; +---------------------------------------------------+
 
 (define (standard-page page)
+
+  (define (fmt-time t)
+    (sys-strftime "%Y/%m/%d %H:%M:%S" (sys-localtime t)))
+  
+  (define (footer page)
+    `((div (@ (id "page-footer"))
+           ,@(cond-list
+              ((ref page 'ctime)
+               => (lambda (t) (format "Created: ~a" (fmt-time t))))
+              ((ref page 'cuser) => (cut format " by ~a" <>))
+              (#t '(br))
+              ((ref page 'mtime)
+               => (lambda (t) (format "Modified: ~a" (fmt-time t))))
+              ((ref page 'muser) => (cut format " by ~a" <>))))
+      (div (@ (id "edit-menu"))
+           (@@ (require-role admin developer))
+           (a/cont (@@ (cont ,edit ,@(pagename-split (ref page 'key))))
+                   "[Edit]")
+           "[History]")))
+  
   (current-page page)
   `((html
      (extra-header (@ (name "content-type")
@@ -339,14 +362,7 @@
            (td (@ (id "main-pane"))
                ,@(if (front-page? page) '() `((h1 ,(ref page 'title))))
                ,@(wiliki:format-content page)
-               ,@(cond-list
-                  ((persistent-page? page)
-                   `(div (@ (id "edit-menu"))
-                         (@@ (require-role admin developer))
-                         (a/cont (@@ (cont ,edit
-                                           ,@(pagename-split (ref page 'key))))
-                                 "[Edit]")
-                         "[History]"))))
+               ,@(if (persistent-page? page) (footer page) '()))
            ))
       (hr)
       (div (@ (id "bottom-pane")) ,@(use-page "/$admin/bottom-pane"))

@@ -1,3 +1,9 @@
+2004-03-01  Shiro Kawai  <shiro@acm.org>
+
+	* kahua-web/kahua-web.kahua
+	(save-page): records cuser and muser.
+	(standard-page): displays created/modified time and user.
+
 2004-03-01  Yusei Tahara  <tahara@timedia.co.jp>
 
 	* kahua-web/macro.kahua (pdf-page): added ##(pdf-page) macro.
