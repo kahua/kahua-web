@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.3 2004/01/23 11:17:00 shiro Exp $
+;; $Id: macro.kahua,v 1.4 2004/01/30 09:59:59 tahara Exp $
 
 (define *macro-alist* '())
 
@@ -79,6 +79,12 @@
 ;;
 (define-wiki-macro (img url)
   `((img (@ (src ,(x->string url))))))
+
+;;---------------------------------------------------------
+;; Seminor form
+;;
+(define-wiki-macro (seminar-order)
+  (mailform-link))
 
 ;;---------------------------------------------------------
 ;; Include

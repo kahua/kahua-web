@@ -1,0 +1,167 @@
+;;-*-Scheme-*-
+;; Kahua website
+;;
+;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
+;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
+;;  See COPYING for terms and conditions of using this software
+;;
+;; $Id: mailform.kahua,v 1.1 2004/01/30 09:59:59 tahara Exp $
+(use gauche.charconv)
+(use gauche.process)
+
+(define (sendmail to from subject body)
+  (call-with-output-process
+   "/usr/sbin/sendmail -t -oi"
+   (lambda (p)
+     (display (format "To: ~a\n" to) p)
+     (display (format "From: ~a\n" from) p)
+     (display (format "Subject: ~a\n" subject) p)
+     (display "Content-Transfer-Encoding: 7bit\n" p)
+     (display "Content-Type: text/plain; charset=ISO-2022-JP\n" p)
+     (display "\n\n" p)
+     (display (ces-convert body "eucjp" "iso2022jp") p)
+     )))
+
+(define (mailform-link)
+  (let1 page-path (or (and-let* ((page (current-page)))
+			(pagename-split (ref page 'key)))
+		      '())
+    `((a/cont (@@ (cont ,seminar-form ,@page-path)) "申し込みはこちら"))))
+
+(define-entry (seminar-form :rest return-page-path)
+  (define (show-form your-name your-mail how-many love-scheme)
+    (standard-page
+     (make <page>
+       :title "Order" :key "/"
+       :content
+       `((h1 "セミナー申し込み")
+         (form/cont
+          (@@ (cont ,confirm (your-name) (your-mail) (how-many) (love-scheme)))
+          (table
+           (@ (class "user-form"))
+           (tr (th "お名前")
+               (td (input (@ (type "text") (name "your-name")
+			     (value ,(or your-name ""))))))
+           (tr (th "メールアドレス")
+               (td (input (@ (type "text") (name "your-mail")
+			     (value ,(or your-mail ""))))))
+           (tr (th "参加人数")
+               (td (input (@ (type "text") (name "how-many")
+			     (value ,(or how-many ""))))))
+	   (tr (th (@ (colspan "2"))
+		   "Scheme でプログラムを書いたことがありますか？"))
+	   (tr (td (@ (colspan "2"))
+		   (textarea (@ (rows "4") (cols "40") (name "love-scheme")
+				(value ,(or love-scheme ""))))))
+	   (tr (th)
+	       (td (input (@ (type "submit") (name "submit") 
+			     (value "送信")))))
+	   ))))))
+
+  (define (show-input your-name your-mail how-many love-scheme)
+    (standard-page
+     (make <page>
+       :title "Order" :key "/"
+       :content
+       `((h1 "入力内容は以下のとおりです")
+         (form/cont
+          (@@ (cont ,mail-proc ,your-name ,your-mail ,how-many ,love-scheme))
+	  (input (@ (type "hidden") (name "your-name") (value ,your-name)))
+	  (input (@ (type "hidden") (name "your-mail") (value ,your-mail)))
+	  (input (@ (type "hidden") (name "how-many") (value ,how-many)))
+	  (input (@ (type "hidden") (name "love-scheme") (value ,love-scheme)))
+          (table
+           (@ (class "user-form"))
+           (tr (th "お名前：")
+               (td ,your-name))
+           (tr (th "メールアドレス：")
+               (td ,your-mail))
+           (tr (th "参加人数：")
+               (td ,how-many))
+	   (tr (th (@ (colspan "2"))
+		   "Scheme でプログラムを書いたことがありますか？"))
+	   (tr (td (@ (colspan "2")) ,love-scheme))
+	   (tr (th)
+	       (td (input (@ (type "submit") (name "confirm") 
+			     (value "確認")))))
+	   ))))))
+
+  (define confirm
+    (entry-lambda (:keyword your-name your-mail how-many love-scheme)
+      (show-input your-name your-mail how-many love-scheme)))
+
+  (define mail-proc
+    (entry-lambda (:keyword your-name your-mail how-many love-scheme)
+      (let ((mesg ""))
+	(begin
+          ;;参加者宛て
+          (sendmail your-mail "Kahua Project<info@kahua.org>"
+                    "Kahua Seminar Registration Confirmation"
+                    confirmation)
+          ;;我々宛て
+          (sendmail "seminar@kahua.org" "Kahua Project<info@kahua.org>"
+                    "Kahua Seminar Registration Confirmation"
+                    (format "~a\n~a\n~a\n~a\n"
+                            your-name your-mail how-many love-scheme))
+          (thankyou)))))
+
+  (define (thankyou)
+    (standard-page
+     (make <page>
+       :title "Order" :key "/"
+       :content
+       `((h1 "お申し込みありがとうございました。")
+         (span (a/cont (@@ (cont ,(lambda () (redirect-to (get-page (pagename-join return-page-path)))))) "セミナーページに戻る"))))))
+
+  (show-form #f #f #f #f))
+
+
+(define confirmation "
+この度は、アプリケーションサーバフレームワークKahuaセミナーにお申し込
+み下さいまして、誠にありがとうございます。
+
+お申し込みを受け付けました。当日会場受付までお越しください。
+
+当日の参加ができなくなった場合は、お手数ですが info@kahua.org までご連
+絡いただけますようお願いいたします。
+
+
+
+セミナー告知ページで会場ビルの階数が間違っておりましたので、訂正いたし
+ます。
+
+会場は、東京都文京区本駒込 文京グリーンコート 16階 IPA 第三 第四会議室
+になります。
+
+----------------------------------------------------------------------
+
+アプリケーションサーバフレームワーク Kahua セミナー
+
+
+【日時】2004年2月13日(金) 13:30〜16:30 (受付開始 13:00)
+
+【場所】東京都文京区本駒込 文京グリーンコート 16階 IPA 第三 第四会議室
+
+        地図
+
+        http://www.ipa.go.jp/about/ipajoho/location.html
+
+        最寄駅
+
+        * 都営三田線「千石駅」（A1又はA3出口）徒歩4分
+        * JR山手線「駒込駅」徒歩10分
+        * JR山手線「巣鴨駅」徒歩12分
+
+【プログラム】
+
+ 13:00 受付開始
+ 13:30〜14:20 GaucheによるSchemeプログラミング入門(川合)
+ 14:20〜14:30 休憩
+ 14:30〜15:20 継続ベースのWebアプリケーションの原理(川合)
+ 15:20〜15:30 休憩
+ 15:30〜16:20 アプリケーションサーバフレームワークKahuaの紹介(やました)
+ 16:20〜16:30 質疑応答 
+
+--
+info@kahua.org
+")
