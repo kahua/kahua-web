@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.6 2004/01/23 11:30:40 shiro Exp $
+;; $Id: kahua-web.kahua,v 1.7 2004/01/23 11:37:27 shiro Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -250,7 +250,7 @@
 ;; "/" -> '()
 (define (pagename-split pagename . opts)
   (let1 c (canon-pagename pagename)
-    (and c (if (string=? c "/")
+    (and c (if (or (string-null? c) (string=? c "/"))
              '()
              (string-split (string-drop c 1) #\/)))))
 
@@ -295,6 +295,8 @@
 
 (define (standard-page page)
   `((html
+     (extra-header (@ (name "Content-type")
+                      (value "text/html; charset=euc_jp")));;for now
      (head (title "Kahua"
                   ,(string-join (pagename-split (ref page 'key))
                                 "|" 'prefix))
