@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: login.kahua,v 1.1 2004/01/25 14:40:47 shiro Exp $
+;; $Id: login.kahua,v 1.2 2004/04/21 00:39:48 nobsun Exp $
 
 ;; login account can only be issued by "admin" role.
 
@@ -25,9 +25,9 @@
   (set! (kahua-current-user) #f)
   ;; if we're in the persistent page, stay on the same page.
   ;; otherwise, redirect to the top.
-  (if (ref (current-page) 'persistent-id)
-    (standard-page (current-page))
-    (redirect-to (get-page "/"))))
+  (if (and (current-page) (ref (current-page) 'persistent-id))
+      (standard-page (current-page))
+      (redirect-to (get-page "/"))))
 
 (define-entry (login-form :rest return-page-path)
   (define (show-form extra-contents logname pass)
