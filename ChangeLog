@@ -1,3 +1,14 @@
+2004-10-18  Shiro Kawai  <shiro@acm.org>
+
+	* configure.ac: When --prefix is given, prepend $prefix/bin/kahua
+	  to PATH, so that kahua-web build process uses consistent Kahua
+	  versions.
+	* Makefile.in: Changed installation destination of 'adduser.scm' and
+	  'lsuser.scm' to libdir.  (These should eventually be a part of
+	  Kahua, I guess).
+	* test.scm.in : Changed the way to run kahua-server according to the
+	  recent change of Kahua.
+
 2004-10-13  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* kahua-web/rss.kahua(pubdate-mtime): 

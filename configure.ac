@@ -1,14 +1,19 @@
 dnl
 dnl Configuring kahua-web
 dnl  process this file with "autoconf" to generate 'configure'.
-dnl $Id: configure.ac,v 1.4 2004/09/13 12:44:23 nobsun Exp $
+dnl $Id: configure.ac,v 1.5 2004/10/19 07:54:12 shiro Exp $
 AC_PREREQ(2.54)
 AC_INIT(kahua-web, 0.2, shiro@acm.org)
 
-dnl Check for programs.
+dnl Check for programs.  Set up PATH according to prefix.
+if test "$prefix" != NONE; then
+  tpath=$prefix/bin/kahua:$PATH
+else
+  tpath=$PATH
+fi
+
 AC_PATH_PROGS([GOSH], gosh)
-AC_PATH_PROGS([KAHUA_INSTALL], kahua-install)
-AC_PATH_PROGS([KAHUA_SERVER], kahua-server)
+AC_PATH_PROGS([KAHUA_INSTALL], kahua-install, [], $tpath)
 
 dnl Check for other program
 AC_PROG_INSTALL
