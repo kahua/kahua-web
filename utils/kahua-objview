@@ -6,7 +6,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-objview,v 1.4 2004/03/01 02:40:54 shiro Exp $
+;; $Id: kahua-objview,v 1.5 2004/03/01 03:07:24 shiro Exp $
 
 ;; Requires:
 ;;  Gauche-gl
@@ -74,6 +74,7 @@
    (cuser    :init-keyword :cuser)
    (mtime    :init-keyword :mtime)
    (muser    :init-keyword :muser)
+   (hidden   :init-keyword :hidden :init-value #f)
    (dirty    :init-value #f)
    (touched  :init-value #f)
    ))
@@ -285,15 +286,15 @@
                                          GDK_GL_MODE_DEPTH))
       (error "*** No appropriate OpenGL-capable visual found.")))
 
-;; ===========================================================================
+;;---------------------------------------------------------------------
 ;; Multi-node Information editor functions
-;; ===========================================================================
+;;
 ;; NOTES: - Uses <g-object-set-data> and <g-object-get-data> to access widgets
 ;;          internal to the <multi-edit> widget.
 ;;        - <multi-edit-cuser> is a frame containing a <name-entry> entry
 ;;        - <multi-edit-muser> is a frame containing a <name-entry> entry
 ;;        - <name-entry> is a <gtk-entry>
-;; ===========================================================================
+;;
 (define (multi-edit-name-frame-new title name)
   (let1 frame (gtk-frame-new title)
     (gtk-frame-set-shadow-type frame GTK_SHADOW_ETCHED_OUT)
@@ -592,9 +593,9 @@
           ((= select-count 1) (info-edit-single-show graph))))
   #t)
 
-;; ============================
-;; Information window functions
-;; ============================
+;;---------------------------------------------------------
+;; Information window
+;;
 
 (define-class <info-win> ()
   ((window)
@@ -672,18 +673,19 @@
 (define (info-win-hide info-win)
   (gtk-widget-hide (ref info-win 'window)))
 
-;; =========================
+;;----------------------------------------------------------------
 ;; Background menu functions
-;; =========================
+;;
 (define-class <menu-bg> (<gtk-menu>)
   ((show-data) ;; menu-item
    (edit-data) ;; menu-item
+   (reparent)  ;; menu-item
+   (commit)    ;; menu-item
    ))
 
 (define-method initialize ((self <menu-bg>) initargs)
   (next-method)
   (menu-bg-initialize self))
-
 
 (define (menu-bg-initialize menu)
   (define (menu-cb-frame-all event . _)
@@ -694,6 +696,9 @@
 
   (define (menu-cb-edit-data event . _)
     (info-edit-show (ref (the-app) 'graph)) #t)
+
+  (define (menu-cb-reparent event . _)
+    #t)
 
   (define (menu-cb-expand-all event . _)
     (glgd-graph-attribute-set (ref (the-app) 'graph) KAHUA_DATA_NODE)
@@ -708,54 +713,68 @@
   (define (menu-cb-save event . _)
     (db-commit) #t)
 
-  (let* ((str "Frame All")
-         (menu-item (gtk-menu-item-new-with-label str)))
+  (let1 menu-item (gtk-menu-item-new-with-label "Frame all")
     (gtk-menu-shell-append menu menu-item)
     (g-signal-connect menu-item "activate" menu-cb-frame-all)
     (gtk-widget-show menu-item))
   (let1 separator (gtk-separator-menu-item-new)
     (gtk-menu-shell-append menu separator)
     (gtk-widget-show separator))
-  (let* ((str "Show data...")
-         (menu-item (gtk-menu-item-new-with-label str)))
+  (let1 menu-item (gtk-menu-item-new-with-label "Show data...")
     (gtk-menu-shell-append menu menu-item)
     (set! (ref menu 'show-data) menu-item)
     (g-signal-connect menu-item "activate" menu-cb-show-data)
     (gtk-widget-set-sensitive menu-item #f)
     (gtk-widget-show menu-item))
-  (let* ((str "Edit data...")
-         (menu-item (gtk-menu-item-new-with-label str)))
+  (let1 menu-item (gtk-menu-item-new-with-label "Edit data...")
     (gtk-menu-shell-append menu menu-item)
     (set! (ref menu 'edit-data) menu-item)
     (g-signal-connect menu-item "activate" menu-cb-edit-data)
     (gtk-widget-set-sensitive menu-item #f)
     (gtk-widget-show menu-item))
+  (let1 menu-item (gtk-menu-item-new-with-label "Reparent")
+    (gtk-menu-shell-append menu menu-item)
+    (set! (ref menu 'reparent) menu-item)
+    (g-signal-connect menu-item "activate" menu-cb-reparent)
+    (gtk-widget-set-sensitive menu-item #f)
+    (gtk-widget-show menu-item))
   (let1 separator (gtk-separator-menu-item-new)
     (gtk-menu-shell-append menu separator)
     (gtk-widget-show separator))
-  (let* ((str "Expand All")
-         (menu-item (gtk-menu-item-new-with-label str)))
+  (let1 menu-item (gtk-menu-item-new-with-label "Expand all")
     (gtk-menu-shell-append menu menu-item)
     (g-signal-connect menu-item "activate" menu-cb-expand-all)
     (gtk-widget-show menu-item))
-  (let* ((str "Collapse All")
-         (menu-item (gtk-menu-item-new-with-label str)))
+  (let1 menu-item (gtk-menu-item-new-with-label "Collapse All")
     (gtk-menu-shell-append menu menu-item)
     (g-signal-connect menu-item "activate" menu-cb-collapse-all)
     (gtk-widget-show menu-item))
   (let1 separator (gtk-separator-menu-item-new)
     (gtk-menu-shell-append menu separator)
     (gtk-widget-show separator))
-  (let* ((str "Commit Changes")
-         (menu-item (gtk-menu-item-new-with-label str)))
+  (let1 menu-item (gtk-menu-item-new-with-label "Commit Changes")
     (gtk-menu-shell-append menu menu-item)
+    (set! (ref menu 'commit) menu-item)
     (g-signal-connect menu-item "activate" menu-cb-save)
+    (gtk-widget-set-sensitive menu-item #f)
     (gtk-widget-show menu-item))
   #t)
 
-;; ==============================
+(define-method menu-popup ((self <menu-bg>) event)
+  (let* ((graph (ref (the-app) 'graph))
+         (nsels (glgd-graph-node-select-count graph)))
+    (gtk-widget-set-sensitive (ref self 'show-data) (= nsels 1))
+    (gtk-widget-set-sensitive (ref self 'edit-data) (> nsels 0))
+    (gtk-widget-set-sensitive (ref self 'reparent)  (> nsels 0))
+    )
+  (gtk-widget-set-sensitive
+   (ref self 'commit)
+   (not (not (find (cut ref <> 'dirty) (ref (the-db) 'pages)))))
+  (gtk-menu-popup self #f #f #f (ref event 'button) (ref event 'time)))
+
+;;----------------------------------------------------------
 ;; <glgdGraph> callback functions
-;; ==============================
+;;
 (define (key-callback graph node link event)
   (when (= (ref event 'type) GDK_KEY_PRESS)
     (let1 kv (ref event 'keyval)
@@ -776,18 +795,7 @@
 
 (define (mouse-right-callback graph node link event)
   (when (= (ref event 'type) GDK_BUTTON_PRESS)
-    (let* ((show-data (ref (ref (the-app) 'menu-bg) 'show-data))
-           (edit-data (ref (ref (the-app) 'menu-bg) 'edit-data))
-           (button (ref event 'button))
-           (time (ref event 'time)))
-      (gtk-widget-set-sensitive show-data #f)
-      (if (= (glgd-graph-node-select-count graph) 1)
-        (gtk-widget-set-sensitive show-data #t)
-        (gtk-widget-set-sensitive show-data #f))
-      (if (> (glgd-graph-node-select-count graph) 0)
-        (gtk-widget-set-sensitive edit-data #t)
-        (gtk-widget-set-sensitive edit-data #f))
-      (gtk-menu-popup (ref (the-app) 'menu-bg) #f #f #f button time)))
+    (menu-popup (ref (the-app) 'menu-bg) event))
   #t)
 
 (define (select-single-node graph node)
@@ -840,29 +848,6 @@
     (set! (ref record 'touched) do-touch))
   #t)
     
-(define (kahua-data-dump kahua-data ndx)
-  (let1 record (car kahua-data)
-    (format #t "~a: basename: ~a [~a]\n" ndx
-            (ref record 'basename) (ref record 'touched))
-    (format #t "    children: ~a\n"
-            (ref record 'children))
-    (format #t "       links: ~a\n"
-            (ref record 'links))
-    (format #t "      create: ~a"
-            (sys-ctime (ref record 'ctime)))
-    (unless (eq? (ref record 'cuser) #f)
-      (format #t "        user: ~a\n"
-              (ref record 'cuser)))
-    (format #t "      modify: ~a"
-            (sys-ctime (ref record 'mtime)))
-    (unless (eq? (ref record 'muser) #f)
-      (format #t "        user: ~a\n"
-              (ref record 'muser))))
-  
-  (unless (null? (cdr kahua-data))
-    (kahua-data-dump (cdr kahua-data) (+ ndx 1)))
-  #t)
- 
 (define (glgd-graph-node-from-kahua graph kahua-data node-id)
   ;; Add this node to the graph
   ;; --------------------------
@@ -909,8 +894,6 @@
 
 (define (glgd-graph-build graph kahua-data)
   (glgd-graph-init graph)
-  (if (> KAHUA_DATA_DUMP 0)
-    (kahua-data-dump kahua-data 0))
 
   ;; Recursively add all kahua pages to the graph as <glgdNode's>
   ;; ------------------------------------------------------------
@@ -958,9 +941,9 @@
     (glgd-graph-flags-set graph GLGDGRAPH_FLAG_PANGOBOLD GLGD_FLAGOP_SET))
   #t)
   
-;; ======================
-;; GTK Callback functions
-;; ======================
+;;----------------------------------------------------------------
+;; Graph pane
+;;
 
 (define-class <graph-pane> (<gtk-drawing-area>)
   ((graph :init-form (glgd-graph-create))   ;; <glgd-graph>
