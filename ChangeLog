@@ -1,7 +1,9 @@
 2004-01-23  Shiro Kawai  <shiro@acm.org>
 
 	* kahua-web/kahua-web.kahua : various fixups, including page
-	renaming support, making edit an entry, fancier error page
+	renaming support, making edit an entry, fancier error page,
+	page alias.
+	
 	* kahua-web/macro.kahua : proper toc macro support
 	* kahua-web/kahua-web.css : minor adjustment in 'pre' block and
 	side-pane.

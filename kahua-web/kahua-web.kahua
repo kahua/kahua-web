@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.4 2004/01/23 11:17:00 shiro Exp $
+;; $Id: kahua-web.kahua,v 1.5 2004/01/23 11:24:19 shiro Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -227,6 +227,7 @@
   (define (fix-up path) ;; strips leading "/.."
     (cond ((string-null? path) "/")
           ((string-prefix? "/.." path) (fix-up (string-drop path 3)))
+          ((string-suffix? "/" path) (string-drop-right path 1))
           (else path)))
   (if (absolute-path? pagename)
     (fix-up (simplify-path pagename))
@@ -260,16 +261,18 @@
 
 ;; Formatting wikiname.
 (define (format-wikiname name)
-  (let1 absname (canon-pagename name)
-    (if absname
-      (if (or (lookup-virtual-page absname)
-              (page-data-exists? absname))
-        `((a/cont (@@ (cont ,show ,@(pagename-split absname)))
-                  ,(base-pagename absname)))
-        `(,(base-pagename absname)
-          (a/cont (@@ (cont ,edit ,@(pagename-split absname)))
-                  "?")))
-      (#`"[[,name]]"))))
+  (receive (path linkname) (string-scan name "//" 'both)
+    (let ((absname  (canon-pagename (or path name)))
+          (linkname (or linkname (base-pagename name))))
+      (if absname
+        (if (or (lookup-virtual-page absname)
+                (page-data-exists? absname))
+          `((a/cont (@@ (cont ,show ,@(pagename-split absname)))
+                    ,linkname))
+          `(,linkname
+            (a/cont (@@ (cont ,edit ,@(pagename-split absname)))
+                    "?")))
+        (#`"[[,name]]")))))
 
 ;;========================================================
 ;; Page formatters
