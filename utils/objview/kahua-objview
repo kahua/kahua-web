@@ -1,0 +1,1065 @@
+#!/usr/bin/env gosh
+;; Object browser example
+;;
+;;  Copyright (c) 2004 Shawn Taras, All rights reserved.
+;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
+;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
+;;  See COPYING for terms and conditions of using this software
+;;
+;; $Id: kahua-objview,v 1.1 2004/03/02 02:36:12 shiro Exp $
+
+;; Requires:
+;;  Gauche-gl
+;;  Gauche-gtk with --enable-glgd-pango
+;;  Kahua
+
+;; History:
+;;  Shawn Taras wrote GUI part.
+;;  Shiro Kawai adapted it to work with actual kahua-web db.
+
+(use srfi-1)
+(use srfi-2)
+(use srfi-13)
+(use gauche.charconv)
+(use gauche.parseopt)
+(use gauche.sequence)
+(use gauche.parameter)
+(use file.util)
+(use util.list)
+(use gtk)
+(use gtk.gtkgl)
+(use gtk.glgd)
+(use gl)
+(use kahua)
+
+(define (usage)
+  (print "kahua-objview [-c config] database-name")
+  (exit 0))
+
+(define (main args)
+  (gtk-init args)
+  (let-args (cdr args) ((conf-file "c=s")
+                        . args)
+    (unless (= (length args) 1) (usage))
+    (kahua-init conf-file)
+    (db-init (car args))
+    (run-app))
+  0)
+
+;;================================================================
+;; Database bridge
+;;
+
+;; NB: we don't want to have persistent <page-data> definition
+;; here, since the persistent definition can be changed.
+;; Instead we use metainfo API to retrieve slot values.
+
+(define (obtain-persistent-class dbname classname)
+  (or (and-let* ((def (with-db (db dbname)
+                        (kahua-persistent-class-definition classname)))
+                 (insulator (make-module #f)))
+        (eval '(use kahua) insulator)
+        (eval def insulator)
+        (eval classname insulator))
+      (error "No such class in the database: ~a" classname)))
+
+;; In-memory image of page data
+(define-class <page> ()
+  ((id       :init-keyword :id       :init-value #f)
+   (key      :init-keyword :key      :init-value "/"
+             :presentation 'label    :presentation-title "Page path"
+             :persistent-name 'name)
+   (basename :init-keyword :basename :init-value "New Page"
+             :presentation 'text     :presentation-title "Page name"
+             :multiedit #f)
+   (content  :init-keyword :content  :init-value ""
+             :presentation 'textarea :presentation-title "Content"
+             :persistent-name 'content
+             :multiedit #f)
+   (ctime    :init-keyword :ctime    :init-value (sys-time)
+             :presentation 'time     :presentation-title "Created at"
+             :persistent-name 'ctime
+             :multiedit #t)
+   (cuser    :init-keyword :cuser    :init-value #f
+             :presentation 'text     :presentation-title "Craeted by"
+             :persistent-name 'cuser
+             :multiedit #t)
+   (mtime    :init-keyword :mtime    :init-value (sys-time)
+             :presentation 'time     :presentation-title "Modified at"
+             :persistent-name 'mtime
+             :multiedit #t)
+   (muser    :init-keyword :muser    :init-value #f
+             :presentation 'text     :presentation-title "Modified by"
+             :persistent-name 'muser
+             :multiedit #t)
+   (hidden   :init-keyword :hidden   :init-value #f
+             :persistent-name 'hidden)
+   (children :init-keyword :children)
+   (links    :init-keyword :links)
+   (dirty    :init-value #f)
+   (touched  :init-value #f)
+   ))
+
+;; called by edit-dialog-detach
+;; if 'value' is not valid for slot, returns a string that describes
+;; the reason.  if 'value' is valid, returns #f.
+(define-method edit-value-invalid? ((obj <page>) slot value)
+  (case slot
+    ((basename)
+     (and (or (not value) (string-null? value))
+          "Page name must not be null"))
+    (else #f)))
+
+;; called by edit-dialog-detach
+;; after editted values are set, this method is called to set up
+;; othe parts of objects.  return value doesn't matter.
+(define-method post-edit ((obj <page>))
+  (unless (equal? (sys-basename (ref obj 'key)) (ref obj 'basename))
+    (set! (ref obj 'key)
+          (build-path (sys-dirname (ref obj 'key))
+                      (ref obj 'basename)))
+    (app-refresh (the-app))))
+                                   
+
+(define-class <db> ()
+  ((name     :init-keyword :name)
+   (pclass   :init-keyword :pclass)
+   (pages    :init-keyword :pages)
+   (deleted-pages :init-value '())
+   ))
+
+(define the-db (make-parameter #f))
+
+(define-method write-object ((page <page>) port)
+  (format port "#<<page> ~a>" (ref page 'key)))
+
+(define-method mark-dirty! ((self <page>))
+  (set! (ref self 'dirty) #t))
+(define-method clear-dirty! ((self <page>))
+  (set! (ref self 'dirty) #f))
+
+(define-method page-delete! ((self <page>))
+  (set! (ref self 'hidden) #t)
+  (push! (ref (the-db) 'deleted-pages) self))
+
+(define-method db-dirty? ((db <db>))
+  (or (not (null? (ref db 'deleted-pages)))
+      (not (not (find (cut ref <> 'dirty) (ref db 'pages))))))
+
+;; Read kahua-web contents and creates an in-memory copy
+(define (db-init dbname)
+
+  (define (page-data->page data)
+    (make <page>
+      :id (ref data 'id) :key (ref data 'name)
+      :basename (sys-basename (ref data 'name))
+      :content (ref data 'content) :children '() :links '()
+      :hidden (safe-ref data 'hidden)
+      :ctime (safe-ref data 'ctime) :cuser (safe-ref data 'cuser)
+      :mtime (safe-ref data 'mtime) :muser (safe-ref data 'muser)))
+  
+  (define (safe-ref obj slot)
+    (and (slot-exists? obj slot)
+         (slot-bound? obj slot)
+         (slot-ref obj slot)))
+
+  ;; main body of db-init
+  (with-db (db dbname)
+    (let* ((<page-data> (obtain-persistent-class dbname '<page-data>))
+           (pages (map page-data->page (make-kahua-collection <page-data>)))
+           (db (make <db> :name dbname :pclass <page-data>)))
+      (the-db (db-setup-data db pages))))
+  )
+
+(define (db-setup-data db pages)
+
+  (define (setup-links page all)
+    (let* ((kstr #`",(ref page 'key)/")
+           (kstrlen (string-length kstr)))
+      (set! (ref page 'children)
+            (map (cut ref <> 'key)
+                 (filter (lambda (p)
+                           (let1 k (ref p 'key)
+                             (and (string-prefix? kstr k)
+                                  (not (string-scan (string-drop k kstrlen)
+                                                    #\/)))))
+                         all)))
+      (set! (ref page 'links)
+            (scan-links (ref page 'key) (ref page 'content) all))
+      page))
+
+  (define (scan-links self content all)
+    (let loop ((content content)
+               (links '()))
+      (cond ((#/\[\[(.*?)\]\]/ content)
+             => (lambda (m)
+                  (let ((link (normalize-link self (m 1))))
+                    (if (ensure-link link all)
+                      (loop (m 'after) (cons link links))
+                      (loop (m 'after) links)))))
+            (else (reverse! links)))))
+
+  (define (normalize-link self link)
+    (cond ((string-prefix? "/" link) link)
+          ((string-prefix? "$/" link)
+           (build-path self (string-drop link 2)))
+          ((string-prefix? "./" link)
+           (build-path (sys-dirname self) (string-drop link 2)))
+          ((string-prefix? "../" link)
+           (simplify-path (build-path (sys-dirname self) link)))
+          (else
+           (build-path (sys-dirname self) link))))  
+
+  (define (ensure-link link all)
+    (find (lambda (p) (equal? (ref p 'key) link)) all))
+
+  (let1 active-pages (filter (lambda (x) (not (ref x 'hidden))) pages)
+    (set! (ref db 'pages)
+          (map (cut setup-links <> active-pages) active-pages)))
+  db)
+
+;; commit any changes
+(define (db-commit)
+  (define (page-save page obj)
+    (for-each
+     (lambda (slot)
+       (and-let* ((ps (slot-definition-option slot :persistent-name #f)))
+         (set! (ref obj ps) (ref page (slot-definition-name slot)))))
+     (class-slots (class-of page)))
+    (clear-dirty! page))
+
+  (define (page-create page)
+    (let1 obj (make (ref (the-db) 'pclass))
+      (page-save page obj)
+      (set! (ref page 'id) (ref obj 'id))
+      (clear-dirty! page)))
+  
+  (let1 modified (append (filter (cut ref <> 'dirty) (ref (the-db) 'pages))
+                         (ref (the-db) 'deleted-pages))
+    (unless (null? modified)
+      (with-db (db (ref (the-db) 'name))
+        (let1 objs (make-kahua-collection (ref (the-db) 'pclass))
+          (dolist (page modified)
+            (cond
+             ((find (lambda (obj) (equal? (ref page 'id) (ref obj 'id)))
+                    objs)
+              => (cut page-save page <>))
+             (else
+              (page-create page))))))
+      (set! (ref (the-db) 'deleted-pages) '()))
+    ))
+
+;;================================================================
+;; Graphical application
+;;
+
+(define-constant GLGD_TRACE_LEVEL 0)
+(define-constant KAHUA_DATA_DUMP 0)
+(define-constant KAHUA_DATA_NODE 1)
+(define-constant PANGO_FONT_BOLD 0)
+(define-constant GRAPH_WINDOWWIDTH 800)
+(define-constant GRAPH_WINDOWHEIGHT 600)
+(define-constant MULTIEDIT_WIDTH 400)
+(define-constant MULTIEDIT_HEIGHT 130)
+(define-constant TEXTAREA_HEIGHT 200)
+
+;; conversion
+;;  cv-out str  to display string in gtk widget.
+;;  cv-in str   to read string from gtk widget.
+(define (cv-out str) (if str (ces-convert str #f "utf8") ""))
+(define (cv-in str)  (ces-convert str "utf8" #f))
+
+;; time formatter
+(define (format-time time)
+  (sys-strftime "%Y/%m/%d %H:%M:%S" (sys-localtime time)))
+
+(define (table-title-add table label l r t b xalign yalign)
+  (let1 frame (gtk-frame-new #f)
+    (gtk-frame-set-shadow-type frame GTK_SHADOW_ETCHED_OUT)
+    (gtk-container-set-border-width frame 1)
+    (let1 label (gtk-label-new label)
+      (gtk-misc-set-alignment label xalign yalign)
+      (gtk-container-add frame label)
+      (gtk-widget-show label))
+    (gtk-table-attach-defaults table frame l r t b)
+    (gtk-widget-show frame))
+  )
+
+(define (table-field-add table label l r t b)
+  (let1 frame (gtk-frame-new #f)
+    (gtk-frame-set-shadow-type frame GTK_SHADOW_ETCHED_OUT)
+    (gtk-container-set-border-width frame 1)
+    (gtk-misc-set-alignment label 0.5 0.5)
+    (gtk-container-add frame label)
+    (gtk-widget-show label)
+    (gtk-table-attach-defaults table frame l r t b)
+    (gtk-widget-show frame))
+  )
+
+;;-----------------------------------------------------------
+;; Application main widget
+;;
+
+(define the-app (make-parameter #f)) ;; <app-objview> singleton
+
+(define-class <app-objview> () ;; application
+  ((window)     ;; <gtk-window> : toplevel window
+   (graph)      ;; <glgd-graph> : graph
+   (graph-pane) ;; <gtk-drawing-area>
+   (menu-bg)    ;; popup menu
+   (edit-dialog) ;; <edit-dialog>
+   (normal-cursor :init-form (gdk-cursor-new GDK_LEFT_PTR));; <gdk-cursor>
+   (pick-cursor   :init-form (gdk-cursor-new GDK_HAND1))   ;; <gdk-cursor>
+   (ctrl-held  :init-value #f)
+   (shift-held :init-value #f)
+   (select-cont :init-value #f) ;; continuation procs for special action
+   (cancel-cont :init-value #f) ;; ditto
+   ))
+
+(define-method initialize ((app <app-objview>) initargs)
+  (next-method)
+  (let* ((glconfig (app-gl-config))
+         (window (gtk-window-new GTK_WINDOW_TOPLEVEL)))
+    (set! (ref app 'window) window)
+    (gtk-window-set-title window "Kahua-web object browser")
+    (g-signal-connect window "delete_event" (lambda _ (gtk-main-quit)))
+    (let1 vbox (gtk-vbox-new #f 0)
+      (gtk-container-add window vbox)
+      (gtk-widget-show vbox)
+
+      ;; Drawing area for drawing OpenGL scene ----------
+      (let1 drawing-area (build-graph-pane app glconfig)
+        (gtk-widget-set-size-request drawing-area
+                                     GRAPH_WINDOWWIDTH GRAPH_WINDOWHEIGHT)
+        (gtk-box-pack-start vbox drawing-area #t #t 0)
+        (set! (ref app 'graph-pane) drawing-area)
+        (gtk-widget-show drawing-area))
+
+      ;; Simple quit button -----------------------------
+      (let1 button (gtk-button-new-with-label "Quit")
+        (gtk-box-pack-start vbox button #f #f 0)
+        (g-signal-connect button "clicked" (lambda _ (app-exit app)))
+        (gtk-widget-show button)))
+
+    (set! (ref app 'menu-bg)  (make <menu-bg>))
+    (set! (ref app 'edit-dialog) (make <edit-dialog> :class <page>))
+    ))
+
+(define-method app-show ((app <app-objview>))
+  (gtk-widget-show (ref app 'window)))
+
+(define-method app-initiate-pick ((app <app-objview>)
+                                  select-cont cancel-cont)
+  (define (reset-cursor)
+    (gdk-window-set-cursor (ref (ref app 'window) 'window)
+                           (ref app 'normal-cursor)))
+  (gdk-window-set-cursor (ref (ref app 'window) 'window)
+                         (ref app 'pick-cursor))
+  (set! (ref app 'select-cont)
+        (lambda (node link event)
+          (reset-cursor)
+          (set! (ref app 'select-cont) #f)
+          (when select-cont (select-cont node link event))))
+  (set! (ref app 'cancel-cont)
+        (lambda (node link event)
+          (reset-cursor)
+          (set! (ref app 'cancel-cont) #f)
+          (when cancel-cont (cancel-cont node link event))))
+  #f)
+
+(define-method app-refresh ((app <app-objview>))
+  (db-setup-data (the-db) (ref (the-db) 'pages))
+  (glgd-graph-fini (ref app 'graph))
+  (graph-build (ref app 'graph) (ref (the-db) 'pages))
+  (glgd-graph-connect (ref app 'graph)
+                      (ref app 'window)
+                      (ref app 'graph-pane)))
+
+(define (app-gl-config)
+  (unless (gdk-gl-query-extension)
+    (error "*** OpenGL is not supported."))
+  (or (gdk-gl-config-new-by-mode (logior GDK_GL_MODE_RGB
+                                         GDK_GL_MODE_DEPTH
+                                         GDK_GL_MODE_DOUBLE))
+      (gdk-gl-config-new-by-mode (logior GDK_GL_MODE_RGB
+                                         GDK_GL_MODE_DEPTH))
+      (error "*** No appropriate OpenGL-capable visual found.")))
+
+(define-method app-edit-node ((app <app-objview>))
+  (and-let* ((dialog (ref app 'edit-dialog))
+             (graph  (ref app 'graph))
+             (nodes (graph-selection-get graph))
+             (pages (filter-map glgd-node-data-get nodes))
+             ((not (null? pages))))
+    (if (> (length pages) 1)
+      (edit-dialog-attach-multi dialog pages)
+      (edit-dialog-attach dialog (car pages)))
+    (app-edit-dialog-handle app dialog (lambda () #t))))
+
+(define-method app-new-node ((app <app-objview>))
+  (let* ((page   (make <page>))
+         (dialog (ref app 'edit-dialog))
+         (cont   (lambda ()
+                   (push! (ref (the-db) 'pages) page)
+                   (app-refresh app))))
+    (edit-dialog-attach dialog page)
+    (app-edit-dialog-handle app dialog cont)))
+
+(define-method app-edit-dialog-handle ((app <app-objview>) dialog cont)
+  (let loop ((response (gtk-dialog-run dialog)))
+    (when (= response GTK_RESPONSE_ACCEPT)
+      (let1 r (edit-dialog-detach dialog)
+        (if r
+          (let* ((info (gtk-dialog-new-with-buttons "Invalid data"
+                                                    (ref app 'window)
+                                                    GTK_DIALOG_MODAL
+                                                    GTK_STOCK_OK
+                                                    GTK_RESPONSE_OK))
+                 (label (gtk-label-new r)))
+            (gtk-container-add (ref info 'vbox) label)
+            (gtk-misc-set-padding label 30 30)
+            (gtk-widget-show label)
+            (gtk-dialog-run info)
+            (gtk-widget-destroy info)
+            (loop (gtk-dialog-run dialog)))
+          (cont))))
+    (gtk-widget-hide dialog)))
+
+(define-method app-delete-node ((app <app-objview>))
+  (let* ((confirm (gtk-dialog-new-with-buttons "Delete confirm"
+                                               (ref app 'window)
+                                               GTK_DIALOG_MODAL
+                                               GTK_STOCK_CANCEL
+                                               GTK_RESPONSE_NONE
+                                               GTK_STOCK_OK
+                                               GTK_RESPONSE_OK))
+         (label (gtk-label-new "Are you sure to delete selected page(s)?")))
+    (gtk-container-add (ref confirm 'vbox) label)
+    (gtk-misc-set-padding label 30 30)
+    (gtk-widget-show label)
+    (let1 res (gtk-dialog-run confirm)
+      (gtk-widget-destroy confirm)
+      (when (eqv? res GTK_RESPONSE_OK)
+        (graph-delete-selected (ref app 'graph))))))
+
+(define-method app-exit ((app <app-objview>))
+  (if (not (db-dirty? (the-db)))
+    (gtk-main-quit)
+    (let* ((confirm (gtk-dialog-new-with-buttons "Quit confirm"
+                                                 (ref app 'window)
+                                                 GTK_DIALOG_MODAL
+                                                 GTK_STOCK_CANCEL
+                                                 GTK_RESPONSE_REJECT
+                                                 GTK_STOCK_QUIT
+                                                 GTK_RESPONSE_OK))
+           (label (gtk-label-new "Change(s) are not committed.  Are you sure to quit?")))
+      (gtk-container-add (ref confirm 'vbox) label)
+      (gtk-misc-set-padding label 30 30)
+      (gtk-widget-show label)
+      (let1 res (gtk-dialog-run confirm)
+        (gtk-widget-destroy confirm)
+        (when (eqv? res GTK_RESPONSE_OK)
+          (gtk-main-quit))))))
+
+;;----------------------------------------------------------------------
+;; Editor dialog
+;;
+
+;; <edit-field> represents one field of editing area
+;; It will be rendered within a cell of a table.
+;; Must respond the following methods.
+;;   (edit-field-set! <edit-field> value)   - set value
+;;   (edit-field-get <edit-field)           - get value
+;;   (edit-field-disable-set! <edit-field> flag)
+
+(define-class <edit-field> (<gtk-frame>)
+  (hbox
+   multiedit  ;; can be used for multi-edit
+   ))
+
+(define-method initialize ((self <edit-field>) initargs)
+  (next-method)
+  (gtk-frame-set-shadow-type self GTK_SHADOW_ETCHED_OUT)
+  (gtk-container-set-border-width self 1)
+  (let1 hbox (gtk-hbox-new #f 0)
+    (gtk-container-add self hbox)
+    (set! (ref self 'hbox) hbox)
+    ))
+
+(define-method edit-field-disable-set! ((self <edit-field>) flag)
+  (gtk-widget-set-sensitive (ref self 'hbox) (not flag)))
+
+(define (presentation->field-class ptype)
+  (case ptype
+    ((text)     <edit-field-text>)
+    ((label)    <edit-field-label>)
+    ((time)     <edit-field-time>)
+    ((textarea) <edit-field-textarea>)
+    (else       <edit-field-label>) ;; fallback
+    ))
+
+;; Label field (read only)...................................
+(define-class <edit-field-label> (<edit-field>)
+  (label))
+
+(define-method initialize ((self <edit-field-label>) initargs)
+  (next-method)
+  (let1 label (gtk-label-new "")
+    (set! (ref self 'label) label)
+    (gtk-misc-set-padding label 0 4)
+    (gtk-box-pack-start (ref self 'hbox) label #t #t 3))
+  )
+
+(define-method edit-field-set! ((self <edit-field-label>) value)
+  (gtk-label-set-text (ref self 'label)
+                      (if value (cv-out (x->string value)) "")))
+
+(define-method edit-field-get ((self <edit-field-label>))
+  (let1 s (cv-in (gtk-label-get-text (ref self 'label)))
+    (if (string-null? s) #f s)))
+
+;; Text edit field ...........................................
+(define-class <edit-field-text> (<edit-field>)
+  (entry))
+
+(define-method initialize ((self <edit-field-text>) initargs)
+  (next-method)
+  (let1 entry (gtk-entry-new)
+    (gtk-entry-set-max-length entry 80)
+    (set! (ref self 'entry) entry)
+    (gtk-box-pack-start (ref self 'hbox) entry #t #t 3))
+  )
+
+(define-method edit-field-set! ((self <edit-field-text>) value)
+  (gtk-entry-set-text (ref self 'entry)
+                      (if value (cv-out (x->string value)) "")))
+
+(define-method edit-field-get ((self <edit-field-text>))
+  (let1 s (cv-in (gtk-entry-get-text (ref self 'entry)))
+    (if (string-null? s) #f s)))
+
+;; Textarea edit field .......................................
+(define-class <edit-field-textarea> (<edit-field>)
+  (textview))
+
+(define-method initialize ((self <edit-field-textarea>) initargs)
+  (next-method)
+  (let ((scroll (gtk-scrolled-window-new #f #f))
+        (view (gtk-text-view-new)))
+    (set! (ref self 'textview) view)
+    (gtk-container-add scroll view)
+    (gtk-scrolled-window-set-policy scroll
+                                    GTK_POLICY_AUTOMATIC
+                                    GTK_POLICY_AUTOMATIC)
+    (gtk-widget-set-size-request scroll -1 TEXTAREA_HEIGHT)
+    (gtk-box-pack-start (ref self 'hbox) scroll #t #t 3))
+  )
+
+(define-method edit-field-set! ((self <edit-field-textarea>) value)
+  (let* ((buffer (gtk-text-view-get-buffer (ref self 'textview)))
+         (s (if value (cv-out (x->string value)) "")))
+    (gtk-text-buffer-set-text buffer s (string-size s))))
+
+(define-method edit-field-get ((self <edit-field-textarea>))
+  (let* ((buffer (gtk-text-view-get-buffer (ref self 'textview)))
+         (start  (gtk-text-buffer-get-start-iter buffer))
+         (end    (gtk-text-buffer-get-end-iter buffer)))
+    (cv-in (gtk-text-buffer-get-text buffer start end #f))))
+
+;; Time edit field ...........................................
+(define-class <edit-field-time> (<edit-field>)
+  (year month day hour minute))
+
+(define-method initialize ((self <edit-field-time>) initargs)
+  (next-method)
+  (let1 bbox (gtk-hbox-new #f 0)
+    (define (spinner name val lo hi stepi pagei)
+      (let1 box (gtk-vbox-new #f 0)
+        (gtk-box-pack-start bbox box #t #t 4)
+        (let* ((adj (gtk-adjustment-new val lo hi stepi pagei 0.0))
+               (spinner (gtk-spin-button-new adj 0 0)))
+          (gtk-spin-button-set-wrap spinner #t)
+          (gtk-spin-button-set-numeric spinner #t)
+          (when (eq? name 'year) (gtk-widget-set-size-request spinner 55 -1))
+          (set! (ref self name) spinner)
+          (gtk-box-pack-start box spinner #f #t 0))))
+    (gtk-box-pack-start (ref self 'hbox) bbox #t #t 5)
+    (spinner 'year    1900.0 0.0 2200.0 1.0 100.0)
+    (spinner 'month   1.0 1.0 12.0 1.0 5.0)
+    (spinner 'day     1.0 1.0 31.0 1.0 5.0)
+    (spinner 'hour    12.0 0.0 23.0 1.0 5.0)
+    (spinner 'minute  0.0 0.0 59.0 1.0 5.0)
+    ))
+
+(define-method edit-field-set! ((self <edit-field-time>) value)
+  (let* ((v  (or value (sys-time)))
+         (tm (sys-localtime v)))
+    (gtk-spin-button-set-value (ref self 'year) (+ 1900 (ref tm 'year)))
+    (gtk-spin-button-set-value (ref self 'month) (+ 1 (ref tm 'mon)))
+    (gtk-spin-button-set-value (ref self 'day) (ref tm 'mday))
+    (gtk-spin-button-set-value (ref self 'hour) (ref tm 'hour))
+    (gtk-spin-button-set-value (ref self 'minute) (ref tm 'min)))
+  )
+
+(define-method edit-field-get ((self <edit-field-time>))
+  (let ((tm (sys-localtime 0)))
+    (slot-set! tm 'sec 0)
+    (slot-set! tm 'min (gtk-spin-button-get-value-as-int (ref self 'minute)))
+    (slot-set! tm 'hour (gtk-spin-button-get-value-as-int (ref self 'hour)))
+    (slot-set! tm 'mday (gtk-spin-button-get-value-as-int (ref self 'day)))
+    (slot-set! tm 'mon (- (gtk-spin-button-get-value-as-int (ref self 'month))
+                          1))
+    (slot-set! tm 'year (- (gtk-spin-button-get-value-as-int (ref self 'year))
+                           1900))
+    (sys-mktime tm)))
+
+;; Edit dialog ................................................
+(define-class <edit-dialog> (<gtk-dialog>)
+  ((class  :init-keyword :class)
+   (fields :init-value '())
+   (obj    :init-value #f)
+   ))
+
+(define-method initialize ((self <edit-dialog>) initargs)
+  (next-method)
+  (unless (slot-bound? self 'class)
+    (error "<edit-dialog> requires :class to be given at initialize time"))
+  (gtk-container-set-border-width self 2)
+  (gtk-dialog-add-button self GTK_STOCK_CANCEL GTK_RESPONSE_REJECT)
+  (gtk-dialog-add-button self GTK_STOCK_OK     GTK_RESPONSE_ACCEPT)
+  (let* ((pslots (filter (cut slot-definition-option <> :presentation #f)
+                         (class-slots (ref self 'class))))
+         (table (gtk-table-new (length pslots) 4 #f)))
+    (gtk-box-pack-start (ref self 'vbox) table #t #t 0)
+    (for-each-with-index
+     (lambda (index slot)
+       (let* ((ptype (slot-definition-option slot :presentation #f))
+              (ptitle (or (slot-definition-option slot :presentation-title #f)
+                          (x->string (slot-definition-name slot))))
+              (field (make (presentation->field-class ptype)))
+              )
+         (table-title-add table ptitle 0 1 index (+ index 1) 1.0 0.5)
+         (set! (ref field 'multiedit)
+               (slot-definition-option slot :multiedit #f))
+         (gtk-table-attach-defaults table field 1 4 index (+ index 1))
+         (push! (ref self 'fields)
+                (cons (slot-definition-name slot) field))))
+     pslots)
+    (gtk-widget-show-all table))
+  )
+
+(define-method edit-dialog-attach ((self <edit-dialog>) obj)
+  (set! (ref self 'obj) obj)
+  (for-each (lambda (field)
+              (edit-field-set! (cdr field) (ref obj (car field)))
+              (edit-field-disable-set! (cdr field) #f))
+            (ref self 'fields)))
+
+(define-method edit-dialog-attach-multi ((self <edit-dialog>) objs)
+  (set! (ref self 'obj) objs)
+  (for-each (lambda (field)
+              (edit-field-set! (cdr field) #f)
+              (edit-field-disable-set! (cdr field)
+                                       (not (ref (cdr field) 'multiedit))))
+            (ref self 'fields)))
+
+;; Returns a string if value in the dialog is not valid.
+;; Returns #f if everything is ok.
+(define-method edit-dialog-detach ((self <edit-dialog>))
+  (and-let* ((obj (ref self 'obj)))
+    (let* ((multi? (list? obj))
+           (objs   (if multi? obj (list obj)))
+           (fields (if multi?
+                     (filter (lambda (p) (ref (cdr p) 'multiedit))
+                             (ref self 'fields))
+                     (ref self 'fields)))
+           (vals   (map (lambda (f) (edit-field-get (cdr f))) fields)))
+      (or (any (lambda (o)
+                 (any (lambda (f v) (edit-value-invalid? o (car f) v))
+                      fields vals))
+               objs)
+          (begin
+            (dolist (o objs)
+              (let1 dirty #f
+                (for-each (lambda (f v)
+                            (unless (equal? v (ref o (car f)))
+                              (slot-set! o (car f) v)
+                              (set! dirty #t)))
+                          fields vals)
+                (when dirty (mark-dirty! o) (post-edit o))))
+            #f)))))
+
+;;----------------------------------------------------------------
+;; Background menu functions
+;;
+(define-class <menu-bg> (<gtk-menu>)
+  ((edit-data) ;; menu-item
+   (reparent)  ;; menu-item
+   (commit)    ;; menu-item
+   (delete)    ;; menu-item
+   ))
+
+(define-method initialize ((self <menu-bg>) initargs)
+  (next-method)
+  (menu-bg-initialize self))
+
+(define (menu-bg-initialize menu)
+  (define (menu-cb-frame-all event . _)
+    (glgd-graph-frame (ref (the-app) 'graph)) #t)
+
+  (define (menu-cb-new-node event . _)
+    (graph-selection-clear (ref (the-app) 'graph))
+    (app-new-node (the-app))
+    #f)
+
+  (define (menu-cb-edit-data event . _)
+    (app-edit-node (the-app))
+    #t)
+
+  (define (menu-cb-reparent event . _)
+    (app-initiate-pick (the-app)
+                       (lambda (node select event)
+                         (graph-reparent (ref (the-app) 'graph) node))
+                       #f)
+    #t)
+
+  (define (menu-cb-save event . _)
+    (db-commit) #t)
+
+  (define (menu-cb-delete event . _)
+    (app-delete-node (the-app))
+    #t)
+
+  (let1 menu-item (gtk-menu-item-new-with-label "Frame all")
+    (gtk-menu-shell-append menu menu-item)
+    (g-signal-connect menu-item "activate" menu-cb-frame-all)
+    (gtk-widget-show menu-item))
+  (let1 separator (gtk-separator-menu-item-new)
+    (gtk-menu-shell-append menu separator)
+    (gtk-widget-show separator))
+  (let1 menu-item (gtk-menu-item-new-with-label "New node...")
+    (gtk-menu-shell-append menu menu-item)
+    (g-signal-connect menu-item "activate" menu-cb-new-node)
+    (gtk-widget-show menu-item))
+  (let1 menu-item (gtk-menu-item-new-with-label "Edit data...")
+    (gtk-menu-shell-append menu menu-item)
+    (set! (ref menu 'edit-data) menu-item)
+    (g-signal-connect menu-item "activate" menu-cb-edit-data)
+    (gtk-widget-set-sensitive menu-item #f)
+    (gtk-widget-show menu-item))
+  (let1 menu-item (gtk-menu-item-new-with-label "Reparent")
+    (gtk-menu-shell-append menu menu-item)
+    (set! (ref menu 'reparent) menu-item)
+    (g-signal-connect menu-item "activate" menu-cb-reparent)
+    (gtk-widget-set-sensitive menu-item #f)
+    (gtk-widget-show menu-item))
+  (let1 separator (gtk-separator-menu-item-new)
+    (gtk-menu-shell-append menu separator)
+    (gtk-widget-show separator))
+  (let1 menu-item (gtk-menu-item-new-with-label "Commit Changes")
+    (gtk-menu-shell-append menu menu-item)
+    (set! (ref menu 'commit) menu-item)
+    (g-signal-connect menu-item "activate" menu-cb-save)
+    (gtk-widget-set-sensitive menu-item #f)
+    (gtk-widget-show menu-item))
+  (let1 separator (gtk-separator-menu-item-new)
+    (gtk-menu-shell-append menu separator)
+    (gtk-widget-show separator))
+  (let1 menu-item (gtk-menu-item-new-with-label "Delete selected")
+    (gtk-menu-shell-append menu menu-item)
+    (set! (ref menu 'delete) menu-item)
+    (g-signal-connect menu-item "activate" menu-cb-delete)
+    (gtk-widget-set-sensitive menu-item #f)
+    (gtk-widget-show menu-item))
+  #t)
+
+(define-method menu-popup ((self <menu-bg>) event)
+  (let* ((graph (ref (the-app) 'graph))
+         (nsels (glgd-graph-node-select-count graph)))
+    (gtk-widget-set-sensitive (ref self 'edit-data) (> nsels 0))
+    (gtk-widget-set-sensitive (ref self 'reparent)  (> nsels 0))
+    (gtk-widget-set-sensitive (ref self 'delete)    (> nsels 0))
+    )
+  (gtk-widget-set-sensitive (ref self 'commit) (db-dirty? (the-db)))
+  (gtk-menu-popup self #f #f #f (ref event 'button) (ref event 'time)))
+
+;;----------------------------------------------------------
+;; <glgdGraph> callback functions
+;;
+(define (key-callback graph node link event)
+  (when (= (ref event 'type) GDK_KEY_PRESS)
+    (let1 kv (ref event 'keyval)
+      (cond
+       ((= kv GDK_Escape) (app-exit (the-app)))
+       ((= kv GDK_Control_L) (set! (ref (the-app) 'ctrl-held) #t))
+       ((= kv GDK_Control_R) (set! (ref (the-app) 'ctrl-held) #t))
+       ((= kv GDK_Shift_L) (set! (ref (the-app) 'shift-held) #t))
+       ((= kv GDK_Shift_R) (set! (ref (the-app) 'shift-held) #t)))))
+  (when (= (ref event 'type) GDK_KEY_RELEASE)
+    (let1 kv (ref event 'keyval)
+      (cond
+       ((= kv GDK_Control_L) (set! (ref (the-app) 'ctrl-held) #f))
+       ((= kv GDK_Control_R) (set! (ref (the-app) 'ctrl-held) #f))
+       ((= kv GDK_Shift_L) (set! (ref (the-app) 'shift-held) #f))
+       ((= kv GDK_Shift_R) (set! (ref (the-app) 'shift-held) #f)))))
+  #t)
+
+(define (mouse-right-callback graph node link event)
+  (when (= (ref event 'type) GDK_BUTTON_PRESS)
+    (cond ((ref (the-app) 'cancel-cont) => (cut <> node link event)))
+    (menu-popup (ref (the-app) 'menu-bg) event))
+  #t)
+
+(define (mouse-left-callback graph node link event)
+  (when (= (ref event 'type) GDK_BUTTON_PRESS)
+    (cond
+     ((ref (the-app) 'select-cont) => (cut <> node link event))
+     ((or (ref (the-app) 'ctrl-held)
+          (ref (the-app) 'shift-held))
+      (graph-selection-toggle graph node))
+     ((>= (glgd-node-id-get node) 0)
+      (graph-selection-clear graph)
+      (unless (glgd-node-is-selected node) (graph-selection-add graph node)))
+     (else (graph-selection-clear graph))))
+  #t)
+
+(define (mouse-hover-callback graph node link event)
+  (glgd-graph-node-list-flag graph GLGDNODE_FLAG_HILITE GLGD_FLAGOP_CLEAR)
+  (if (= (glgd-graph-link-index graph link) -1)
+    (if (>= (glgd-node-id-get node) -1)
+      (glgd-node-flags-set node GLGDNODE_FLAG_HILITE GLGD_FLAGOP_SET)))
+  #t)
+
+(define (graph-selection-add graph node)
+  (glgd-node-flags-set node GLGDNODE_FLAG_SELECTED GLGD_FLAGOP_SET))
+
+(define (graph-selection-toggle graph node)
+  (glgd-node-flags-set node GLGDNODE_FLAG_SELECTED GLGD_FLAGOP_TOGGLE))
+
+(define (graph-selection-clear graph)
+  (glgd-graph-node-list-flag graph GLGDNODE_FLAG_SELECTED GLGD_FLAGOP_CLEAR))
+
+(define (graph-selection-get graph)
+  (filter-map (lambda (index)
+                (and-let* ((node (glgd-graph-node-by-id graph index))
+                           ((glgd-node-is-selected node)))
+                  node))
+              (iota (glgd-graph-node-count graph))))
+
+(define (graph-delete-selected graph)
+  (let1 nodes (graph-selection-get graph)
+    (unless (null? nodes)
+      (for-each (lambda (node)
+                  (and-let* ((page (glgd-node-data-get node)))
+                    (page-delete! page)))
+                nodes)
+      (graph-selection-clear graph)
+      (app-refresh (the-app)))))
+
+(define (graph-reparent graph node)
+
+  (define (do-reparent parent-key page)
+    (set! (ref page 'key) (build-path parent-key (ref page 'basename)))
+    (mark-dirty! page)
+    (for-each (lambda (child-key)
+                (do-reparent (ref page 'key)
+                             (find (lambda (p) (equal? (ref p 'key) child-key))
+                                   (ref (the-db) 'pages))))
+              (ref page 'children)))
+  
+  (let ((parent    (and node (glgd-node-data-get node)))
+        (selection (graph-selection-get graph)))
+    (cond
+     ((not parent) (graph-selection-clear graph))
+     ((memq node selection)
+      (print "Can't be a parent node of itself."))
+     (else
+      (let1 parent-key (ref parent 'key)
+        (dolist (n selection)
+          (and-let* ((page (glgd-node-data-get n)))
+            (do-reparent parent-key page)))
+        (graph-selection-clear graph)
+        (app-refresh (the-app))))))
+  #f)
+
+;;
+;; Constract node&links from kahua data
+;;
+(define (kahua-record-by-key kahua-data key)
+  (find (lambda (record) (equal? (ref record 'key) key)) kahua-data))
+
+(define (kahua-record-index-by-key kahua-data key)
+  (list-index (lambda (record) (equal? (ref record 'key) key)) kahua-data))
+
+(define (kahua-record-child-count record)
+  (length (ref record 'children)))
+    
+(define (kahua-record-link-count record)
+  (length (ref record 'links)))
+
+(define (kahua-data-touch kahua-data do-touch)
+  (dolist (record kahua-data)
+    (set! (ref record 'touched) do-touch))
+  #t)
+    
+(define (glgd-graph-node-from-kahua graph kahua-data node-id)
+  ;; Add this node to the graph
+  ;; --------------------------
+  (let1 node (glgd-node-create)
+    (let1 label (cv-out (ref (car kahua-data) 'basename))
+      (glgd-node-data-set node (car kahua-data))
+      (glgd-node-info-set node label node-id))
+    (glgd-node-attribute-set node KAHUA_DATA_NODE)
+    (glgd-graph-node-add graph node))
+  
+  ;; Recursively add next node
+  ;; -------------------------
+  (unless (null? (cdr kahua-data))
+    (glgd-graph-node-from-kahua graph (cdr kahua-data) (+ node-id 1)))
+  #t)
+
+(define (glgd-graph-link-from-kahua graph list parent-index parent children)
+  (let1 src-node (glgd-graph-node-by-id graph parent-index)
+    (set! (ref parent 'touched) #t)
+    (dolist (child-key children)
+      (let* ((child-record (kahua-record-by-key (ref (the-db) 'pages) child-key))
+             (child-index (kahua-record-index-by-key (ref (the-db) 'pages) child-key))
+             (dst-node (glgd-graph-node-by-id graph child-index))
+             (link (glgd-link-create)))
+        (glgd-link-set link src-node dst-node)
+        (glgd-graph-link-add graph list link)
+        (set! (ref child-record 'touched) #t)
+        (when (> (length (ref child-record 'children)) 0)
+          (glgd-graph-tree-from-kahua graph list child-record child-index)))))
+  #t)
+
+(define (glgd-graph-tree-from-kahua graph list record record-index)
+  (let* ((parent record)
+         (children (ref record 'children)))
+    (glgd-graph-link-from-kahua graph list record-index parent children))
+  #t)
+  
+(define (glgd-graph-loner-from-kahua graph list record record-index)
+  (let* ((link (glgd-link-create))
+         (src-node (glgd-graph-node-by-id graph record-index)))
+    (glgd-link-set link src-node src-node)
+    (glgd-graph-link-add graph list link))
+  #t)
+
+(define (graph-build graph kahua-data)
+  (glgd-graph-init graph)
+
+  ;; Recursively add all kahua pages to the graph as <glgdNode's>
+  ;; ------------------------------------------------------------
+  (glgd-graph-node-from-kahua graph kahua-data 0)
+  
+  ;; Clear touch flags for kahua-data
+  ;; --------------------------------
+  (kahua-data-touch kahua-data #f)
+
+  ;; First Pass! kahua records with children
+  ;; ---------------------------------------
+  (let* ((records kahua-data)
+         (record-count (length records)))
+    (dotimes (record-index record-count)
+      (unless (eq? (ref (car records) 'touched) #t)
+        (when (> (kahua-record-child-count (car records)) 0)
+          (let* ((list (glgd-link-list-create))
+                 (record (car records)))
+            (glgd-graph-tree-from-kahua graph list record record-index)
+            (glgd-graph-link-list-add graph list))))
+      (set! records (cdr records))))
+  
+  ;; Second Pass! kahua records without children
+  ;; -------------------------------------------
+  (let* ((records kahua-data)
+         (record-count (length records)))
+    (dotimes (record-index record-count)
+      (unless (eq? (ref (car records) 'touched) #t)
+        (unless (> (kahua-record-child-count (car records)) 0)
+          (let* ((list (glgd-link-list-create))
+                 (record (car records)))
+            (glgd-graph-loner-from-kahua graph list record record-index)
+            (glgd-graph-link-list-add graph list))))
+      (set! records (cdr records))))
+
+  (glgd-graph-attribute-set graph KAHUA_DATA_NODE)
+  (glgd-graph-auto-organize graph 0.0 0.0)
+  (glgd-graph-callback-set graph GLGDGRAPH_FN_KEY key-callback)
+  (glgd-graph-callback-set graph GLGDGRAPH_FN_MOUSE_LEFT mouse-left-callback)
+  (glgd-graph-callback-set graph GLGDGRAPH_FN_MOUSE_RIGHT mouse-right-callback)
+  (glgd-graph-callback-set graph GLGDGRAPH_FN_MOUSE_HOVER mouse-hover-callback)
+  (if (> KAHUA_DATA_DUMP 0)
+    (glgd-graph-link-list-dump graph))
+  (if (> PANGO_FONT_BOLD 0)
+    (glgd-graph-flags-set graph GLGDGRAPH_FLAG_PANGOBOLD GLGD_FLAGOP_SET))
+  #t)
+  
+;;----------------------------------------------------------------
+;; Graph pane
+;;
+
+(define (build-graph-pane app glconfig)
+
+  (define (draw widget . _)
+    (let ((glcontext (gtk-widget-get-gl-context widget))
+          (gldrawable (gtk-widget-get-gl-drawable widget)))
+      (when (gdk-gl-drawable-gl-begin gldrawable glcontext)
+        (gl-clear (logior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
+        (glgd-graph-draw (ref (the-app) 'graph))
+        (if (gdk-gl-drawable-is-double-buffered gldrawable)
+          (gdk-gl-drawable-swap-buffers gldrawable)
+          (gl-flush))
+        (gdk-gl-drawable-gl-end gldrawable))
+      #t))
+
+  (define (reshape widget . _)
+    (let* ((glcontext (gtk-widget-get-gl-context widget))
+           (gldrawable (gtk-widget-get-gl-drawable widget))
+           (wsize (ref widget 'allocation))
+           (h (/ (ref wsize 'height) (ref wsize 'width))))
+      (when (gdk-gl-drawable-gl-begin gldrawable glcontext)
+        (gl-viewport 0 0 (ref wsize 'width) (ref wsize 'height))
+        (gdk-gl-drawable-gl-end gldrawable))
+      #t)
+    (glgd-graph-reshape (ref (the-app) 'graph)))
+
+  (define (init widget)
+    (let ((glcontext (gtk-widget-get-gl-context widget))
+          (gldrawable (gtk-widget-get-gl-drawable widget)))
+      (when (gdk-gl-drawable-gl-begin gldrawable glcontext)
+        (gl-light GL_LIGHT0 GL_POSITION '#f32(5.0 5.0 10.0 0.0))
+        (gl-enable GL_CULL_FACE)
+        (gl-enable GL_LIGHTING)
+        (gl-enable GL_LIGHT0)
+        (gl-enable GL_DEPTH_TEST)
+        (gl-enable GL_NORMALIZE)
+        (gdk-gl-drawable-gl-end gldrawable))))
+
+  ;; build-graph-pane
+  (let ((self  (gtk-drawing-area-new))
+        (graph (glgd-graph-create)))
+    (gtk-widget-set-gl-capability self glconfig #f #t GDK_GL_RGBA_TYPE)
+    (gtk-widget-set-events self (logior GDK_EXPOSURE_MASK
+                                        GDK_VISIBILITY_NOTIFY_MASK))
+    (g-signal-connect self "realize" init)
+    (g-signal-connect self "configure_event" reshape)
+    (g-signal-connect self "expose_event" draw)
+    (graph-build graph (ref (the-db) 'pages))
+    (glgd-graph-connect graph (ref app 'window) self)
+    (set! (ref app 'graph) graph)
+    self))
+
+;;----------------------------------------------------------------
+;; GUI application entry
+;;
+(define (run-app)
+  (the-app (make <app-objview>))
+  (app-show (the-app))
+  (gtk-main)
+  (glgd-graph-fini (ref (the-app) 'graph)))
+
+;; Local variables:
+;; mode: scheme
+;; end:
+
