@@ -6,7 +6,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-objview,v 1.5 2004/03/01 03:07:24 shiro Exp $
+;; $Id: kahua-objview,v 1.6 2004/03/01 03:44:00 shiro Exp $
 
 ;; Requires:
 ;;  Gauche-gl
@@ -240,8 +240,11 @@
    (graph)    ;; <glgd-graph> : graph
    (info-win) ;; <info-win> : pop-up information window
    (menu-bg)  ;; popup menu
+   (pick-cursor :init-form (gtk-cursor-new GDK_HAND2)) ;; <gtk-cursor>
    (ctrl-held  :init-value #f)
    (shift-held :init-value #f)
+   (select-cont :init-value #f) ;; continuation procs for special action
+   (cancel-cont :init-value #f) ;; ditto
    ))
 
 (define-method initialize ((app <app-objview>) initargs)
@@ -275,6 +278,10 @@
 
 (define-method app-show ((app <app-objview>))
   (gtk-widget-show (ref app 'window)))
+
+(define-method app-initiate-pick ((app <app-objview>)
+                                  select-cont cancel-cont)
+  )
 
 (define (app-gl-config)
   (unless (gdk-gl-query-extension)
@@ -698,6 +705,7 @@
     (info-edit-show (ref (the-app) 'graph)) #t)
 
   (define (menu-cb-reparent event . _)
+    (initiate-reparent (the-app))
     #t)
 
   (define (menu-cb-expand-all event . _)
