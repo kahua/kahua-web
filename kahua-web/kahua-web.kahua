@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.5 2004/01/23 11:24:19 shiro Exp $
+;; $Id: kahua-web.kahua,v 1.6 2004/01/23 11:30:40 shiro Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -416,20 +416,27 @@
            (textarea (@ (name "content") (rows 20) (cols 60))
                      ,(ref page 'content))
            (br)
-           (input (@ (type "submit") (name "commit") (value "Commit")))
-           (input (@ (type "checkbox") (name "donttouch") (value "on")
-                     (id "donttouch")))
-           (label (@ (for "donttouch")) "Don't update 'Recent Changes'")
-           (input (@ (type "checkbox") (name "addtonews") (value "on")
-                     (id "addtonews")))
-           (label (@ (for "addtonews")) "Add to news item")
+           (div (@ (class "edit-inputs"))
+                (input (@ (type "submit") (name "commit") (value "Commit")))
+                " "
+                (input (@ (type "checkbox") (name "donttouch") (value "on")
+                          (id "donttouch")))
+                (label (@ (for "donttouch")) "Don't update 'Recent Changes'")
+                " "
+                (input (@ (type "checkbox") (name "addtonews") (value "on")
+                          (id "addtonews")))
+                (label (@ (for "addtonews")) "Add to news item")
+                (br)
+                "Change Page Name : "
+                (input (@ (type "entry") (name "changename") (width 20)
+                          (value ,(ref page 'key))))
+                " "
+                (input (@ (type "checkbox") (name "confirmchange") (value "on")
+                          (id "confirmchange")))
+                (label (@ (for "confirmchange")) "I'm sure"))
            (br)
-           "Change Page Name"
-           (input (@ (type "entry") (name "changename") (width 20)
-                     (value ,(ref page 'key))))
-           (input (@ (type "checkbox") (name "confirmchange") (value "on")
-                     (id "confirmchange")))
-           (label (@ (for "confirmchange")) "I'm sure")
+           (div (@ (class "edit-help"))
+                ,@(use-page "/$admin/edit-help"))
            )))
     (standard-page epage)))
 
