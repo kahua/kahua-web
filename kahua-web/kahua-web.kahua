@@ -1,0 +1,311 @@
+;;-*-Scheme-*-
+;; Kahua website
+;;
+;;  Copyright (c) 2003 Scheme Arts, L.L.C., All rights reserved.
+;;  Copyright (c) 2003 Time Intermedia Corporation, All rights reserved.
+;;  See COPYING for terms and conditions of using this software
+;;
+;; $Id: kahua-web.kahua,v 1.1 2004/01/21 13:42:06 shiro Exp $
+
+(use srfi-1)
+(use srfi-2)
+(use srfi-13)
+(use file.util)
+(use util.list)
+(use gauche.logger)
+(use gauche.sequence)
+(use wiliki.format)
+
+(primary-database-name
+ (build-path (ref (kahua-config) 'working-directory) "kahua-web"))
+
+(log-open (kahua-logpath "kahua-web.log"))
+
+;;========================================================
+;; Page-data
+;;
+
+(define-class <page-data> (<kahua-persistent-base>)
+  ((name       :allocation :persistent :init-keyword :name)
+   (content    :allocation :persistent :init-keyword :content
+               :init-value "")
+   (ctime      :allocation :persistent :init-keyword :ctime
+               :init-value (sys-time))
+   (cuser      :allocaiton :persistent :init-keyword :cuser
+               :init-value #f)
+   (mtime      :allocation :persistent :init-keyword :mtime
+               :init-value #f)
+   (muser      :allocation :persistent :init-keyword :muser
+               :init-value #f)
+   (change-log :allocation :persistent :init-keyword :change-log
+               :init-value '())
+   ))
+
+;; pagename -> Maybe <page-data>
+(define (get-page-data pagename)
+  (find (lambda (p) (equal? (ref p 'name) pagename))
+        (make-kahua-collection <page-data>)))
+
+(define (page-data-exists? pagename)
+  (not (not (get-page-data pagename)))) ;; for now
+
+;;========================================================
+;; Page
+;;
+
+(define-class <page> (<wiliki-page>)
+  ((virtual-pages :allocation :class :init-value '())))
+
+(define-class <transient-page> (<page>) ())
+(define-class <persistent-page> (<page>) ())
+
+(define (add-virtual-page! pagename proc)
+  (class-slot-set! <page> 'virtual-pages
+                   (assoc-set! (class-slot-ref <page> 'virtual-pages)
+                               pagename proc)))
+
+(define (lookup-virtual-page pagename)
+  (assoc-ref (class-slot-ref <page> 'virtual-pages) pagename))
+
+;; pagename -> Maybe <wiliki-page>
+(define (get-page pagename)
+  (cond ((lookup-virtual-page pagename) => (cut <> pagename))
+        ((get-page-data pagename)
+         => (lambda (data)
+              (make <persistent-page>
+                :title (base-pagename (ref data 'name))
+                :key   (ref data 'name)
+                :content (ref data 'content)
+                :ctime (ref data 'ctime) :cuser (ref data 'cuser)
+                :mtime (ref data 'mtime) :muser (ref data 'muser))))
+        (else #f)))
+
+(define (save-page page)
+  (when (is-a? page <persistent-page>)
+    (let ((data (or (get-page-data (ref page 'key))
+                    (make <page-data> :name (ref page 'key)))))
+      (set! (ref data 'content) (ref page 'content))
+      (set! (ref data 'mtime) (sys-time))
+      (kahua-db-sync))))
+
+(define (front-page? page)
+  (equal? (ref page 'key) "/"))
+
+;;========================================================
+;; Page paths
+;;
+
+;; Kahua-web's pages can be constructed in hierarchy.
+;; Each page has a name beginning with "/", and have similar
+;; structure like pathnames.
+;; Within the page, wikiname can refer to the other pages
+;; by "relative pathname".
+;;
+;; Note that the page is not a "directory"---there's no real
+;; container in the database, but only a conceptual group of
+;; names.   An unqualified name refers to the page in the
+;; same conceptual directory---that is, "baz" in the page
+;; "/foo/bar" means "/foo/baz", not "/foo/bar/baz".
+;;
+;; The pathname component "." and ".." can be used to point relative
+;; names.  Note that these also works from the conceptual directory
+;; where the page is in, so "./baz" in the page "/foo/bar" is
+;; "/foo/baz", and "../baz" in the page "/foo/bar" is "/baz".
+;;
+;; A special name "$" refers to the page itself.  So "$/baz" in the
+;; page "/foo/bar" means "/foo/bar/baz".
+;;
+;; The name of the top page is "/".
+;; The "parent" page of the top page is the top page itself.
+;; That is, "/a/../.." refers to "/", and "/a/../../b" refers to "/b".
+
+;; Get canonical (absolute) pathname of the page.
+;; Returns #f if pagename is invalid.
+(define (canon-pagename pagename . current)
+  (define (fix-up path) ;; strips leading "/.."
+    (cond ((string-null? path) "/")
+          ((string-prefix? "/.." path) (fix-up (string-drop path 3)))
+          (else path)))
+  (if (absolute-path? pagename)
+    (fix-up (simplify-path pagename))
+    (and-let* ((curpage (get-optional current
+                                      (ref (wiliki:current-page) 'key))))
+      (fix-up (cond ((equal? pagename "$") curpage)
+                    ((string-prefix? "$/" pagename)
+                     (build-path curpage (string-drop pagename 2)))
+                    (else
+                     (build-path (sys-dirname curpage) pagename)))))))
+
+;; Base name to be used for display
+;;  NB: it is arguable that whether we should display the pathname
+;;  component if the pointed page is in different "directory".
+;;  For now, I just take the basename (except the "/").
+(define (base-pagename pagename)
+  (if (equal? pagename "/") "/" (sys-basename pagename)))
+
+;; "/aa/bb/cc" -> '("/" "aa" "bb" "cc")
+;; "/" -> '("/")
+(define (pagename->components pagename)
+  (let1 c (canon-pagename pagename)
+    (and c
+         (if (string=? c "/")
+           (list c)
+           (cons "/" (string-split (string-drop c 1) #\/))))))
+
+;; '("/" "aa" "bb" "cc") => "/aa/bb/cc"
+;; '("/") => "/"
+(define (components->pagename components)
+  (if (null? components)
+    "/" ;; tolerate
+    (string-append "/" (string-join (cdr components) "/"))))
+
+;; Formatting wikiname.
+(define (format-wikiname name)
+  (let1 absname (canon-pagename name)
+    (if absname
+      (if (or (lookup-virtual-page absname)
+              (page-data-exists? absname))
+        `((a/cont (@@ (cont ,show ,@(cdr (string-split absname #\/))))
+                  ,(base-pagename absname)))
+        `(,(base-pagename absname)
+          (a/cont (@@ (cont ,(cut edit-page (make <persistent-page>
+                                              :title absname
+                                              :key absname))))
+                  "?")))
+      (#`"[[,name]]"))))
+
+;; A common routine to format a customizable pane
+(define (use-page pagename)
+  (cond ((get-page pagename) => wiliki:format-content)
+        (else (format-wikiname pagename))))
+
+;;========================================================
+;; Page formatters
+;;
+
+;; +---------------------------------------------------+
+;; |title-pane                                         |
+;; +---------------------------------------------------+
+;; |navigation-pane                  [login]  [search] |
+;; +---------------------------------------------------+
+;; |side-pane |Page Title                              |
+;; |          |                                        |
+;; |          |  contents...                           |
+;; |          |                                        |
+;; :          :                                        :
+;; |          |                                        |
+;; +---------------------------------------------------+
+;; |                   bottom-pane                     |
+;; +---------------------------------------------------+
+
+(define (standard-page page)
+  `((html
+     (head (title "Kahua"
+                  ,(string-join (cdr (pagename->components (ref page 'key)))
+                                "|" 'prefix))
+           (link (@ (rel "stylesheet") (type "text/css")
+                    (href ,(kahua-static-document-url
+                            "kahua-web/kahua-web.css")))))
+     (body
+      (div (@ (id "title-pane")) ,@(use-page "/$admin/title-pane"))
+      ,@(page-navigation page)
+      (hr)
+      (table
+       (@ (id "body-pane"))
+       (tr (td (@ (id "side-pane")) ,@(use-page "/$admin/side-pane"))
+           (td (@ (id "main-pane"))
+               ,@(if (front-page? page) '() `((h1 ,(ref page 'title))))
+               ,@(wiliki:format-content page)
+               (div (@ (id "edit-menu"))
+                    (a/cont (@@ (cont ,(cut edit-page page))) "[Edit]")
+                    "[History]"))
+           ))
+      (hr)
+      (div (@ (id "bottom-pane")) ,@(use-page "/$admin/bottom-pane"))
+      ))))
+
+(define (page-navigation page)
+  ;; ("/" "a" "b") => (() ("a") ("a" "b"))
+  (define (navi-paths pathl)
+    (map-with-index (lambda (ind _) (take (cdr pathl) ind)) pathl))
+  ;; ("/" "a" "b") => ("Home" "a" "b")
+  (define (navi-names pathl)
+    (map (lambda (path) (if (equal? path "/") "Home" path)) pathl))
+  ;; "/a/b" => ["Home" ">" "a" ">" "b"] with appropriate links
+  (define (navi-links pathl)
+    (intersperse " > "
+                 (map (lambda (paths name)
+                        (if (get-page #`"/,(string-join paths \"/\")")
+                          `(a/cont (@@ (cont ,show ,@paths)) ,name)
+                          name))
+                      (navi-paths pathl)
+                      (navi-names pathl))))
+  ;; body
+  `((table
+     (@ (id "navigation-pane"))
+     (tr (td (@ (id "navigation-pane-left"))
+             ,@(navi-links (pagename->components (ref page 'key))))
+         (td (@ (id "navigation-pane-right"))
+             "[login]" "[search]"))))
+  )
+
+(define (redirect-to page)
+  `((html  ;; Needed to make a single SXML node. Will be unnecessary in future.
+     (extra-header (@ (name "Status") (value "302 Moved")))
+     (extra-header (@ (name "Location")
+                      (value ,(kahua-self-uri-full
+                               #`"show,(ref page 'key)")))))))
+
+(let ((formatter (wiliki:formatter)))
+  (set! (ref formatter 'bracket) format-wikiname)
+  )
+
+;;========================================================
+;; Main application
+;;
+
+(define-entry (show :rest page-path)
+  (let ((pagename #`"/,(string-join page-path \"/\")"))
+    (cond ((get-page pagename) => standard-page)
+          (else (standard-page (make-nonexistent-page pagename))))))
+
+;; assumes pagename is canonicalized
+(define (make-nonexistent-page pagename)
+  (make-error-page "Error: nonexistent page"
+                   `(p "ページ" ,pagename "は存在しません")))
+
+(define (make-error-page title body)
+  (make <transient-page> :title title :key "/Error" :content body))
+
+(define (edit-page page)
+  (let1 epage
+      (make <transient-page>
+        :title #`"Editing ,(ref page 'title)" :key (ref page 'key)
+        :content
+        `((form/cont
+           (@@ (cont ,(cut commit-page page)))
+           (textarea (@ (name "content") (rows 20) (cols 60))
+                     ,(ref page 'content))
+           (br)
+           (input (@ (type "submit") (name "commit") (value "Commit")))
+           )))
+    (standard-page epage)))
+
+(define (commit-page page)
+  (let ((content (canon-content (kahua-context-ref "content" ""))))
+    (set! (ref page 'content) content)
+    (save-page page)
+    (redirect-to page)))
+
+;; canonicalize EOL to #\newline
+(define (canon-content content)
+  (string-join (call-with-input-string content port->string-list)
+               "\n" 'suffix))
+
+;;========================================================
+;; initialization
+;;
+   
+(initialize-main-proc show)
+
+

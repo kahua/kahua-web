@@ -1,0 +1,43 @@
+;; -*-Scheme-*-
+;; test kahua-web script.
+;; $Id: test.scm.in,v 1.1 2004/01/21 13:42:06 shiro Exp $
+
+(use srfi-2)
+(use srfi-11)
+(use gauche.test)
+(use gauche.process)
+(use gauche.net)
+(use rfc.uri)
+(use util.list)
+(use text.tree)
+(use file.util)
+(use kahua)
+(use kahua.test.xml)
+(use kahua.test.worker)
+
+(test-start "kahua-web")
+
+(define GOSH "@GOSH@")
+(define KAHUA_SERVER "@KAHUA_SERVER@")
+
+(sys-system "rm -rf _tmp _work")
+(sys-mkdir "_tmp" #o755)
+(sys-mkdir "_work" #o755)
+
+(define *config* "./test.conf")
+
+(kahua-init *config*)
+
+;;------------------------------------------------------------
+;; Run wiki-iki
+(test-section "kahua-server kahua-web.kahua")
+
+(with-worker
+ (w `(,GOSH "-I.." ,KAHUA_SERVER "-c" ,*config*
+            "../kahua-web/kahua-web.kahua"))
+
+ (test* "run kahua-web.kahua" #t (worker-running? w))
+ )
+
+(test-end)
+

@@ -1,0 +1,20 @@
+$Id: README,v 1.1 2004/01/21 13:42:06 shiro Exp $
+
+kahua-web : Kahua-based WiLiKi-like CMS
+
+[Requirements]
+
+Gauche-0.7.3
+WiLiKi-0.5_pre1
+Kahua-0.1.1
+
+[Installation]
+
+  % autoconf
+  % ./configure
+  % make
+  % make check
+  % make install
+
+Then, edit app-servers to add "kahua-web".
+

@@ -1,0 +1,54 @@
+# Makefile for kahua-web
+# $Id: Makefile.in,v 1.1 2004/01/21 13:42:06 shiro Exp $
+
+SHELL       = @SHELL@
+prefix      = @prefix@
+exec_prefix = @exec_prefix@
+bindir      = @bindir@
+libdir      = @libdir@
+srcdir      = @srcdir@
+VPATH       = $(srcdir)
+top_builddir = @top_builddir@
+top_srcdir   = @top_srcdir@
+
+DESTDIR  =
+
+GOSH = @GOSH@
+KAHUA_INSTALL = @KAHUA_INSTALL@
+
+# specify -c ../kahua.conf etc. to give an alternative conf file
+KAHUACONFIG = 
+
+SCRIPTFILES = kahua-web/kahua-web.kahua
+
+STATICFILES = kahua-web/kahua-web.css
+
+CONFIG_GENERATED = Makefile VERSION test/test.scm \
+		   config.log config.status autom4* \
+.PHONY: all check clean distclean install maintainer-clean
+
+all:
+
+check:
+	rm -f test/test.log
+	cd test; $(GOSH) ./test.scm > test.log
+
+clean:
+	rm -rf core *~ kahua-web/*~ test/*~ test/_* test/test.log
+
+install: 
+	$(KAHUA_INSTALL) $(KAHUACONFIG) -t script $(SCRIPTFILES)
+	$(KAHUA_INSTALL) $(KAHUACONFIG) -t static $(STATICFILES)
+
+uninstall :
+	$(KAHUA_INSTALL) -U $(KAHUACONFIG) -t script $(SCRIPTFILES)
+	$(KAHUA_INSTALL) -U $(KAHUACONFIG) -t static $(STATICFILES)
+
+distclean: clean
+	rm -rf $(CONFIG_GENERATED)
+
+maintainer-clean: clean
+	rm -rf $(CONFIG_GENERATED) configure
+
+
+
