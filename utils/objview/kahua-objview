@@ -6,7 +6,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-objview,v 1.3 2004/03/02 09:08:01 shiro Exp $
+;; $Id: kahua-objview,v 1.4 2004/03/02 09:42:17 shiro Exp $
 
 ;; Requires:
 ;;  Gauche-gl
@@ -107,8 +107,12 @@
 (define-method edit-value-invalid? ((obj <page>) slot value)
   (case slot
     ((basename)
-     (and (or (not value) (string-null? value))
-          "Page name must not be null"))
+     (cond ((or (not value) (string-null? value))
+            "Page name must not be null")
+           ((find (lambda (x) (equal? #`"/,value" (ref x 'key)))
+                  (ref (the-db) 'pages))
+            #`"Page path \"/,value\" is not unique")
+           (else #f)))
     (else #f)))
 
 ;; called by edit-dialog-detach
@@ -119,8 +123,8 @@
     (set! (ref obj 'key)
           (build-path (sys-dirname (ref obj 'key))
                       (ref obj 'basename)))
+    (set! (ref obj 'basename) (sys-basename (ref obj 'key)))
     (app-refresh (the-app))))
-                                   
 
 (define-class <db> ()
   ((name     :init-keyword :name)
@@ -408,56 +412,39 @@
     (when (= response GTK_RESPONSE_ACCEPT)
       (let1 r (edit-dialog-detach dialog)
         (if r
-          (let* ((info (gtk-dialog-new-with-buttons "Invalid data"
-                                                    (ref app 'window)
-                                                    GTK_DIALOG_MODAL
-                                                    GTK_STOCK_CLOSE
-                                                    GTK_RESPONSE_OK))
-                 (label (gtk-label-new r)))
-            (gtk-container-add (ref info 'vbox) label)
-            (gtk-misc-set-padding label 30 30)
-            (gtk-widget-show label)
-            (gtk-dialog-run info)
-            (gtk-widget-destroy info)
+          (begin
+            (app-message app "Invalid data" r GTK_STOCK_CLOSE GTK_RESPONSE_OK)
             (loop (gtk-dialog-run dialog)))
           (cont))))
     (gtk-widget-hide dialog)))
 
 (define-method app-delete-node ((app <app-objview>))
-  (let* ((confirm (gtk-dialog-new-with-buttons "Delete confirm"
-                                               (ref app 'window)
-                                               GTK_DIALOG_MODAL
-                                               GTK_STOCK_CANCEL
-                                               GTK_RESPONSE_NONE
-                                               GTK_STOCK_OK
-                                               GTK_RESPONSE_OK))
-         (label (gtk-label-new "Are you sure to delete selected page(s)?")))
-    (gtk-container-add (ref confirm 'vbox) label)
-    (gtk-misc-set-padding label 30 30)
-    (gtk-widget-show label)
-    (let1 res (gtk-dialog-run confirm)
-      (gtk-widget-destroy confirm)
-      (when (eqv? res GTK_RESPONSE_OK)
-        (graph-delete-selected (ref app 'graph))))))
+  (let1 res (app-message app "Delete confirm"
+                       "Are you sure to delete selected page(s)?"
+                       GTK_STOCK_CANCEL GTK_RESPONSE_REJECT
+                       GTK_STOCK_OK GTK_RESPONSE_OK)
+    (when (eqv? res GTK_RESPONSE_OK)
+      (graph-delete-selected (ref app 'graph)))))
 
 (define-method app-exit ((app <app-objview>))
   (if (not (db-dirty? (the-db)))
     (gtk-main-quit)
-    (let* ((confirm (gtk-dialog-new-with-buttons "Quit confirm"
-                                                 (ref app 'window)
-                                                 GTK_DIALOG_MODAL
-                                                 GTK_STOCK_CANCEL
-                                                 GTK_RESPONSE_REJECT
-                                                 GTK_STOCK_QUIT
-                                                 GTK_RESPONSE_OK))
-           (label (gtk-label-new "Change(s) are not committed.  Are you sure to quit anyway?")))
-      (gtk-container-add (ref confirm 'vbox) label)
-      (gtk-misc-set-padding label 30 30)
-      (gtk-widget-show label)
-      (let1 res (gtk-dialog-run confirm)
-        (gtk-widget-destroy confirm)
-        (when (eqv? res GTK_RESPONSE_OK)
-          (gtk-main-quit))))))
+    (let1 res (app-message app "Quit confirm"
+                           "Change(s) are not committed.  Are you sure to quit anyway?"
+                           GTK_STOCK_CANCEL GTK_RESPONSE_REJECT
+                           GTK_STOCK_QUIT GTK_RESPONSE_OK)
+      (when (eqv? res GTK_RESPONSE_OK) (gtk-main-quit)))))
+
+(define-method app-message ((app <app-objview>) title message . buttons)
+  (let* ((info (apply gtk-dialog-new-with-buttons
+                      title (ref app 'window) GTK_DIALOG_MODAL buttons))
+         (label (gtk-label-new message)))
+    (gtk-container-add (ref info 'vbox) label)
+    (gtk-misc-set-padding label 30 30)
+    (gtk-widget-show label)
+    (let1 r (gtk-dialog-run info)
+      (gtk-widget-destroy info)
+      r)))
 
 ;;----------------------------------------------------------------------
 ;; Editor dialog
@@ -864,28 +851,34 @@
               (ref page 'children)))
 
   ;; return #t if node is one of descendants of selections
-  (define (check-consistency parent selected)
+  (define (cyclic? parent selected)
     (any (lambda (page)
            (string-prefix? #`",(ref page 'key)/" #`",(ref parent 'key)/"))
          selected))
+
+  ;; return #t if reparenting will create non-unique node path
+  (define (nonunique? parent selected)
+    (let* ((paths (map (lambda (data)
+                        (build-path (ref parent 'key) (ref data 'basename)))
+                       selected))
+           (all (append paths
+                        (map (cut ref <> 'key)
+                             (lset-difference eq? (ref parent 'children)
+                                              selected)))))
+      (not (= (length all) (length (delete-duplicates all string=?))))))
   
   (let ((parent   (and node (glgd-node-data-get node)))
         (selected (filter-map glgd-node-data-get (graph-selection-get graph))))
     (cond
      ((not parent) (graph-selection-clear graph))
-     ((check-consistency parent selected)
-      (let* ((info (gtk-dialog-new-with-buttons "Invalid operation"
-                                                    (ref (the-app) 'window)
-                                                    GTK_DIALOG_MODAL
-                                                    GTK_STOCK_CLOSE
-                                                    GTK_RESPONSE_OK))
-             (label (gtk-label-new "Can't reparent to its own descendant")))
-        (gtk-container-add (ref info 'vbox) label)
-        (gtk-misc-set-padding label 30 30)
-        (gtk-widget-show label)
-        (gtk-dialog-run info)
-        (gtk-widget-destroy info)
-        ))
+     ((cyclic? parent selected)
+      (app-message (the-app) "Invalid operation"
+                   "Can't reparent to its own descendant"
+                   GTK_STOCK_CLOSE GTK_RESPONSE_OK))
+     ((nonunique? parent selected)
+      (app-message (the-app) "Invalid operation"
+                   "Can't reparent, for it would create non-unique path."
+                   GTK_STOCK_CLOSE GTK_RESPONSE_OK))
      (else
       (for-each (cute do-reparent (ref parent 'key) <>) selected)
       (graph-selection-clear graph)
