@@ -6,7 +6,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-objview,v 1.3 2004/03/01 00:26:18 shiro Exp $
+;; $Id: kahua-objview,v 1.4 2004/03/01 02:40:54 shiro Exp $
 
 ;; Requires:
 ;;  Gauche-gl
@@ -88,7 +88,7 @@
 
 (define-method mark-dirty! ((self <page>))
   (set! (ref self 'dirty) #t))
-(define-method clean-dirty! ((self <page>))
+(define-method clear-dirty! ((self <page>))
   (set! (ref self 'dirty) #f))
 
 
@@ -162,7 +162,8 @@
                 (ctime ctime)
                 (cuser cuser)
                 (mtime mtime)
-                (muser muser))))
+                (muser muser)))
+    (clear-dirty! page))
   
   (let1 modified (filter (cut ref <> 'dirty) (ref (the-db) 'pages))
     (unless (null? modified)
@@ -175,7 +176,7 @@
               => (cut page-save page <>))
              (else
               (page-create page)))))))
-    (print modified)))
+    ))
 
 ;;================================================================
 ;; Graphical application
@@ -193,14 +194,6 @@
 (define-constant INFOEDIT_HEIGHT 260)
 (define-constant INFOWIN_WIDTH 400)
 (define-constant INFOWIN_HEIGHT 200)
-
-(define *graph* #f)
-(define *ctrl-held* #f)
-(define *shift-held* #f)
-(define *file-name* "/")
-(define *menu-bg* #f)
-(define *info-win* #f)
-
 
 ;; conversion
 ;;  cv-out str  to display string in gtk widget.
@@ -234,6 +227,63 @@
     (gtk-table-attach-defaults table frame l r t b)
     (gtk-widget-show frame))
   )
+
+;;-----------------------------------------------------------
+;; Application main widget
+;;
+
+(define the-app (make-parameter #f)) ;; <app-objview> singleton
+
+(define-class <app-objview> () ;; application
+  ((window)   ;; <gtk-window> : toplevel window
+   (graph)    ;; <glgd-graph> : graph
+   (info-win) ;; <info-win> : pop-up information window
+   (menu-bg)  ;; popup menu
+   (ctrl-held  :init-value #f)
+   (shift-held :init-value #f)
+   ))
+
+(define-method initialize ((app <app-objview>) initargs)
+  (next-method)
+  (let* ((glconfig (app-gl-config))
+         (window (gtk-window-new GTK_WINDOW_TOPLEVEL)))
+    (set! (ref app 'window) window)
+    (gtk-window-set-title window "Kahua-web object browser")
+    (g-signal-connect window "delete_event" (lambda _ (gtk-main-quit)))
+    (let1 vbox (gtk-vbox-new #f 0)
+      (gtk-container-add window vbox)
+      (gtk-widget-show vbox)
+
+      ;; Drawing area for drawing OpenGL scene ----------
+      (let1 drawing-area (build-graph-pane app glconfig)
+        (gtk-widget-set-size-request drawing-area
+                                     GRAPH_WINDOWWIDTH GRAPH_WINDOWHEIGHT)
+        (gtk-box-pack-start vbox drawing-area #t #t 0)
+        (gtk-widget-show drawing-area))
+
+
+      ;; Simple quit button -----------------------------
+      (let1 button (gtk-button-new-with-label "Quit")
+        (gtk-box-pack-start vbox button #f #f 0)
+        (g-signal-connect button "clicked" (lambda _ (gtk-main-quit)))
+        (gtk-widget-show button)))
+
+    (set! (ref app 'info-win) (make <info-win>))
+    (set! (ref app 'menu-bg)  (make <menu-bg>))
+    ))
+
+(define-method app-show ((app <app-objview>))
+  (gtk-widget-show (ref app 'window)))
+
+(define (app-gl-config)
+  (unless (gdk-gl-query-extension)
+    (error "*** OpenGL is not supported."))
+  (or (gdk-gl-config-new-by-mode (logior GDK_GL_MODE_RGB
+                                         GDK_GL_MODE_DEPTH
+                                         GDK_GL_MODE_DOUBLE))
+      (gdk-gl-config-new-by-mode (logior GDK_GL_MODE_RGB
+                                         GDK_GL_MODE_DEPTH))
+      (error "*** No appropriate OpenGL-capable visual found.")))
 
 ;; ===========================================================================
 ;; Multi-node Information editor functions
@@ -625,34 +675,40 @@
 ;; =========================
 ;; Background menu functions
 ;; =========================
-(define (menu-cb-frame-all event . _)
-  (glgd-graph-frame *graph*)
-  #t)
+(define-class <menu-bg> (<gtk-menu>)
+  ((show-data) ;; menu-item
+   (edit-data) ;; menu-item
+   ))
 
-(define (menu-cb-show-data event . _)
-  (info-win-show *info-win* *graph*)
-  #t)
+(define-method initialize ((self <menu-bg>) initargs)
+  (next-method)
+  (menu-bg-initialize self))
 
-(define (menu-cb-edit-data event . _)
-  (info-edit-show *graph*)
-  #t)
-
-(define (menu-cb-expand-all event . _)
-  (glgd-graph-attribute-set *graph* KAHUA_DATA_NODE)
-  (glgd-graph-auto-organize *graph* 0.0 0.0)
-  #t)
-
-(define (menu-cb-collapse-all event . _)
-  (glgd-graph-attribute-reset *graph* KAHUA_DATA_NODE)
-  (glgd-graph-auto-organize *graph* 0.0 0.0)
-  #t)
-
-(define (menu-cb-save event . _)
-  (db-commit)
-  #t)
 
 (define (menu-bg-initialize menu)
-  (let* ((str #`"Frame All")
+  (define (menu-cb-frame-all event . _)
+    (glgd-graph-frame (ref (the-app) 'graph)) #t)
+
+  (define (menu-cb-show-data event . _)
+    (info-win-show (ref (the-app) 'info-win) (ref (the-app) 'graph)) #t)
+
+  (define (menu-cb-edit-data event . _)
+    (info-edit-show (ref (the-app) 'graph)) #t)
+
+  (define (menu-cb-expand-all event . _)
+    (glgd-graph-attribute-set (ref (the-app) 'graph) KAHUA_DATA_NODE)
+    (glgd-graph-auto-organize (ref (the-app) 'graph) 0.0 0.0)
+    #t)
+
+  (define (menu-cb-collapse-all event . _)
+    (glgd-graph-attribute-reset (ref (the-app) 'graph) KAHUA_DATA_NODE)
+    (glgd-graph-auto-organize (ref (the-app) 'graph) 0.0 0.0)
+    #t)
+
+  (define (menu-cb-save event . _)
+    (db-commit) #t)
+
+  (let* ((str "Frame All")
          (menu-item (gtk-menu-item-new-with-label str)))
     (gtk-menu-shell-append menu menu-item)
     (g-signal-connect menu-item "activate" menu-cb-frame-all)
@@ -660,29 +716,29 @@
   (let1 separator (gtk-separator-menu-item-new)
     (gtk-menu-shell-append menu separator)
     (gtk-widget-show separator))
-  (let* ((str #`"Show data...")
+  (let* ((str "Show data...")
          (menu-item (gtk-menu-item-new-with-label str)))
     (gtk-menu-shell-append menu menu-item)
-    (g-object-set-data menu 'show-data menu-item)
+    (set! (ref menu 'show-data) menu-item)
     (g-signal-connect menu-item "activate" menu-cb-show-data)
     (gtk-widget-set-sensitive menu-item #f)
     (gtk-widget-show menu-item))
-  (let* ((str #`"Edit data...")
+  (let* ((str "Edit data...")
          (menu-item (gtk-menu-item-new-with-label str)))
     (gtk-menu-shell-append menu menu-item)
-    (g-object-set-data menu 'edit-data menu-item)
+    (set! (ref menu 'edit-data) menu-item)
     (g-signal-connect menu-item "activate" menu-cb-edit-data)
     (gtk-widget-set-sensitive menu-item #f)
     (gtk-widget-show menu-item))
   (let1 separator (gtk-separator-menu-item-new)
     (gtk-menu-shell-append menu separator)
     (gtk-widget-show separator))
-  (let* ((str #`"Expand All")
+  (let* ((str "Expand All")
          (menu-item (gtk-menu-item-new-with-label str)))
     (gtk-menu-shell-append menu menu-item)
     (g-signal-connect menu-item "activate" menu-cb-expand-all)
     (gtk-widget-show menu-item))
-  (let* ((str #`"Collapse All")
+  (let* ((str "Collapse All")
          (menu-item (gtk-menu-item-new-with-label str)))
     (gtk-menu-shell-append menu menu-item)
     (g-signal-connect menu-item "activate" menu-cb-collapse-all)
@@ -690,7 +746,7 @@
   (let1 separator (gtk-separator-menu-item-new)
     (gtk-menu-shell-append menu separator)
     (gtk-widget-show separator))
-  (let* ((str #`"Commit Changes")
+  (let* ((str "Commit Changes")
          (menu-item (gtk-menu-item-new-with-label str)))
     (gtk-menu-shell-append menu menu-item)
     (g-signal-connect menu-item "activate" menu-cb-save)
@@ -705,23 +761,23 @@
     (let1 kv (ref event 'keyval)
       (cond
        ((= kv GDK_Escape) (gtk-main-quit))
-       ((= kv GDK_Control_L) (set! *ctrl-held* #t))
-       ((= kv GDK_Control_R) (set! *ctrl-held* #t))
-       ((= kv GDK_Shift_L) (set! *shift-held* #t))
-       ((= kv GDK_Shift_R) (set! *shift-held* #t)))))
+       ((= kv GDK_Control_L) (set! (ref (the-app) 'ctrl-held) #t))
+       ((= kv GDK_Control_R) (set! (ref (the-app) 'ctrl-held) #t))
+       ((= kv GDK_Shift_L) (set! (ref (the-app) 'shift-held) #t))
+       ((= kv GDK_Shift_R) (set! (ref (the-app) 'shift-held) #t)))))
   (when (= (ref event 'type) GDK_KEY_RELEASE)
     (let1 kv (ref event 'keyval)
       (cond
-       ((= kv GDK_Control_L) (set! *ctrl-held* #f))
-       ((= kv GDK_Control_R) (set! *ctrl-held* #f))
-       ((= kv GDK_Shift_L) (set! *shift-held* #f))
-       ((= kv GDK_Shift_R) (set! *shift-held* #f)))))
+       ((= kv GDK_Control_L) (set! (ref (the-app) 'ctrl-held) #f))
+       ((= kv GDK_Control_R) (set! (ref (the-app) 'ctrl-held) #f))
+       ((= kv GDK_Shift_L) (set! (ref (the-app) 'shift-held) #f))
+       ((= kv GDK_Shift_R) (set! (ref (the-app) 'shift-held) #f)))))
   #t)
 
 (define (mouse-right-callback graph node link event)
   (when (= (ref event 'type) GDK_BUTTON_PRESS)
-    (let* ((show-data (g-object-get-data *menu-bg* 'show-data))
-           (edit-data (g-object-get-data *menu-bg* 'edit-data))
+    (let* ((show-data (ref (ref (the-app) 'menu-bg) 'show-data))
+           (edit-data (ref (ref (the-app) 'menu-bg) 'edit-data))
            (button (ref event 'button))
            (time (ref event 'time)))
       (gtk-widget-set-sensitive show-data #f)
@@ -731,7 +787,7 @@
       (if (> (glgd-graph-node-select-count graph) 0)
         (gtk-widget-set-sensitive edit-data #t)
         (gtk-widget-set-sensitive edit-data #f))
-      (gtk-menu-popup *menu-bg* #f #f #f button time)))
+      (gtk-menu-popup (ref (the-app) 'menu-bg) #f #f #f button time)))
   #t)
 
 (define (select-single-node graph node)
@@ -744,9 +800,9 @@
 (define (mouse-left-callback graph node link event)
   (when (= (ref event 'type) GDK_BUTTON_PRESS)
     (cond
-     ((equal? *ctrl-held* #t)
+     ((ref (the-app) 'ctrl-held)
       (glgd-node-flags-set node GLGDNODE_FLAG_SELECTED GLGD_FLAGOP_TOGGLE))
-     ((equal? *shift-held* #t)
+     ((ref (the-app) 'shift-held)
       (glgd-node-flags-set node GLGDNODE_FLAG_SELECTED GLGD_FLAGOP_TOGGLE))
      ((>= (glgd-node-id-get node) 0)
       (select-single-node graph node))
@@ -754,7 +810,7 @@
                                       GLGD_FLAGOP_CLEAR))))
 
   (if (= (ref event 'type) GDK_BUTTON_RELEASE)
-    (info-win-hide *info-win*))
+    (info-win-hide (ref (the-app) 'info-win)))
   #t)
 
 (define (mouse-hover-callback graph node link event)
@@ -910,14 +966,14 @@
   ((graph :init-form (glgd-graph-create))   ;; <glgd-graph>
    ))
 
-(define (build-graph-pane parent glconfig)
+(define (build-graph-pane app glconfig)
 
   (define (draw widget . _)
     (let ((glcontext (gtk-widget-get-gl-context widget))
           (gldrawable (gtk-widget-get-gl-drawable widget)))
       (when (gdk-gl-drawable-gl-begin gldrawable glcontext)
         (gl-clear (logior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
-        (glgd-graph-draw *graph*)
+        (glgd-graph-draw (ref (the-app) 'graph))
         (if (gdk-gl-drawable-is-double-buffered gldrawable)
           (gdk-gl-drawable-swap-buffers gldrawable)
           (gl-flush))
@@ -933,7 +989,7 @@
         (gl-viewport 0 0 (ref wsize 'width) (ref wsize 'height))
         (gdk-gl-drawable-gl-end gldrawable))
       #t)
-    (glgd-graph-reshape *graph*))
+    (glgd-graph-reshape (ref (the-app) 'graph)))
 
   (define (init widget)
     (let ((glcontext (gtk-widget-get-gl-context widget))
@@ -956,60 +1012,18 @@
     (g-signal-connect self "configure_event" reshape)
     (g-signal-connect self "expose_event" draw)
     (glgd-graph-build (ref self 'graph) (ref (the-db) 'pages))
-    (glgd-graph-connect (ref self 'graph) parent self)
-    (set! *graph* (ref self 'graph))
+    (glgd-graph-connect (ref self 'graph) (ref app 'window) self)
+    (set! (ref app 'graph) (ref self 'graph))
     self))
 
 ;;----------------------------------------------------------------
 ;; GUI application entry
 ;;
 (define (run-app)
-  (let1 glconfig (app-gl-config)
-    ;; Top-level window -------------------
-    (let1 window (gtk-window-new GTK_WINDOW_TOPLEVEL)
-      (gtk-window-set-title window "Kahua-web object browser")
-      (g-signal-connect window "delete_event" (lambda _ (gtk-main-quit)))
-      (let1 vbox (gtk-vbox-new #f 0)
-        (gtk-container-add window vbox)
-        (gtk-widget-show vbox)
-
-        ;; Drawing area for drawing OpenGL scene ----------
-        (let1 drawing-area (build-graph-pane window glconfig)
-          (gtk-widget-set-size-request drawing-area
-                                       GRAPH_WINDOWWIDTH GRAPH_WINDOWHEIGHT)
-          (gtk-box-pack-start vbox drawing-area #t #t 0)
-          (gtk-widget-show drawing-area))
-
-        ;; Simple quit button -----------------------------
-        (let1 button (gtk-button-new-with-label "Quit")
-          (gtk-box-pack-start vbox button #f #f 0)
-          (g-signal-connect button "clicked" (lambda _ (gtk-main-quit)))
-          (gtk-widget-show button)))
-
-      ;; Initialize info-win
-      ;; -------------------
-      (set! *info-win* (make <info-win>))
-      
-      ;; Initialize pop-up menus
-      ;; -----------------------
-      (set! *menu-bg* (gtk-menu-new))
-      (menu-bg-initialize *menu-bg*)
-
-      (gtk-widget-show window))
-    (gtk-main)
-    (glgd-graph-fini *graph*)
-    0))
-
-(define (app-gl-config)
-  (unless (gdk-gl-query-extension)
-    (error "*** OpenGL is not supported."))
-  (or (gdk-gl-config-new-by-mode (logior GDK_GL_MODE_RGB
-                                         GDK_GL_MODE_DEPTH
-                                         GDK_GL_MODE_DOUBLE))
-      (gdk-gl-config-new-by-mode (logior GDK_GL_MODE_RGB
-                                         GDK_GL_MODE_DEPTH))
-      (error "*** No appropriate OpenGL-capable visual found.")))
-
+  (the-app (make <app-objview>))
+  (app-show (the-app))
+  (gtk-main)
+  (glgd-graph-fini (ref (the-app) 'graph)))
 
 ;; Local variables:
 ;; mode: scheme
