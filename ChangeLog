@@ -1,3 +1,9 @@
+2005-01-20  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* kahua-web/macro.kahua
+	Modified inline image macro to remove leading '/' (if exists) 
+	in the specified path.
+
 2005-01-18  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* kahua-web/local.kahua: 
