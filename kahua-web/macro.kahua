@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.16 2004/09/03 01:01:40 nobsun Exp $
+;; $Id: macro.kahua,v 1.17 2004/11/05 13:21:16 nobsun Exp $
 
 (use gauche.collection)
 
@@ -115,7 +115,11 @@
 ;; Inline image
 ;;
 (define-wiki-macro (img url . attrs)
-  `((img (@ (src ,(x->string url)) ,@(filter allowed-img-attr? attrs)))))
+  `((img (@ (src ,(imgpath (x->string url)))
+                 ,@(filter allowed-img-attr? attrs)))))
+
+(define (imgpath filename)
+  (kahua-static-document-url #`"kahua-web/,filename"))
 
 (define allowed-img-attrs 
   (append '(class id title)

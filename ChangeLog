@@ -1,3 +1,8 @@
+2004-11-05  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* kahua-web/macro.kahua: Modified img macro to use 
+	kahua-static-document-url.
+	
 2004-10-18  Shiro Kawai  <shiro@acm.org>
 
 	* configure.ac: When --prefix is given, prepend $prefix/bin/kahua
