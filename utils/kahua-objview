@@ -6,7 +6,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-objview,v 1.12 2004/03/01 11:44:21 shiro Exp $
+;; $Id: kahua-objview,v 1.13 2004/03/02 00:12:14 shiro Exp $
 
 ;; Requires:
 ;;  Gauche-gl
@@ -22,7 +22,7 @@
 (use srfi-13)
 (use gauche.charconv)
 (use gauche.parseopt)
-(use gauche.collection)
+(use gauche.sequence)
 (use gauche.parameter)
 (use file.util)
 (use util.list)
@@ -66,16 +66,23 @@
 ;; In-memory image of page data
 (define-class <page> ()
   ((id       :init-keyword :id)
-   (key      :init-keyword :key)
-   (basename :init-keyword :basename)
-   (content  :init-keyword :content)
+   (key      :init-keyword :key      :init-value ""
+             :presentation 'text     :presentation-title "Page path")
+   (basename :init-keyword :basename :init-value ""
+             :presentation 'label    :presentation-title "Page name")
+   (content  :init-keyword :content  :init-value ""
+             :presentation 'textarea :presentation-title "Content")
+   (ctime    :init-keyword :ctime    :init-value (sys-time)
+             :presentation 'time     :presentation-title "Created at")
+   (cuser    :init-keyword :cuser    :init-value #f
+             :presentation 'text     :presentation-title "Craeted by")
+   (mtime    :init-keyword :mtime    :init-value (sys-time)
+             :presentation 'time     :presentation-title "Modified at")
+   (muser    :init-keyword :muser    :init-value #f
+             :presentation 'text     :presentation-title "Modified by")
+   (hidden   :init-keyword :hidden   :init-value #f)
    (children :init-keyword :children)
    (links    :init-keyword :links)
-   (ctime    :init-keyword :ctime)
-   (cuser    :init-keyword :cuser)
-   (mtime    :init-keyword :mtime)
-   (muser    :init-keyword :muser)
-   (hidden   :init-keyword :hidden :init-value #f)
    (dirty    :init-value #f)
    (touched  :init-value #f)
    ))
@@ -184,6 +191,7 @@
                 (set! (ref obj (car slot)) (ref page (cadr slot))))
               '((name key)
                 (hidden hidden)
+                (content content)
                 (ctime ctime)
                 (cuser cuser)
                 (mtime mtime)
@@ -221,6 +229,7 @@
 (define-constant INFOEDIT_HEIGHT 260)
 (define-constant INFOWIN_WIDTH 400)
 (define-constant INFOWIN_HEIGHT 200)
+(define-constant TEXTAREA_HEIGHT 200)
 
 ;; conversion
 ;;  cv-out str  to display string in gtk widget.
@@ -267,6 +276,7 @@
    (graph-pane) ;; <gtk-drawing-area>
    (info-win)   ;; <info-win> : pop-up information window
    (menu-bg)    ;; popup menu
+   (edit-dialog) ;; <edit-dialog>
    (normal-cursor :init-form (gdk-cursor-new GDK_LEFT_PTR));; <gdk-cursor>
    (pick-cursor   :init-form (gdk-cursor-new GDK_HAND1))   ;; <gdk-cursor>
    (ctrl-held  :init-value #f)
@@ -302,6 +312,7 @@
 
     (set! (ref app 'info-win) (make <info-win>))
     (set! (ref app 'menu-bg)  (make <menu-bg>))
+    (set! (ref app 'edit-dialog) (make <edit-dialog> :class <page>))
     ))
 
 (define-method app-show ((app <app-objview>))
@@ -432,6 +443,177 @@
 ;;        - <hour-spinner> is a <gtk-spin-button>
 ;;        - <minute-spinner> is a <gtk-spin-button>
 ;; ===========================================================================
+
+;; <edit-field> represents one field of editing area
+;; It will be rendered within a cell of a table.
+;; Must respond the following methods.
+;;   (edit-field-set! <edit-field> value)   - set value
+;;   (edit-field-get <edit-field)           - get value
+;;   (edit-field-editable-set! <edit-field> flag)
+
+(define-class <edit-field> (<gtk-frame>)
+  (hbox))
+
+(define-method initialize ((self <edit-field>) initargs)
+  (next-method)
+  (gtk-frame-set-shadow-type self GTK_SHADOW_ETCHED_OUT)
+  (gtk-container-set-border-width self 1)
+  (let1 hbox (gtk-hbox-new #f 0)
+    (gtk-container-add self hbox)
+    (set! (ref self 'hbox) hbox)
+    ))
+
+(define (presentation->field-class ptype)
+  (case ptype
+    ((time)     <edit-field-time>)
+    ((textarea) <edit-field-textarea>)
+    (else       <edit-field-text>)))
+
+;; Text edit field ...........................................
+(define-class <edit-field-text> (<edit-field>)
+  (entry))
+
+(define-method initialize ((self <edit-field-text>) initargs)
+  (next-method)
+  (let1 entry (gtk-entry-new)
+    (gtk-entry-set-max-length entry 80)
+    (set! (ref self 'entry) entry)
+    (gtk-box-pack-start (ref self 'hbox) entry #t #t 3))
+  )
+
+(define-method edit-field-set! ((self <edit-field-text>) value)
+  (gtk-entry-set-text (ref self 'entry)
+                      (if value (cv-out (x->string value)) "")))
+
+(define-method edit-field-get ((self <edit-field-text>))
+  (let1 s (cv-in (gtk-entry-get-text (ref self 'entry)))
+    (if (string-null? s) #f s)))
+
+;; Textarea edit field .......................................
+(define-class <edit-field-textarea> (<edit-field>)
+  (textview))
+
+(define-method initialize ((self <edit-field-textarea>) initargs)
+  (next-method)
+  (let ((scroll (gtk-scrolled-window-new #f #f))
+        (view (gtk-text-view-new)))
+    (set! (ref self 'textview) view)
+    (gtk-container-add scroll view)
+    (gtk-scrolled-window-set-policy scroll
+                                    GTK_POLICY_AUTOMATIC
+                                    GTK_POLICY_AUTOMATIC)
+    (gtk-widget-set-size-request scroll -1 TEXTAREA_HEIGHT)
+    (gtk-box-pack-start (ref self 'hbox) scroll #t #t 3))
+  )
+
+(define-method edit-field-set! ((self <edit-field-textarea>) value)
+  (let* ((buffer (gtk-text-view-get-buffer (ref self 'textview)))
+         (s (if value (cv-out (x->string value)) "")))
+    (gtk-text-buffer-set-text buffer s (string-size s))))
+
+(define-method edit-field-get ((self <edit-field-textarea>))
+  (let* ((buffer (gtk-text-view-get-buffer (ref self 'textview)))
+         (start  (gtk-text-buffer-get-start-iter buffer))
+         (end    (gtk-text-buffer-get-end-iter buffer)))
+    (cv-in (gtk-text-buffer-get-text buffer start end #f))))
+
+;; Time edit field ...........................................
+(define-class <edit-field-time> (<edit-field>)
+  (year month day hour minute))
+
+(define-method initialize ((self <edit-field-time>) initargs)
+  (next-method)
+  (let1 bbox (gtk-hbox-new #f 0)
+    (define (spinner name val lo hi stepi pagei)
+      (let1 box (gtk-vbox-new #f 0)
+        (gtk-box-pack-start bbox box #t #t 4)
+        (let* ((adj (gtk-adjustment-new val lo hi stepi pagei 0.0))
+               (spinner (gtk-spin-button-new adj 0 0)))
+          (gtk-spin-button-set-wrap spinner #t)
+          (gtk-spin-button-set-numeric spinner #t)
+          (when (eq? name 'year) (gtk-widget-set-size-request spinner 55 -1))
+          (set! (ref self name) spinner)
+          (gtk-box-pack-start box spinner #f #t 0))))
+    (gtk-box-pack-start (ref self 'hbox) bbox #t #t 5)
+    (spinner 'year    1900.0 0.0 2200.0 1.0 100.0)
+    (spinner 'month   1.0 1.0 12.0 1.0 5.0)
+    (spinner 'day     1.0 1.0 31.0 1.0 5.0)
+    (spinner 'hour    12.0 0.0 23.0 1.0 5.0)
+    (spinner 'minute  0.0 0.0 59.0 1.0 5.0)
+    ))
+
+(define-method edit-field-set! ((self <edit-field-time>) value)
+  (let* ((v  (or value (sys-time)))
+         (tm (sys-localtime v)))
+    (gtk-spin-button-set-value (ref self 'year) (+ 1900 (ref tm 'year)))
+    (gtk-spin-button-set-value (ref self 'month) (+ 1 (ref tm 'mon)))
+    (gtk-spin-button-set-value (ref self 'day) (ref tm 'mday))
+    (gtk-spin-button-set-value (ref self 'hour) (ref tm 'hour))
+    (gtk-spin-button-set-value (ref self 'minute) (ref tm 'min)))
+  )
+
+(define-method edit-field-get ((self <edit-field-time>))
+  (let ((tm (sys-localtime 0)))
+    (slot-set! tm 'sec 0)
+    (slot-set! tm 'min (gtk-spin-button-get-value-as-int (ref self 'minute)))
+    (slot-set! tm 'hour (gtk-spin-button-get-value-as-int (ref self 'hour)))
+    (slot-set! tm 'mday (gtk-spin-button-get-value-as-int (ref self 'day)))
+    (slot-set! tm 'mon (- (gtk-spin-button-get-value-as-int (ref self 'month))
+                          1))
+    (slot-set! tm 'year (- (gtk-spin-button-get-value-as-int (ref self 'year))
+                           1900))
+    (sys-mktime tm)))
+
+;; Edit dialog ................................................
+(define-class <edit-dialog> (<gtk-dialog>)
+  ((class  :init-keyword :class)
+   (fields :init-value '())
+   (obj    :init-value #f)
+   ))
+
+(define-method initialize ((self <edit-dialog>) initargs)
+  (next-method)
+  (unless (slot-bound? self 'class)
+    (error "<edit-dialog> requires :class to be given at initialize time"))
+  (gtk-container-set-border-width self 2)
+  (gtk-dialog-add-button self GTK_STOCK_CANCEL GTK_RESPONSE_REJECT)
+  (gtk-dialog-add-button self GTK_STOCK_OK     GTK_RESPONSE_ACCEPT)
+  (let* ((pslots (filter (cut slot-definition-option <> :presentation #f)
+                         (class-slots (ref self 'class))))
+         (table (gtk-table-new (length pslots) 4 #f)))
+    (gtk-box-pack-start (ref self 'vbox) table #t #t 0)
+    (for-each-with-index
+     (lambda (index slot)
+       (let* ((ptype (slot-definition-option slot :presentation #f))
+              (ptitle (or (slot-definition-option slot :presentation-title #f)
+                          (x->string (slot-definition-name slot))))
+              (field (make (presentation->field-class ptype)))
+              )
+         (table-title-add table ptitle 0 1 index (+ index 1) 1.0 0.5)
+         (gtk-table-attach-defaults table field 1 4 index (+ index 1))
+         (push! (ref self 'fields)
+                (cons (slot-definition-name slot) field))))
+     pslots)
+    (gtk-widget-show-all table))
+  )
+
+(define-method edit-dialog-attach ((self <edit-dialog>) obj)
+  (set! (ref self 'obj) obj)
+  (for-each (lambda (field)
+              (edit-field-set! (cdr field) (ref obj (car field))))
+            (ref self 'fields)))
+
+(define-method edit-dialog-detach ((self <edit-dialog>))
+  (and-let* ((obj (ref self 'obj)))
+    (let1 dirty #f
+      (for-each (lambda (field)
+                  (let1 val (edit-field-get (cdr field))
+                    (unless (equal? val (ref obj (car field)))
+                      (slot-set! obj (car field) val)
+                      (set! dirty #t))))
+                (ref self 'fields))
+      (when dirty (mark-dirty! obj)))))
+
 (define (info-edit-name-frame-new title name)
   (let1 frame (gtk-frame-new title)
     (gtk-frame-set-shadow-type frame GTK_SHADOW_ETCHED_OUT)
@@ -747,11 +929,24 @@
   (define (menu-cb-frame-all event . _)
     (glgd-graph-frame (ref (the-app) 'graph)) #t)
 
+  (define (menu-cb-new-node event . _)
+    #f)
+
   (define (menu-cb-show-data event . _)
     (info-win-show (ref (the-app) 'info-win) (ref (the-app) 'graph)) #t)
 
   (define (menu-cb-edit-data event . _)
-    (info-edit-show (ref (the-app) 'graph)) #t)
+    (and-let* ((dialog (ref (the-app) 'edit-dialog))
+               (graph  (ref (the-app) 'graph))
+               (nodes (graph-selection-get graph))
+               (pages (filter-map glgd-node-data-get nodes))
+               ((not (null? pages))))
+      (edit-dialog-attach dialog (car pages))
+      (let1 response (gtk-dialog-run dialog)
+        (gtk-widget-hide dialog)
+        (when (= response GTK_RESPONSE_ACCEPT)
+          (edit-dialog-detach dialog))))
+    #t)
 
   (define (menu-cb-reparent event . _)
     (app-initiate-pick (the-app)
@@ -760,15 +955,17 @@
                        #f)
     #t)
 
-  (define (menu-cb-expand-all event . _)
+#|
+  (define (menu-cb-expand event . _)
     (glgd-graph-attribute-set (ref (the-app) 'graph) KAHUA_DATA_NODE)
     (glgd-graph-auto-organize (ref (the-app) 'graph) 0.0 0.0)
     #t)
 
-  (define (menu-cb-collapse-all event . _)
+  (define (menu-cb-collapse event . _)
     (glgd-graph-attribute-reset (ref (the-app) 'graph) KAHUA_DATA_NODE)
     (glgd-graph-auto-organize (ref (the-app) 'graph) 0.0 0.0)
     #t)
+|#
 
   (define (menu-cb-save event . _)
     (db-commit) #t)
@@ -798,6 +995,10 @@
   (let1 separator (gtk-separator-menu-item-new)
     (gtk-menu-shell-append menu separator)
     (gtk-widget-show separator))
+  (let1 menu-item (gtk-menu-item-new-with-label "New node...")
+    (gtk-menu-shell-append menu menu-item)
+    (g-signal-connect menu-item "activate" menu-cb-new-node)
+    (gtk-widget-show menu-item))
   (let1 menu-item (gtk-menu-item-new-with-label "Show data...")
     (gtk-menu-shell-append menu menu-item)
     (set! (ref menu 'show-data) menu-item)
@@ -816,17 +1017,19 @@
     (g-signal-connect menu-item "activate" menu-cb-reparent)
     (gtk-widget-set-sensitive menu-item #f)
     (gtk-widget-show menu-item))
+#|
   (let1 separator (gtk-separator-menu-item-new)
     (gtk-menu-shell-append menu separator)
     (gtk-widget-show separator))
-  (let1 menu-item (gtk-menu-item-new-with-label "Expand all")
+  (let1 menu-item (gtk-menu-item-new-with-label "Expand")
     (gtk-menu-shell-append menu menu-item)
-    (g-signal-connect menu-item "activate" menu-cb-expand-all)
+    (g-signal-connect menu-item "activate" menu-cb-expand)
     (gtk-widget-show menu-item))
-  (let1 menu-item (gtk-menu-item-new-with-label "Collapse All")
+  (let1 menu-item (gtk-menu-item-new-with-label "Collapse")
     (gtk-menu-shell-append menu menu-item)
-    (g-signal-connect menu-item "activate" menu-cb-collapse-all)
+    (g-signal-connect menu-item "activate" menu-cb-collapse)
     (gtk-widget-show menu-item))
+|#
   (let1 separator (gtk-separator-menu-item-new)
     (gtk-menu-shell-append menu separator)
     (gtk-widget-show separator))
