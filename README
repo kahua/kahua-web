@@ -1,20 +1,46 @@
-$Id: README,v 1.3 2004/08/10 00:51:40 nobsun Exp $
+$Id: README,v 1.4 2004/09/13 03:49:00 nobsun Exp $
 
 kahua-web : Kahua-based WiLiKi-like CMS
 
 [Requirements]
 
-Gauche-0.8
+Gauche-0.8.1
 WiLiKi-0.5
-Kahua-0.2.7
+Kahua-0.2.8
 
 [Installation]
 
   % autoconf
-  % ./configure
+  % ./configure [any options if you need]
+
+You have to give some options to specify the same install directories 
+as Kahua installed. For example if you gave --prefix=$HOME to 
+configure script of Kahua when you installed it, you have to give the 
+same option to kahua-web's configure script.
+
+  % ./configure --prefix=$HOME
+
+And then
+
   % make
   % make check
   % make install
 
-Then, edit app-servers to add "kahua-web".
+Then, edit app-servers to add "kahua-web" entry.
+
+  (kahua-web :argument () :run-by-default 0)
+
+If you want to allow non registered user to edit page, 
+give 'non-member-edit as a argument.
+
+  (kahua-web :argument (non-member-edit) :run-by-default 0)
+
+[Information]
+
+You can find some Kahua-web's information at the Kahua.org site.
+Sorry, it is now not updated.  Please participate and post your questions
+to the kahua-dev mailing list.  
+
+http://www.kahua.org/cgi-bin/kahua.cgi/kahua-web/show/info/Mailing%20List
+
 
