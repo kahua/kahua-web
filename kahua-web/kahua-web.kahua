@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.28 2005/01/18 06:59:24 nobsun Exp $
+;; $Id: kahua-web.kahua,v 1.29 2005/01/25 00:29:21 nobsun Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -30,6 +30,9 @@
 (load "kahua-web/comment.kahua")
 (load "kahua-web/rss.kahua")
 (load "kahua-web/local.kahua")
+
+(or (symbol-bound? '*kahua-web-title*)
+    (define *kahua-web-title* "Kahua"))
 
 ;;========================================================
 ;; Application error handling
@@ -353,7 +356,7 @@
     `((html
        (extra-header (@ (name "content-type")
                         (value "text/html; charset=euc-jp")));;for now
-       (head (title "Kahua"
+       (head (title ,*kahua-web-title*
                     ,(string-join (pagename-split (ref page 'key))
                                   "|" 'prefix))
 	     (meta (@ (http-equiv "Content-type")
