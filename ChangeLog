@@ -1,3 +1,15 @@
+2004-01-24  Shiro Kawai  <shiro@acm.org>
+
+	* init.scm, Makefile.in : runs database initialization routine
+	at install stage.  It asks the admin password if there hasn't been
+	an admin user.
+
+	* kahua-web/login.kahua : added login and user management components.
+
+	* kahua-web/kahua-web.kahua : made login link, and added require-role
+	annotations for edit-related links and pages to prevent non-login
+	user from editing pages.
+
 2004-01-23  Shiro Kawai  <shiro@acm.org>
 
 	* kahua-web/kahua-web.kahua : various fixups, including page

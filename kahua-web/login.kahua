@@ -1,0 +1,116 @@
+;;-*-Scheme-*-
+;; Kahua website
+;;
+;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
+;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
+;;  See COPYING for terms and conditions of using this software
+;;
+;; $Id: login.kahua,v 1.1 2004/01/25 14:40:47 shiro Exp $
+
+;; login account can only be issued by "admin" role.
+
+(define (login-link)
+  (let1 page-path (or (and-let* ((page (current-page)))
+                        (pagename-split (ref page 'key)))
+                      '())
+    (or (and-let* ((user (kahua-current-user))
+                   (name (ref user 'login-name)))
+          `((span (@ (class "login-link"))
+                  "User '" (a/cont (@@ (cont ,user-admin ,name)) ,name) "' "
+                  (a/cont (@@ (cont ,logout ,@page-path)) "[logout]"))))
+        `((span (@ (class "login-link"))
+                (a/cont (@@ (cont ,login-form ,@page-path)) "[login]"))))))
+
+(define-entry (logout :rest page-path)
+  (set! (kahua-current-user) #f)
+  ;; if we're in the persistent page, stay on the same page.
+  ;; otherwise, redirect to the top.
+  (if (ref (current-page) 'persistent-id)
+    (standard-page (current-page))
+    (redirect-to (get-page "/"))))
+
+(define-entry (login-form :rest return-page-path)
+  (define (show-form extra-contents logname pass)
+    (standard-page
+     (make <page>
+       :title "Login" :key "/"
+       :content
+       `((h1 "Login")
+         ,@extra-contents
+         (form/cont
+          (@@ (cont ,login-check (logname) (pass)))
+          (table
+           (@ (class "user-form"))
+           (tr (th "Username")
+               (td (input (@ (type "text") (name "logname")
+                             (value ,(or logname ""))))))
+           (tr (th "Password")
+               (td (input (@ (type "password") (name "pass")
+                             (value ,(or pass ""))))))
+           (tr (th)
+               (td (input (@ (type "submit") (name "submit")
+                             (value "Login")))))))
+         ))))
+  (define login-check
+    (entry-lambda (:keyword logname pass)
+      (if (kahua-check-user logname pass)
+        (begin (set! (kahua-current-user) logname)
+               (redirect-to (get-page (pagename-join return-page-path))))
+        (show-form
+         '((p (@ (class "warning"))
+              "Username or password does not match.  Try again."))
+         logname pass))))
+  (show-form '() #f #f))
+
+;; user info page
+;;   admin role or developer role can access all user page.
+;;   other users can only access his/her own page
+(define-entry (user-admin logname)
+  (let1 user (find-kahua-instance <kahua-user> logname)
+    (define (user-page extra-message)
+      (standard-page
+       (make <page>
+         :title #`"User ',logname'" :key "/"
+         :content
+         `((h1 "User '",logname"'")
+           (p "User " ,logname " has role(s): "
+              ,(string-join (map x->string (ref user 'role-alist)) ", "))
+           (h3 "Change password:")
+           (form/cont
+            (@@ (cont ,change-pass (oldpass) (newpass1) (newpass2)))
+            ,@extra-message
+            (table
+             (@ (class "user-form"))
+             (tr (th "Old password")
+                 (td (input (@ (type "password") (name "oldpass")))))
+             (tr (th "New password")
+                 (td (input (@ (type "password") (name "newpass1")))))
+             (tr (th "Retype new password")
+                 (td (input (@ (type "password") (name "newpass2")))))
+             (tr (th)
+                 (td (input (@ (type "submit") (name "submit")
+                               (value "Change")))))))
+           ))))
+    (define change-pass
+      (entry-lambda (:keyword oldpass newpass1 newpass2)
+        (cond ((not (equal? newpass1 newpass2))
+               (user-page '((p (@ (class "warning"))
+                               "New passwords don't match."))))
+              ((not (kahua-user-password-change user oldpass newpass1))
+               (user-page '((p (@ (class "warning"))
+                               "Wrong password."))))
+              (else
+               (kahua-db-sync)
+               (user-page '((p "Password changed.")))))))
+
+    (if (or (kahua-user-has-role? (kahua-current-user) '(admin developer))
+            (and-let* ((u (kahua-current-user)))
+              (equal? logname (ref u 'login-name))))
+      (user-page '())
+      (standard-page
+       (make <page>
+         :title #`"User ,logname" :key "/"
+         :content
+         `((p (@ (class "warning"))
+              "You don't have a priviledge to browse this page.")))))
+    ))

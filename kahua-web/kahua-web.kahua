@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.8 2004/01/23 23:45:21 shiro Exp $
+;; $Id: kahua-web.kahua,v 1.9 2004/01/25 14:40:47 shiro Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -14,13 +14,16 @@
 (use util.list)
 (use gauche.logger)
 (use gauche.sequence)
+(use gauche.parameter)
 (use wiliki.format)
+(use wiliki.log)
 
 (primary-database-name
  (build-path (ref (kahua-config) 'working-directory) "kahua-web"))
 
 (log-open (kahua-logpath "kahua-web.log"))
 (load "kahua-web/macro.kahua")
+(load "kahua-web/login.kahua")
 
 ;;========================================================
 ;; Application error handling
@@ -83,7 +86,6 @@
 ;; containts <page-data>'s id.
 (define-class <page> (<wiliki-page>)
   ((persistent-id :init-keyword :persistent-id :init-value #f)
-   (name-changed? :init-value #f)
    (virtual-pages :allocation :class :init-value '())))
 
 (define (persistent-page? page)
@@ -97,6 +99,12 @@
 (define (lookup-virtual-page pagename)
   (assoc-ref (class-slot-ref <page> 'virtual-pages) pagename))
 
+;; current page
+;; NB: this is different from wiliki:current-page, which contains
+;; the page being currently formatted.  This current-page keeps
+;; the "toplevel" page to be shown.
+(define current-page (make-parameter #f))
+
 ;; <page-data> -> <page>
 (define (page-data->page data)
   (make <page>
@@ -106,7 +114,7 @@
     :ctime (ref data 'ctime) :cuser (ref data 'cuser)
     :mtime (ref data 'mtime) :muser (ref data 'muser)))
 
-;; pagename -> Maybe <wiliki-page>
+;; pagename -> Maybe <page>
 ;; pagename must be canonicalized.
 (define (get-page pagename)
   (cond ((not pagename) #f) ;; for safety
@@ -136,7 +144,7 @@
     (edit-page page
                `(p (@ (class "warning"))
                    "A page with name \"" ,name "\" already exists. "
-                   "Use different name.")))
+                   "Use a different name.")))
 
   (let ((data (cond ((ref page 'persistent-id) => get-page-data/check)
                     (else (get-new-page/check (ref page 'key))))))
@@ -302,6 +310,7 @@
 ;; +---------------------------------------------------+
 
 (define (standard-page page)
+  (current-page page)
   `((html
      (extra-header (@ (name "Content-type")
                       (value "text/html; charset=euc_jp")));;for now
@@ -324,6 +333,7 @@
                ,@(cond-list
                   ((persistent-page? page)
                    `(div (@ (id "edit-menu"))
+                         (@@ (require-role admin developer))
                          (a/cont (@@ (cont ,edit
                                            ,@(pagename-split (ref page 'key))))
                                  "[Edit]")
@@ -352,7 +362,8 @@
      (tr (td (@ (id "navigation-pane-left"))
              ,@(navi-links (pagename-split (ref page 'key))))
          (td (@ (id "navigation-pane-right"))
-             "[login]" "[search]"))))
+             ,@(login-link)
+             "[search]"))))
   )
 
 (define (redirect-to page)
@@ -422,33 +433,35 @@
         :title #`"Editing ,(ref page 'title)" :key (ref page 'key)
         :content
         `(,@extra-contents
-          (form/cont
-           (@@ (cont ,commit (donttouch) (content)))
-           (textarea (@ (name "content") (rows 20) (cols 60))
-                     ,(ref page 'content))
-           (br)
-           (div (@ (class "edit-inputs"))
-                (input (@ (type "submit") (name "commit") (value "Commit")))
-                " "
-                (input (@ (type "checkbox") (name "donttouch") (value "on")
-                          (id "donttouch")))
-                (label (@ (for "donttouch")) "Don't update 'Recent Changes'")
-                " "
-                (input (@ (type "checkbox") (name "addtonews") (value "on")
-                          (id "addtonews")))
-                (label (@ (for "addtonews")) "Add to news item")
-                (br)
-                "Change Page Name : "
-                (input (@ (type "entry") (name "changename") (width 20)
-                          (value ,(ref page 'key))))
-                " "
-                (input (@ (type "checkbox") (name "confirmchange") (value "on")
-                          (id "confirmchange")))
-                (label (@ (for "confirmchange")) "I'm sure"))
-           (br)
-           (div (@ (class "edit-help"))
-                ,@(use-page "/$admin/edit-help"))
-           )))
+          (div
+           (@@ (require-role admin developer))
+           (form/cont
+            (@@ (cont ,commit (donttouch) (content)))
+            (textarea (@ (name "content") (rows 20) (cols 60))
+                      ,(ref page 'content))
+            (br)
+            (div (@ (class "edit-inputs"))
+                 (input (@ (type "submit") (name "commit") (value "Commit")))
+                 " "
+                 (input (@ (type "checkbox") (name "donttouch") (value "on")
+                           (id "donttouch")))
+                 (label (@ (for "donttouch")) "Don't update 'Recent Changes'")
+                 " "
+                 (input (@ (type "checkbox") (name "addtonews") (value "on")
+                           (id "addtonews")))
+                 (label (@ (for "addtonews")) "Add to news item")
+                 (br)
+                 "Change Page Name : "
+                 (input (@ (type "entry") (name "changename") (width 20)
+                           (value ,(ref page 'key))))
+                 " "
+                 (input (@ (type "checkbox") (name "confirmchange") (value "on")
+                           (id "confirmchange")))
+                 (label (@ (for "confirmchange")) "I'm sure"))
+            (br)
+            (div (@ (class "edit-help"))
+                 ,@(use-page "/$admin/edit-help"))
+            ))))
     (standard-page epage)))
 
 ;; canonicalize EOL to #\newline
