@@ -1,4 +1,9 @@
 2004-09-03  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* kahua-web/macro.kahua:
+	modified simple-comment-form macro in order to list older first.
+	
+2004-09-03  Nobuo Yamashita  <nobsun@sampou.org>
 	
 	* kahua-web/comment.kahua:
 	Newly added for providing simple comment form.

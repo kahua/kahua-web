@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.15 2004/09/02 23:23:45 nobsun Exp $
+;; $Id: macro.kahua,v 1.16 2004/09/03 01:01:40 nobsun Exp $
 
 (use gauche.collection)
 
@@ -331,7 +331,7 @@
                                               (or (ref c 'contents) "")
                                               "\n}}}"))))
 			       '()))
-			 (ref comments 'comments)))
+			 (reverse (ref comments 'comments))))
 		"There is no comment.")))
 	;; form
 	`(div (@ (class "simplecommentmacro"))
