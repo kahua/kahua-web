@@ -1,3 +1,7 @@
+2004-02-27  Koichi Sasada <sasada@namikilab.tuat.ac.jp>
+
+	* kahua-web/kahua-web.kahua : fixed content-type keyword.
+
 2004-02-26  Yusei Tahara  <tahara@timedia.co.jp>
 
 	* kahua-web/kahua-web.kahua (standard-page): charset bug fixed.
