@@ -1,3 +1,8 @@
+2004-03-09  Koichi Sasada <sasada@namikilab.tuat.ac.jp>
+
+	* kahua-web/search.kahua, kahua-web/kahua-web.kahua:
+	added search field.
+
 2004-03-03  Shiro Kawai  <shiro@acm.org>
 
 	* kahua-web/kahua-web.kahua:

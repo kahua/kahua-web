@@ -1,0 +1,35 @@
+;;-*-Scheme-*-
+;; kahua-web: search
+;;
+;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
+;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
+;;  See COPYING for terms and conditions of using this software
+;;
+;; $Id: search.kahua,v 1.1 2004/03/09 10:35:27 ko1 Exp $
+
+(use wiliki.pasttime)
+
+;; search page
+(define-entry (search :keyword word sort-by)
+  (define (search-result)
+    (let*(
+	  (sorter (cond 
+		   (else
+		    (lambda (x y) (> (ref x 'mtime) (ref y 'mtime))))))
+	  (pages (sort
+		  (filter (lambda (page)
+			    (string-contains-ci (ref page 'content) word))
+			  (make-kahua-collection <page-data>)) sorter)))
+      (string-concatenate 
+       (cons (format "* search key: ~a\n" word)
+	     (map (lambda (page) 
+		    (format "- [[~a]] (~a)\n"
+			    (ref page 'name) 
+			    (how-long-since (ref page 'mtime))))
+		  pages)))
+      ))
+  (standard-page
+   (make <page> :title "Search Result" :key "/Search" 
+	        :content (search-result))))
+
+

@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.19 2004/03/03 23:45:03 shiro Exp $
+;; $Id: kahua-web.kahua,v 1.20 2004/03/09 10:35:27 ko1 Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -24,6 +24,7 @@
 (log-open (kahua-logpath "kahua-web.log"))
 (load "kahua-web/macro.kahua")
 (load "kahua-web/login.kahua")
+(load "kahua-web/search.kahua")
 (load "kahua-web/mailform.kahua")
 
 ;;========================================================
@@ -381,15 +382,40 @@
                           name))
                       (navi-paths pathl)
                       (cons "Home" pathl))))
+  ;; 
+  (define (navigation-right)
+    `(form/cont 
+      (@  (style "margin:0pt; padding:0pt"))
+      (@@ (cont ,search))
+      ,@(login-link)
+	" ¸¡º÷: "
+	(input (@ (style "margin:0pt; padding:0pt")
+		  (type "text") (name "word") (size 10)))))
   ;; body
   `((table
      (@ (id "navigation-pane"))
      (tr (td (@ (id "navigation-pane-left"))
              ,@(navi-links (pagename-split (ref page 'key))))
          (td (@ (id "navigation-pane-right"))
-             ,@(login-link)
-             "[search]"))))
-  )
+	     ,(navigation-right))))))
+
+(define (get-source page-path)
+  (or
+   (and-let* ((page (get-page page-path))
+	      (content (ref page 'content)))
+     (if (pair? content)
+	 (format "{{{\n~a\n}}}\n" content)
+	 (string-concatenate 
+	  (map (lambda (line) (format " ~a\n" line))
+	       (string-split (ref page 'content) "\n")))))
+   (format "* No Such Page: ~a" page-path)))
+
+(define-entry (source :rest page-name)
+  (let ((page-path (pagename-join page-name)))
+    (standard-page
+     (make <page> :title (format "Source of ~a" page-path)
+	          :key   (format "/Source/~a" page-path)
+                  :content (get-source page-path)))))
 
 (define (redirect-to page)
   (let1 page (or page (get-page "/"))
