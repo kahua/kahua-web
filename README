@@ -1,12 +1,12 @@
-$Id: README,v 1.1 2004/01/21 13:42:06 shiro Exp $
+$Id: README,v 1.2 2004/03/10 02:35:36 nobsun Exp $
 
 kahua-web : Kahua-based WiLiKi-like CMS
 
 [Requirements]
 
-Gauche-0.7.3
-WiLiKi-0.5_pre1
-Kahua-0.1.1
+Gauche-0.7.3.2
+WiLiKi-0.5_pre2
+Kahua-0.2
 
 [Installation]
 
