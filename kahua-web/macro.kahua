@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.7 2004/03/01 09:25:22 shiro Exp $
+;; $Id: macro.kahua,v 1.8 2004/03/01 09:33:43 shiro Exp $
 
 (use gauche.collection)
 
@@ -101,10 +101,7 @@
                   (map identity (all-page-data)))
     (let loop ((pages page-data))
       (cond
-       ((null? pages)
-        (let1 r (render (filter (cut cadr <>) page-data))
-          (log-format "~s" r)
-          r))
+       ((null? pages) (render (filter (cut cadr <>) page-data)))
        ((find-parent (car pages) page-data)
         => (lambda (parent)
              (set! (cadr (car pages)) #f)
