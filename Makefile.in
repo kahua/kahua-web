@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.8 2004/04/02 10:04:58 nobsun Exp $
+# $Id: Makefile.in,v 1.9 2004/04/05 02:35:14 nobsun Exp $
 
 package	          = kahua-web
 kahua		  = kahua
@@ -67,7 +67,7 @@ install:
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t static $(STATICFILES)
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t plugin -r $(PLUGINFILE) \
                                         $(SOURCEDIR)/$(PLUGINFILE)
-	$(GOSH) ./init.scm $(KAHUACONFIG)
+	$(GOSH) -I$(libdir) ./init.scm $(KAHUACONFIG)
 
 uninstall :
 	$(KAHUA_INSTALL) -U $(KAHUACONFIG) -t script $(SCRIPTFILES)
