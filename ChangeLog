@@ -1,3 +1,7 @@
+2004-02-26  Yusei Tahara  <tahara@timedia.co.jp>
+
+	* kahua-web/kahua-web.kahua (standard-page): charset bug fixed.
+
 2004-02-26  Koichi Sasada <sasada@namikilab.tuat.ac.jp>
 
 	* Makefile.in: added '$(KAHUACONFIG)' to 'init.scm' option.

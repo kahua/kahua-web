@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.12 2004/02/05 01:34:46 shiro Exp $
+;; $Id: kahua-web.kahua,v 1.13 2004/02/26 13:38:07 tahara Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -314,7 +314,7 @@
   (current-page page)
   `((html
      (extra-header (@ (name "Content-type")
-                      (value "text/html; charset=euc_jp")));;for now
+                      (value "text/html; charset=euc-jp")));;for now
      (head (title "Kahua"
                   ,(string-join (pagename-split (ref page 'key))
                                 "|" 'prefix))
