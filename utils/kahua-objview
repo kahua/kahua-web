@@ -6,7 +6,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-objview,v 1.6 2004/03/01 03:44:00 shiro Exp $
+;; $Id: kahua-objview,v 1.7 2004/03/01 03:46:20 shiro Exp $
 
 ;; Requires:
 ;;  Gauche-gl
@@ -281,6 +281,7 @@
 
 (define-method app-initiate-pick ((app <app-objview>)
                                   select-cont cancel-cont)
+  #f
   )
 
 (define (app-gl-config)
@@ -705,7 +706,7 @@
     (info-edit-show (ref (the-app) 'graph)) #t)
 
   (define (menu-cb-reparent event . _)
-    (initiate-reparent (the-app))
+    (app-initiate-pick (the-app) #f #f)
     #t)
 
   (define (menu-cb-expand-all event . _)
