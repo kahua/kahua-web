@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.15 2004/02/29 02:24:23 shiro Exp $
+;; $Id: kahua-web.kahua,v 1.16 2004/03/01 10:19:33 shiro Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -45,6 +45,9 @@
 ;; Page-data
 ;;
 
+;; NB: there's no way to delete a <page-data>.  A 'deleted' pages
+;; will be marked as "hidden".
+
 (define-class <page-data> (<kahua-persistent-base>)
   ((name       :allocation :persistent :init-keyword :name)
    (content    :allocation :persistent :init-keyword :content
@@ -57,11 +60,14 @@
                :init-value #f)
    (muser      :allocation :persistent :init-keyword :muser
                :init-value #f)
+   (hidden     :allocation :persistent :init-keyword :hidden
+               :init-value #f)
    ))
 
 ;; [<page-data>]
 (define (all-page-data)
-  (make-kahua-collection <page-data>))  
+  (filter (lambda (x) (not (ref x 'hidden)))
+          (make-kahua-collection <page-data>)))
 
 ;; pagename -> Maybe <page-data>
 ;; pagename must be canonicalized.
@@ -249,7 +255,9 @@
   (if (absolute-path? pagename)
     (canon-path pagename)
     (and-let* ((curpage (get-optional current
-                                      (ref (wiliki:current-page) 'key))))
+                                      (cond ((wiliki:current-page)
+                                             => (cut ref <> 'key))
+                                            (else #f)))))
       (cond ((equal? pagename "$") curpage)
             ((string-prefix? "$/" pagename)
              (canon-path curpage (string-drop pagename 2)))
@@ -408,7 +416,7 @@
     (standard-page
      (make-error-page "Error: program error"
                       `(,@(use-page "/$admin/program-error")
-                        (pre ,(kahua-error-string exc)))))))
+                        (pre ,(kahua-error-string exc (kahua-current-user))))))))
 
 (define-entry (edit :rest page-path)
   (let ((pagename (pagename-join page-path)))

@@ -1,3 +1,15 @@
+2004-03-01  Shiro Kawai  <shiro@acm.org>
+
+	* kahua-web/kahua-web.kahua:
+	(canon-pagename): fixed a bug that throws an error in some context.
+	(error-proc): turn on stack dump in the error message when the user
+	is logged in.
+	(<page-data>): added 'hidden' slot.
+	
+	* kahua-web/macro.kahua:
+	(format-macro): turn on stack dump in the error message when the user
+	is logged in.
+
 2004-02-29  Shiro Kawai  <shiro@acm.org>
 
 	* kahua-web/macro.kahua (tree-index): added ##(tree-index prefix)

@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.8 2004/03/01 09:33:43 shiro Exp $
+;; $Id: macro.kahua,v 1.9 2004/03/01 10:19:33 shiro Exp $
 
 (use gauche.collection)
 
@@ -32,7 +32,7 @@
                  "Error in expanding macro: "
                  (strong ,(write-to-string expr))
                  "\n"
-                 ,(kahua-error-string e #t))))
+                 ,(kahua-error-string e (kahua-current-user)))))
       (cut handler (cdr expr))))
   (cond ((assq-ref *macro-alist* (car expr)) => safe-apply)
         (else (unhandled-macro (car expr) (cdr expr)))))
