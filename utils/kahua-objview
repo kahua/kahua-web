@@ -6,7 +6,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-objview,v 1.1 2004/02/29 02:39:21 shiro Exp $
+;; $Id: kahua-objview,v 1.2 2004/02/29 23:53:02 shiro Exp $
 
 ;; Requires:
 ;;  Gauche-gl
@@ -67,16 +67,23 @@
 (define-class <page> ()
   ((key      :init-keyword :key)
    (basename :init-keyword :basename)
+   (content  :init-keyword :content)
    (children :init-keyword :children)
    (links    :init-keyword :links)
    (ctime    :init-keyword :ctime)
    (cuser    :init-keyword :cuser)
    (mtime    :init-keyword :mtime)
    (muser    :init-keyword :muser)
+   (dirty    :init-value #f)
    (touched  :init-value #f)
    ))
 
 (define all-pages (make-parameter '()))
+
+(define-method mark-dirty! ((self <page>))
+  (set! (ref self 'dirty) #t))
+(define-method clean-dirty! ((self <page>))
+  (set! (ref self 'dirty) #f))
 
 ;; Read kahua-web contents and creates an in-memory copy
 (define (db-init dbname)
@@ -91,6 +98,7 @@
       (make <page>
         :key (ref page 'name)
         :basename (sys-basename (ref page 'name))
+        :content (ref page 'content)
         :children children
         :links links
         :ctime (safe-ref page 'ctime)
@@ -144,8 +152,8 @@
 (define-constant KAHUA_DATA_DUMP 0)
 (define-constant KAHUA_DATA_NODE 1)
 (define-constant PANGO_FONT_BOLD 0)
-(define-constant GL_WINDOW_WIDTH 800)
-(define-constant GL_WINDOW_HEIGHT 600)
+(define-constant GRAPH_WINDOWWIDTH 800)
+(define-constant GRAPH_WINDOWHEIGHT 600)
 (define-constant MULTIEDIT_WIDTH 400)
 (define-constant MULTIEDIT_HEIGHT 130)
 (define-constant INFOEDIT_WIDTH 400)
@@ -153,39 +161,23 @@
 (define-constant INFOWIN_WIDTH 400)
 (define-constant INFOWIN_HEIGHT 200)
 
-(define *graph* (glgd-graph-create))
+(define *graph* #f)
 (define *ctrl-held* #f)
 (define *shift-held* #f)
 (define *file-name* "/")
 (define *menu-bg* #f)
 (define *info-win* #f)
-(define *info-win-key* #f)
-(define *info-win-basename* #f)
-(define *info-win-children* #f)
-(define *info-win-links* #f)
-(define *info-win-ctime* #f)
-(define *info-win-cuser* #f)
-(define *info-win-mtime* #f)
-(define *info-win-muser* #f)
 
-(define (list->pages lis)
-  (map (lambda (entry)
-    (apply make <page>
-      :key (car entry)
-      (append-map (lambda (key) `(,key ,(get-keyword key (cdr entry))))
-        '(:basename :children :links :ctime :cuser :mtime :muser))))
-    lis))
 
-(define-method write-object ((page <page>) port)
-  (write (list (ref page 'key)
-           :basename (ref page 'basename)
-           :children (ref page 'children)
-           :links    (ref page 'links)
-           :ctime    (ref page 'ctime)
-           :cuser    (ref page 'cuser)
-           :mtime    (ref page 'mtime)
-           :muser    (ref page 'muser))
-    port))
+;; conversion
+;;  cv-out str  to display string in gtk widget.
+;;  cv-in str   to read string from gtk widget.
+(define (cv-out str) (if str (ces-convert str #f "utf8") ""))
+(define (cv-in str)  (ces-convert str "utf8" #f))
+
+;; time formatter
+(define (format-time time)
+  (sys-strftime "%Y/%m/%d %H:%M:%S" (sys-localtime time)))
 
 (define (table-title-add table label l r t b xalign yalign)
   (let1 frame (gtk-frame-new #f)
@@ -197,7 +189,7 @@
       (gtk-widget-show label))
     (gtk-table-attach-defaults table frame l r t b)
     (gtk-widget-show frame))
-  #t)
+  )
 
 (define (table-field-add table label l r t b)
   (let1 frame (gtk-frame-new #f)
@@ -208,7 +200,7 @@
     (gtk-widget-show label)
     (gtk-table-attach-defaults table frame l r t b)
     (gtk-widget-show frame))
-  #t)
+  )
 
 ;; ===========================================================================
 ;; Multi-node Information editor functions
@@ -270,12 +262,12 @@
         (when (equal? (glgd-node-is-selected node) #t)
           (let* ((cuser (g-object-get-data multi-edit 'multi-edit-cuser))
                  (name (g-object-get-data cuser 'name-entry)))
-            (set! (ref record 'cuser)
-                  (ces-convert (gtk-entry-get-text name) "utf8" #f)))
+            (set! (ref record 'cuser) (cv-in (gtk-entry-get-text name)))
+            (mark-dirty! record))
           (let* ((muser (g-object-get-data multi-edit 'multi-edit-muser))
                  (name (g-object-get-data muser 'name-entry)))
-            (set! (ref record 'muser)
-                  (ces-convert (gtk-entry-get-text name) "utf8" #f))))))
+            (set! (ref record 'muser) (cv-in (gtk-entry-get-text name)))
+            (mark-dirty! record)))))
     (glgd-graph-node-list-flag graph GLGDNODE_FLAG_SELECTED GLGD_FLAGOP_CLEAR))
   #t)
 
@@ -421,9 +413,9 @@
     (let1 record (glgd-node-data-get node)
       (unless (null? record)
         (let1 page-name (format "~a [~a]"
-                                (ces-convert (ref record 'basename) #f "utf8")
-                                (ces-convert (ref record 'key) #f "utf8"))
-          (table-title-add table page-name 1 4 0 1 0.5 0.5))
+                                (ref record 'basename)
+                                (ref record 'key))
+          (table-title-add table (cv-out page-name) 1 4 0 1 0.5 0.5))
         (let1 ctime (info-edit-date-frame-new #f)
           (info-edit-date-fill ctime (ref record 'ctime))
           (g-object-set-data info-edit 'info-edit-ctime ctime)
@@ -432,7 +424,7 @@
                      #f
                      (if (eq? (ref record 'cuser) #f)
                        #f
-                       (ces-convert (ref record 'cuser) #f "utf8")))
+                       (cv-out (ref record 'cuser))))
           (g-object-set-data info-edit 'info-edit-cuser cuser)
           (gtk-table-attach-defaults table cuser 1 4 2 3))
         (let1 mtime (info-edit-date-frame-new #f)
@@ -443,7 +435,7 @@
                      #f
                      (if (eq? (ref record 'muser) #f)
                        #f
-                       (ces-convert (ref record 'muser) #f "utf8")))
+                       (cv-out (ref record 'muser))))
           (g-object-set-data info-edit 'info-edit-muser muser)
           (gtk-table-attach-defaults table muser 1 4 4 5)))))
   #t)
@@ -469,19 +461,21 @@
          (record (glgd-node-data-get node)))
     (let1 posix-time (info-edit-date-get
                       (g-object-get-data info-edit 'info-edit-ctime))
-      (set! (ref record 'ctime) posix-time))
+      (set! (ref record 'ctime) posix-time)
+      (mark-dirty! record))
     (let* ((cuser (g-object-get-data info-edit 'info-edit-cuser))
            (name (g-object-get-data cuser 'name-entry)))
-      (set! (ref record 'cuser)
-            (ces-convert (gtk-entry-get-text name) "utf8" #f)))
+      (set! (ref record 'cuser) (cv-in (gtk-entry-get-text name)))
+      (mark-dirty! record))
     (let1 posix-time (info-edit-date-get
                       (g-object-get-data info-edit 'info-edit-mtime))
-      (set! (ref record 'mtime) posix-time))
+      (set! (ref record 'mtime) posix-time)
+      (mark-dirty! record))
     (let* ((muser (g-object-get-data info-edit 'info-edit-muser))
            (name (g-object-get-data muser 'name-entry)))
-      (set! (ref record 'muser)
-            (ces-convert (gtk-entry-get-text name) "utf8" #f))))
-  #t)
+      (set! (ref record 'muser) (cv-in (gtk-entry-get-text name)))
+      (mark-dirty! record))
+    #t))
 
 (define (info-edit-respond widget response-id)
   (when (eq? response-id GTK_RESPONSE_ACCEPT)
@@ -518,70 +512,82 @@
 ;; ============================
 ;; Information window functions
 ;; ============================
-(define (info-win-fill info-win node)
-  ;; NOTES: - <ces-convert> is used to convert all text fields to UTF-8
-  ;;        - <sys-ctime> returns a string with a CR at the end
-  ;;          (<string-scan> with <before> is used to remove it)
-  ;;        - <record> contains the entire record class with the key
-  ;; ------------------------------------------------------------------
+
+(define-class <info-win> ()
+  ((window)
+   (labels :init-value '()) ;; assoc list
+   ))
+
+(define-method initialize ((self <info-win>) initargs)
+  (next-method)
+  (let1 info-win (gtk-window-new GTK_WINDOW_POPUP)
+    (set! (ref self 'window) info-win)
+    (gtk-window-set-decorated info-win #f)
+    (gtk-widget-set-size-request info-win INFOWIN_WIDTH INFOWIN_HEIGHT)
+    (gtk-container-set-border-width info-win 2)
+    (let1 frame (gtk-frame-new #f)
+      (gtk-container-add info-win frame)
+      (gtk-frame-set-shadow-type frame GTK_SHADOW_ETCHED_IN)
+      (gtk-widget-show frame)
+      (let1 table (gtk-table-new 6 4 #t)
+        (gtk-container-add frame table)
+        (for-each (lambda (labdesc)
+                    (let1 lab (gtk-label-new "")
+                      (push! (ref self 'labels) (cons (car labdesc) lab))
+                      (apply table-field-add table lab (cdr labdesc))))
+                  '((key 1 4 0 1)
+                    (basename 1 4 1 2)
+                    (children 1 4 2 3)
+                    (links 1 4 3 4)
+                    (ctime 1 3 4 5)
+                    (cuser 3 4 4 5)
+                    (mtime 1 3 5 6)
+                    (muser 3 4 5 6)))
+        (table-title-add table "Key:" 0 1 0 1 1.0 0.5)
+        (table-title-add table "Basename:" 0 1 1 2 1.0 0.5)
+        (table-title-add table "Children:" 0 1 2 3 1.0 0.5)
+        (table-title-add table "Links:" 0 1 3 4 1.0 0.5)
+        (table-title-add table "Created:" 0 1 4 5 1.0 0.5)
+        (table-title-add table "Modified:" 0 1 5 6 1.0 0.5)
+        (gtk-widget-show table))
+      (gtk-widget-show frame))))
+
+(define-method get-label ((self <info-win>) name)
+  (assq-ref (ref self 'labels) name))
+
+(define-method info-win-fill ((self <info-win>) node)
   (let1 record (glgd-node-data-get node)
     (unless (null? record)
-      (gtk-label-set-text *info-win-key*
-                          (ces-convert (ref record 'key) #f "utf8"))
-      (gtk-label-set-text *info-win-basename*
-                          (ces-convert (ref record 'basename) #f "utf8"))
-      (gtk-label-set-text *info-win-children*
+      (gtk-label-set-text (get-label self 'key)
+                          (cv-out (ref record 'key)))
+      (gtk-label-set-text (get-label self 'basename)
+                          (cv-out (ref record 'basename)))
+      (gtk-label-set-text (get-label self 'children)
                           #`",(kahua-record-child-count record)")
-      (gtk-label-set-text *info-win-links*
+      (gtk-label-set-text (get-label self 'links)
                           #`",(kahua-record-link-count record)")
-      (gtk-label-set-text *info-win-ctime*
-                          (string-scan (sys-ctime (ref record 'ctime)) "\n" `before))
-      (if (eq? (ref record 'cuser) #f)
-        (gtk-label-set-text *info-win-cuser* "")
-        (gtk-label-set-text *info-win-cuser*
-                            (ces-convert (ref record 'cuser) #f "utf8")))
-      (gtk-label-set-text *info-win-mtime*
-                          (string-scan (sys-ctime (ref record 'mtime)) "\n" 'before))
-      (if (eq? (ref record 'muser) #f)
-        (gtk-label-set-text *info-win-muser* "")
-        (gtk-label-set-text *info-win-muser*
-                            (ces-convert (ref record 'muser) #f "utf8")))))
-  #t)
-  
-(define (info-win-initialize info-win)
-  (gtk-window-set-decorated info-win #f)
-  (gtk-widget-set-size-request info-win INFOWIN_WIDTH INFOWIN_HEIGHT)
-  (gtk-container-set-border-width info-win 2)
-  (let1 frame (gtk-frame-new #f)
-    (gtk-container-add info-win frame)
-    (gtk-frame-set-shadow-type frame GTK_SHADOW_ETCHED_IN)
-    (gtk-widget-show frame)
-    (let1 table (gtk-table-new 6 4 #t)
-      (gtk-container-add frame table)
-      (table-field-add table *info-win-key* 1 4 0 1)
-      (table-field-add table *info-win-basename* 1 4 1 2)
-      (table-field-add table *info-win-children* 1 4 2 3)
-      (table-field-add table *info-win-links* 1 4 3 4)
-      (table-field-add table *info-win-ctime* 1 3 4 5)
-      (table-field-add table *info-win-cuser* 3 4 4 5)
-      (table-field-add table *info-win-mtime* 1 3 5 6)
-      (table-field-add table *info-win-muser* 3 4 5 6)
-      (table-title-add table "Key:" 0 1 0 1 1.0 0.5)
-      (table-title-add table "Basename:" 0 1 1 2 1.0 0.5)
-      (table-title-add table "Children:" 0 1 2 3 1.0 0.5)
-      (table-title-add table "Links:" 0 1 3 4 1.0 0.5)
-      (table-title-add table "Created:" 0 1 4 5 1.0 0.5)
-      (table-title-add table "Modified:" 0 1 5 6 1.0 0.5)
-      (gtk-widget-show table)))
+      (gtk-label-set-text (get-label self 'ctime)
+                          (format-time (ref record 'ctime)))
+      (gtk-label-set-text (get-label self 'cuser)
+                          (cond ((ref record 'cuser) => cv-out)
+                                (else "")))
+      (gtk-label-set-text (get-label self 'mtime)
+                          (format-time (ref record 'mtime)))
+      (gtk-label-set-text (get-label self 'muser)
+                          (cond ((ref record 'muser) => cv-out)
+                                (else "")))
+      ))
   #t)
   
 (define (info-win-show info-win graph)
   (let1 node (glgd-graph-node-selected graph 0)
     (unless (eq? node #f)
       (info-win-fill info-win node)
-      (gtk-window-set-position info-win  GTK_WIN_POS_MOUSE)
-      (gtk-widget-show info-win)))
-  #t)
+      (gtk-window-set-position (ref info-win 'window) GTK_WIN_POS_MOUSE)
+      (gtk-widget-show (ref info-win 'window)))))
+
+(define (info-win-hide info-win)
+  (gtk-widget-hide (ref info-win 'window)))
 
 ;; =========================
 ;; Background menu functions
@@ -720,7 +726,7 @@
                                       GLGD_FLAGOP_CLEAR))))
 
   (if (= (ref event 'type) GDK_BUTTON_RELEASE)
-    (gtk-widget-hide *info-win*))
+    (info-win-hide *info-win*))
   #t)
 
 (define (mouse-hover-callback graph node link event)
@@ -777,8 +783,7 @@
   ;; Add this node to the graph
   ;; --------------------------
   (let1 node (glgd-node-create)
-    (let1 label
-        (ces-convert (ref (car kahua-data) 'basename) #f "utf8")
+    (let1 label (cv-out (ref (car kahua-data) 'basename))
       (glgd-node-data-set node (car kahua-data))
       (glgd-node-info-set node label node-id))
     (glgd-node-attribute-set node KAHUA_DATA_NODE)
@@ -872,80 +877,71 @@
 ;; ======================
 ;; GTK Callback functions
 ;; ======================
-(define (draw widget . _)
-  (let ((glcontext (gtk-widget-get-gl-context widget))
-        (gldrawable (gtk-widget-get-gl-drawable widget)))
-    (when (gdk-gl-drawable-gl-begin gldrawable glcontext)
-      (gl-clear (logior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
-      (glgd-graph-draw *graph*)
-      (if (gdk-gl-drawable-is-double-buffered gldrawable)
-        (gdk-gl-drawable-swap-buffers gldrawable)
-        (gl-flush))
-      (gdk-gl-drawable-gl-end gldrawable))
-    #t))
 
-(define (reshape widget . _)
-  (let* ((glcontext (gtk-widget-get-gl-context widget))
-         (gldrawable (gtk-widget-get-gl-drawable widget))
-         (wsize (ref widget 'allocation))
-         (h (/ (ref wsize 'height) (ref wsize 'width))))
-    (when (gdk-gl-drawable-gl-begin gldrawable glcontext)
-      (gl-viewport 0 0 (ref wsize 'width) (ref wsize 'height))
-      (gdk-gl-drawable-gl-end gldrawable))
-    #t)
-  (glgd-graph-reshape *graph*))
+(define-class <graph-pane> (<gtk-drawing-area>)
+  ((graph :init-form (glgd-graph-create))   ;; <glgd-graph>
+   ))
 
-(define (init widget)
-  (let ((glcontext (gtk-widget-get-gl-context widget))
-        (gldrawable (gtk-widget-get-gl-drawable widget)))
-    (when (gdk-gl-drawable-gl-begin gldrawable glcontext)
-      (gl-light GL_LIGHT0 GL_POSITION '#f32(5.0 5.0 10.0 0.0))
-      (gl-enable GL_CULL_FACE)
-      (gl-enable GL_LIGHTING)
-      (gl-enable GL_LIGHT0)
-      (gl-enable GL_DEPTH_TEST)
-      (gl-enable GL_NORMALIZE)
+(define (build-graph-pane parent glconfig data-proc)
 
-      (print)
-      (print #`"GL_RENDERER   = ,(gl-get-string GL_RENDERER)")
-      (print #`"GL_VERSION    = ,(gl-get-string GL_VERSION)")
-      (print #`"GL_VENDOR     = ,(gl-get-string GL_VENDOR)")
-      ;;      (print #`"GL_EXTENSIONS = ,(gl-get-string GL_EXTENSIONS)")
-      (print)
+  (define (draw widget . _)
+    (let ((glcontext (gtk-widget-get-gl-context widget))
+          (gldrawable (gtk-widget-get-gl-drawable widget)))
+      (when (gdk-gl-drawable-gl-begin gldrawable glcontext)
+        (gl-clear (logior GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
+        (glgd-graph-draw *graph*)
+        (if (gdk-gl-drawable-is-double-buffered gldrawable)
+          (gdk-gl-drawable-swap-buffers gldrawable)
+          (gl-flush))
+        (gdk-gl-drawable-gl-end gldrawable))
+      #t))
 
-      (gdk-gl-drawable-gl-end gldrawable))))
+  (define (reshape widget . _)
+    (let* ((glcontext (gtk-widget-get-gl-context widget))
+           (gldrawable (gtk-widget-get-gl-drawable widget))
+           (wsize (ref widget 'allocation))
+           (h (/ (ref wsize 'height) (ref wsize 'width))))
+      (when (gdk-gl-drawable-gl-begin gldrawable glcontext)
+        (gl-viewport 0 0 (ref wsize 'width) (ref wsize 'height))
+        (gdk-gl-drawable-gl-end gldrawable))
+      #t)
+    (glgd-graph-reshape *graph*))
+
+  (define (init widget)
+    (let ((glcontext (gtk-widget-get-gl-context widget))
+          (gldrawable (gtk-widget-get-gl-drawable widget)))
+      (when (gdk-gl-drawable-gl-begin gldrawable glcontext)
+        (gl-light GL_LIGHT0 GL_POSITION '#f32(5.0 5.0 10.0 0.0))
+        (gl-enable GL_CULL_FACE)
+        (gl-enable GL_LIGHTING)
+        (gl-enable GL_LIGHT0)
+        (gl-enable GL_DEPTH_TEST)
+        (gl-enable GL_NORMALIZE)
+        (gdk-gl-drawable-gl-end gldrawable))))
+
+  ;; build-graph-pane
+  (let1 self (make <graph-pane>)
+    (gtk-widget-set-gl-capability self glconfig #f #t GDK_GL_RGBA_TYPE)
+    (gtk-widget-set-events self (logior GDK_EXPOSURE_MASK
+                                        GDK_VISIBILITY_NOTIFY_MASK))
+    (g-signal-connect self "realize" init)
+    (g-signal-connect self "configure_event" reshape)
+    (g-signal-connect self "expose_event" draw)
+    (glgd-graph-build (ref self 'graph) (data-proc))
+    (glgd-graph-connect (ref self 'graph) parent self)
+    (set! *graph* (ref self 'graph))
+    self))
 
 (define (save-kahua-data widget)
-  (let1 fs (gtk-widget-get-toplevel widget)
-    (format #t "Saving data to ~a\n" (gtk-file-selection-get-filename fs))
-    (gtk-widget-destroy fs))
+  (print "save kahua data")
   #t)
 
 ;;----------------------------------------------------------------
 ;; GUI application entry
 ;;
 (define (run-app)
-  ;(glgd-verbosity GLGD_TRACE_LEVEL)  ;; for debug
-
-  ;; Test for OpenGL support
-  ;; -----------------------
-  (unless (gdk-gl-query-extension)
-    (error "*** OpenGL is not supported."))
-
-  ;; Initialize GTK window with GL draw area
-  ;; ---------------------------------------  
-  (let1 glconfig (or (gdk-gl-config-new-by-mode (logior GDK_GL_MODE_RGB
-                                                        GDK_GL_MODE_DEPTH
-                                                        GDK_GL_MODE_DOUBLE))
-                     (begin
-                       (warn "*** Cannot find the double-buffered visual.\n")
-                       (warn "*** Trying single-buffered visual.\n")
-                       (gdk-gl-config-new-by-mode (logior GDK_GL_MODE_RGB
-                                                          GDK_GL_MODE_DEPTH)))
-                     (error "*** No appropriate OpenGL-capable visual found."))
-
-    ;; Top-level window
-    ;; ----------------
+  (let1 glconfig (app-gl-config)
+    ;; Top-level window -------------------
     (let1 window (gtk-window-new GTK_WINDOW_TOPLEVEL)
       (gtk-window-set-title window "Kahua-web object browser")
       (g-signal-connect window "delete_event" (lambda _ (gtk-main-quit)))
@@ -953,30 +949,14 @@
         (gtk-container-add window vbox)
         (gtk-widget-show vbox)
 
-        ;; Drawing area for drawing OpenGL scene
-        ;; -------------------------------------
-        (let1 drawing-area (gtk-drawing-area-new)
+        ;; Drawing area for drawing OpenGL scene ----------
+        (let1 drawing-area (build-graph-pane window glconfig all-pages)
           (gtk-widget-set-size-request drawing-area
-                                       GL_WINDOW_WIDTH GL_WINDOW_HEIGHT)
-          (gtk-widget-set-gl-capability drawing-area glconfig #f #t
-                                        GDK_GL_RGBA_TYPE)
+                                       GRAPH_WINDOWWIDTH GRAPH_WINDOWHEIGHT)
           (gtk-box-pack-start vbox drawing-area #t #t 0)
-          (gtk-widget-set-events drawing-area
-                                 (logior GDK_EXPOSURE_MASK
-                                         GDK_VISIBILITY_NOTIFY_MASK))
-          (g-signal-connect drawing-area "realize" init)
-          (g-signal-connect drawing-area "configure_event" reshape)
-          (g-signal-connect drawing-area "expose_event" draw)
-          
-          ;; Build the <glgdGraph> from the Kahua Data
-          ;; -----------------------------------------
-          (glgd-graph-build *graph* (all-pages))
-          (glgd-graph-connect *graph* window drawing-area)
-
           (gtk-widget-show drawing-area))
 
-        ;; Simple quit button
-        ;; ------------------
+        ;; Simple quit button -----------------------------
         (let1 button (gtk-button-new-with-label "Quit")
           (gtk-box-pack-start vbox button #f #f 0)
           (g-signal-connect button "clicked" (lambda _ (gtk-main-quit)))
@@ -984,16 +964,7 @@
 
       ;; Initialize info-win
       ;; -------------------
-      (set! *info-win* (gtk-window-new GTK_WINDOW_POPUP))
-      (set! *info-win-key* (gtk-label-new ""))
-      (set! *info-win-basename* (gtk-label-new ""))
-      (set! *info-win-children* (gtk-label-new ""))
-      (set! *info-win-links* (gtk-label-new ""))
-      (set! *info-win-ctime* (gtk-label-new ""))
-      (set! *info-win-cuser* (gtk-label-new ""))
-      (set! *info-win-mtime* (gtk-label-new ""))
-      (set! *info-win-muser* (gtk-label-new ""))
-      (info-win-initialize *info-win*)
+      (set! *info-win* (make <info-win>))
       
       ;; Initialize pop-up menus
       ;; -----------------------
@@ -1005,7 +976,15 @@
     (glgd-graph-fini *graph*)
     0))
 
-  
+(define (app-gl-config)
+  (unless (gdk-gl-query-extension)
+    (error "*** OpenGL is not supported."))
+  (or (gdk-gl-config-new-by-mode (logior GDK_GL_MODE_RGB
+                                         GDK_GL_MODE_DEPTH
+                                         GDK_GL_MODE_DOUBLE))
+      (gdk-gl-config-new-by-mode (logior GDK_GL_MODE_RGB
+                                         GDK_GL_MODE_DEPTH))
+      (error "*** No appropriate OpenGL-capable visual found.")))
 
 
 ;; Local variables:
