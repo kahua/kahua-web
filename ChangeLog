@@ -1,3 +1,9 @@
+2005-01-26  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* kahua-web/kahua-web.kahua
+	Added link element for rss feed in head element of html.  
+	And enabled to specify rss feed entry URL by *kahua-web-rss*.
+	
 2005-01-25  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* kahua-web/version.kahua.in:

@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.30 2005/01/25 03:42:55 nobsun Exp $
+;; $Id: kahua-web.kahua,v 1.31 2005/01/26 05:09:44 nobsun Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -34,6 +34,9 @@
 
 (or (symbol-bound? '*kahua-web-title*)
     (define *kahua-web-title* "Kahua"))
+
+(or (symbol-bound? '*kahua-web-rss*)
+    (define *kahua-web-rss* "/cgi-bin/kahua.cgi/kahua-web/rss"))
 
 ;;========================================================
 ;; Application error handling
@@ -362,6 +365,9 @@
                                   "|" 'prefix))
 	     (meta (@ (http-equiv "Content-type")
 		      (content "text/html; charset=euc-jp")))
+             (link (@ (rel "alternate") (type "application/rss+xml")
+                      (title ,(string-append *kahua-web-title* " RSS"))
+                      (href ,*kahua-web-rss*)))
              (link (@ (rel "stylesheet") (type "text/css")
                       (href ,(kahua-static-document-url
                               "kahua-web/kahua-web.css")))))
