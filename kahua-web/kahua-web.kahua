@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.3 2004/01/22 15:32:53 shiro Exp $
+;; $Id: kahua-web.kahua,v 1.4 2004/01/23 11:17:00 shiro Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -21,6 +21,23 @@
 
 (log-open (kahua-logpath "kahua-web.log"))
 (load "kahua-web/macro.kahua")
+
+;;========================================================
+;; Application error handling
+;;
+;;   An error that causes a normal occasion (e.g. input error)
+;;   can be thrown by <kahua-error> object.
+;;   The <error> would be considered as a program error.
+;;   NB: <kahua-error> should go to kahua module?
+
+(define-class <kahua-error> (<error>)
+  ((form :init-keyword :form :init-value #f) ;; form to display.  [SXML]
+   ))
+
+(define (kahua-error form)
+  (raise (make <kahua-error>
+           :message "kahua application error"
+           :form form)))
 
 ;;========================================================
 ;; Page-data
@@ -52,6 +69,9 @@
 (define (page-data-exists? pagename)
   (not (not (get-page-data pagename)))) ;; for now
 
+(define (get-page-data-from-id id)
+  (find-kahua-instance <page-data> id))
+
 (define-method pagename<? ((a <page-data>) (b <page-data>))
   (string<? (ref a 'name) (ref b 'name)))
 
@@ -59,11 +79,17 @@
 ;; Page
 ;;
 
+;; <page> class is used to represent any "displayable" pages, including
+;; procedurally constructed page.
+;; For the page that has persistent <page-data>, persistent-id slot
+;; containts <page-data>'s id.
 (define-class <page> (<wiliki-page>)
-  ((virtual-pages :allocation :class :init-value '())))
+  ((persistent-id :init-keyword :persistent-id :init-value #f)
+   (name-changed? :init-value #f)
+   (virtual-pages :allocation :class :init-value '())))
 
-(define-class <transient-page> (<page>) ())
-(define-class <persistent-page> (<page>) ())
+(define (persistent-page? page)
+  (and (is-a? page <page>) (ref page 'persistent-id)))
 
 (define (add-virtual-page! pagename proc)
   (class-slot-set! <page> 'virtual-pages
@@ -73,11 +99,11 @@
 (define (lookup-virtual-page pagename)
   (assoc-ref (class-slot-ref <page> 'virtual-pages) pagename))
 
-;; <page-data> -> <persistent-page>
+;; <page-data> -> <page>
 (define (page-data->page data)
-  (make <persistent-page>
+  (make <page>
     :title (base-pagename (ref data 'name))
-    :key   (ref data 'name)
+    :key   (ref data 'name)  :persistent-id (key-of data)
     :content (ref data 'content)
     :ctime (ref data 'ctime) :cuser (ref data 'cuser)
     :mtime (ref data 'mtime) :muser (ref data 'muser)))
@@ -91,13 +117,30 @@
         (else #f)))
 
 ;; save page.
-(define (save-page page)
-  (when (is-a? page <persistent-page>)
-    (let ((data (or (get-page-data (ref page 'key))
-                    (make <page-data> :name (ref page 'key)))))
-      (set! (ref data 'content) (ref page 'content))
-      (set! (ref data 'mtime) (sys-time))
-      (kahua-db-sync))))
+(define (save-page page cont)
+  (define (get-page-data/check id)
+    (let ((data (get-page-data-from-id id)))
+      (unless (equal? (ref data 'name) (ref page 'key))
+        ;; page name is changed.  make sure it doesn't conflict.
+        (let1 other (get-page-data (ref page 'key))
+          (when (and other (not (equal? (ref data 'id) (ref other 'id))))
+            (error "duplicated page name:" (ref page 'key))))
+        (set! (ref data 'name) (ref page 'key)))
+      data))
+  (define (get-new-page/check name)
+    (let1 other (get-page-data name)
+      (when other (error "duplicated page name:" name))
+      (make <page-data> :name (ref page 'key))))
+
+  (let ((data (cond ((ref page 'persistent-id) => get-page-data/check)
+                    (else (get-new-page/check (ref page 'key))))))
+    (set! (ref data 'content) (ref page 'content))
+    (set! (ref data 'mtime) (sys-time))
+    (kahua-db-sync)
+    (if (ref page 'persistent-id)
+      (cont page)
+      (cont (page-data->page (get-page-data (ref page 'key)))))
+    ))
 
 (define (front-page? page)
   (equal? (ref page 'key) "/"))
@@ -107,7 +150,7 @@
 (add-virtual-page!
  "/"
  (lambda (name)
-   (make <transient-page>
+   (make <page>
      :title "Kahua home" :key "/" :content (use-page "/$admin/home"))))
 
 ;;========================================================
@@ -119,7 +162,7 @@
                :allocation :persistent)
    (max-pages  :init-keyword :max-pages :init-value #f
                :allocation :persistent)
-   (page-names :init-keyword :pages :init-value '()
+   (pages      :init-keyword :pages :init-value '()
                :allocation :persistent)
    ))
 
@@ -127,16 +170,13 @@
   (x->string (ref self 'name)))
 
 ;; assume pagename is canonicalized
-(define-method page-set-push-unique! ((self <page-set>) (pagename <string>))
-  (let1 lis
-      (cons pagename (remove (pa$ equal? pagename) (ref self 'page-names)))
-    (set! (ref self 'page-names)
+(define-method page-set-push-unique! ((self <page-set>) (page <page>))
+  (let1 lis (cons (ref page 'persistent-id)
+                  (remove (cut equal? (ref page 'persistent-id) <>)
+                          (ref self 'pages)))
+    (set! (ref self 'pages)
           (cond ((ref self 'max-pages) => (cut take* lis <>))
                 (else lis)))))
-
-;; (<page-set>) -> [<page>]
-(define-method page-set->pages ((self <page-set>))
-  (filter get-page (ref self 'page-names)))
 
 ;; (String, Bool=#f, MaxPages=#f) -> <page-set>
 ;; second arg specifies whether it should create a new page set if
@@ -194,9 +234,9 @@
                                       (ref (wiliki:current-page) 'key))))
       (fix-up (cond ((equal? pagename "$") curpage)
                     ((string-prefix? "$/" pagename)
-                     (build-path curpage (string-drop pagename 2)))
+                     (fix-up (simplify-path (build-path curpage (string-drop pagename 2)))))
                     (else
-                     (build-path (sys-dirname curpage) pagename)))))))
+                     (fix-up (simplify-path (build-path (sys-dirname curpage) pagename)))))))))
 
 ;; Base name to be used for display
 ;;  NB: it is arguable that whether we should display the pathname
@@ -205,21 +245,18 @@
 (define (base-pagename pagename)
   (if (equal? pagename "/") "/" (sys-basename pagename)))
 
-;; "/aa/bb/cc" -> '("/" "aa" "bb" "cc")
-;; "/" -> '("/")
-(define (pagename->components pagename)
+;; "/aa/bb/cc" -> '("aa" "bb" "cc")
+;; "/" -> '()
+(define (pagename-split pagename . opts)
   (let1 c (canon-pagename pagename)
-    (and c
-         (if (string=? c "/")
-           (list c)
-           (cons "/" (string-split (string-drop c 1) #\/))))))
+    (and c (if (string=? c "/")
+             '()
+             (string-split (string-drop c 1) #\/)))))
 
-;; '("/" "aa" "bb" "cc") => "/aa/bb/cc"
-;; '("/") => "/"
-(define (components->pagename components)
-  (if (null? components)
-    "/" ;; tolerate
-    (string-append "/" (string-join (cdr components) "/"))))
+;; '("aa" "bb" "cc") => "/aa/bb/cc"
+;; '() => "/"
+(define (pagename-join components)
+  (string-append "/" (string-join components "/")))
 
 ;; Formatting wikiname.
 (define (format-wikiname name)
@@ -227,12 +264,10 @@
     (if absname
       (if (or (lookup-virtual-page absname)
               (page-data-exists? absname))
-        `((a/cont (@@ (cont ,show ,@(cdr (string-split absname #\/))))
+        `((a/cont (@@ (cont ,show ,@(pagename-split absname)))
                   ,(base-pagename absname)))
         `(,(base-pagename absname)
-          (a/cont (@@ (cont ,(cut edit-page (make <persistent-page>
-                                              :title absname
-                                              :key absname))))
+          (a/cont (@@ (cont ,edit ,@(pagename-split absname)))
                   "?")))
       (#`"[[,name]]"))))
 
@@ -258,7 +293,7 @@
 (define (standard-page page)
   `((html
      (head (title "Kahua"
-                  ,(string-join (cdr (pagename->components (ref page 'key)))
+                  ,(string-join (pagename-split (ref page 'key))
                                 "|" 'prefix))
            (link (@ (rel "stylesheet") (type "text/css")
                     (href ,(kahua-static-document-url
@@ -274,9 +309,11 @@
                ,@(if (front-page? page) '() `((h1 ,(ref page 'title))))
                ,@(wiliki:format-content page)
                ,@(cond-list
-                  ((is-a? page <persistent-page>)
+                  ((persistent-page? page)
                    `(div (@ (id "edit-menu"))
-                         (a/cont (@@ (cont ,(cut edit-page page))) "[Edit]")
+                         (a/cont (@@ (cont ,edit
+                                           ,@(pagename-split (ref page 'key))))
+                                 "[Edit]")
                          "[History]"))))
            ))
       (hr)
@@ -286,24 +323,21 @@
 (define (page-navigation page)
   ;; ("/" "a" "b") => (() ("a") ("a" "b"))
   (define (navi-paths pathl)
-    (map-with-index (lambda (ind _) (take (cdr pathl) ind)) pathl))
-  ;; ("/" "a" "b") => ("Home" "a" "b")
-  (define (navi-names pathl)
-    (map (lambda (path) (if (equal? path "/") "Home" path)) pathl))
+    (map-with-index (lambda (ind _) (take pathl ind)) (cons #f pathl)))
   ;; "/a/b" => ["Home" ">" "a" ">" "b"] with appropriate links
   (define (navi-links pathl)
     (intersperse " > "
                  (map (lambda (paths name)
-                        (if (get-page #`"/,(string-join paths \"/\")")
+                        (if (get-page (pagename-join paths))
                           `(a/cont (@@ (cont ,show ,@paths)) ,name)
                           name))
                       (navi-paths pathl)
-                      (navi-names pathl))))
+                      (cons "Home" pathl))))
   ;; body
   `((table
      (@ (id "navigation-pane"))
      (tr (td (@ (id "navigation-pane-left"))
-             ,@(navi-links (pagename->components (ref page 'key))))
+             ,@(navi-links (pagename-split (ref page 'key))))
          (td (@ (id "navigation-pane-right"))
              "[login]" "[search]"))))
   )
@@ -330,7 +364,7 @@
 ;;
 
 (define-entry (show :rest page-path)
-  (let ((pagename #`"/,(string-join page-path \"/\")"))
+  (let ((pagename (pagename-join page-path)))
     (cond ((get-page pagename) => standard-page)
           (else (standard-page (make-nonexistent-page pagename))))))
 
@@ -340,48 +374,61 @@
                    `(p "ページ" ,pagename "は存在しません")))
 
 (define (make-error-page title body)
-  (make <transient-page> :title title :key "/Error" :content body))
+  (make <page> :title title :key "/Error" :content body))
+
+(define (error-proc exc)
+  (if (is-a? exc <kahua-error>)
+    (standard-page (ref exc 'form))
+    (standard-page
+     (make-error-page "Error: program error"
+                      `(,@(use-page "/$admin/program-error")
+                        (pre ,(kahua-error-string exc)))))))
+
+(define-entry (edit :rest page-path)
+  (let ((pagename (pagename-join page-path)))
+    (cond ((get-page pagename) => edit-page)
+          (else (edit-page (make <page> :title pagename :key pagename))))))
 
 (define (edit-page page)
-  (let1 commit (entry-lambda (:keyword content donttouch addtonews
-                                       changename confirmchange)
-                 (set! (ref page 'content) (canon-content content))
-                 (and-let* (((equal? confirmchange "on"))
-                            (newname (canon-pagename changename)))
-                   (set! (ref page 'key) newname))
-                 (unless (equal? donttouch "on")
-                   (page-set-push-unique! (page-set:recent-changes)
-                                          (ref page 'key)))
-                 (when (equal? addtonews "on")
-                   (page-set-push-unique! (page-set:news)
-                                          (ref page 'key)))
-                 (save-page page)
-                 (redirect-to page))
-    (let1 epage
-        (make <transient-page>
-          :title #`"Editing ,(ref page 'title)" :key (ref page 'key)
-          :content
-          `((form/cont
-             (@@ (cont ,commit (donttouch) (content)))
-             (textarea (@ (name "content") (rows 20) (cols 60))
-                       ,(ref page 'content))
-             (br)
-             (input (@ (type "submit") (name "commit") (value "Commit")))
-             (input (@ (type "checkbox") (name "donttouch") (value "on")
-                       (id "donttouch")))
-             (label (@ (for "donttouch")) "Don't update 'Recent Changes'")
-             (input (@ (type "checkbox") (name "addtonews") (value "on")
-                       (id "addtonews")))
-             (label (@ (for "addtonews")) "Add to news item")
-             (br)
-             "Change Page Name"
-             (input (@ (type "entry") (name "changename") (width 20)
-                       (value ,(ref page 'key))))
-             (input (@ (type "checkbox") (name "confirmchange") (value "on")
-                       (id "confirmchange")))
-             (label (@ (for "confirmchange")) "I'm sure")
-             )))
-      (standard-page epage))))
+  (define commit
+    (entry-lambda (:keyword content donttouch addtonews
+                            changename confirmchange)
+      (set! (ref page 'content) (canon-content content))
+      (and-let* (((equal? confirmchange "on"))
+                 (newname (canon-pagename changename)))
+        (set! (ref page 'key) newname))
+      (save-page page
+                 (lambda (page)
+                   (unless (equal? donttouch "on")
+                     (page-set-push-unique! (page-set:recent-changes) page))
+                   (when (equal? addtonews "on")
+                     (page-set-push-unique! (page-set:news) page))
+                   (redirect-to page)))))
+  (let1 epage
+      (make <page>
+        :title #`"Editing ,(ref page 'title)" :key (ref page 'key)
+        :content
+        `((form/cont
+           (@@ (cont ,commit (donttouch) (content)))
+           (textarea (@ (name "content") (rows 20) (cols 60))
+                     ,(ref page 'content))
+           (br)
+           (input (@ (type "submit") (name "commit") (value "Commit")))
+           (input (@ (type "checkbox") (name "donttouch") (value "on")
+                     (id "donttouch")))
+           (label (@ (for "donttouch")) "Don't update 'Recent Changes'")
+           (input (@ (type "checkbox") (name "addtonews") (value "on")
+                     (id "addtonews")))
+           (label (@ (for "addtonews")) "Add to news item")
+           (br)
+           "Change Page Name"
+           (input (@ (type "entry") (name "changename") (width 20)
+                     (value ,(ref page 'key))))
+           (input (@ (type "checkbox") (name "confirmchange") (value "on")
+                     (id "confirmchange")))
+           (label (@ (for "confirmchange")) "I'm sure")
+           )))
+    (standard-page epage)))
 
 ;; canonicalize EOL to #\newline
 (define (canon-content content)
@@ -394,4 +441,4 @@
    
 (initialize-main-proc show)
 
-
+(kahua-error-proc error-proc)
