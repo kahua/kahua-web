@@ -1,3 +1,9 @@
+2005-01-21  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* kahua-web/macro.kahua
+	Modified simple-comment-form macro to also specify page-name.
+	It will be useful to move a page containing simple-comment-forms
+
 2005-01-20  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* kahua-web/macro.kahua

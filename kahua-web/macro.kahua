@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.18 2005/01/19 23:39:50 nobsun Exp $
+;; $Id: macro.kahua,v 1.19 2005/01/21 04:43:34 nobsun Exp $
 
 (use gauche.collection)
 
@@ -300,15 +300,17 @@
 ;;-----------------------------------------------------------------
 ;; simple-comment-form
 ;;
-(define-wiki-macro (simple-comment-form comment-name)
-  (or (and-let* ((page (current-page))
+(define-wiki-macro (simple-comment-form comment-name . page-name)
+  (or (and-let* ((page (if (null? page-name)
+                           (current-page)
+                           (get-page (car page-name))))
 		 (key (ref page 'persistent-id))
 		 (title (ref page 'title))
 	         (key (string-append title "(" key ")" "-" (x->string comment-name))))
-	(define commit-comment
+        (define commit-comment
 	  (entry-lambda (:keyword author contents)
             ;; commit
-	    (if (not (or (string-null? (string-trim author)) 
+            (if (not (or (string-null? (string-trim author)) 
 			 (string-null? (string-trim contents))))
 		(let* ((set (or (find-kahua-instance <simple-comment-set> key)
 				(make <simple-comment-set> :name key)))
