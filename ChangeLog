@@ -1,3 +1,12 @@
+2005-01-25  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* kahua-web/kahua-web.kahua:
+	Enabled to specify common page title by *kahua-web-title*.
+
+	* kahua-web/local.kahua:
+	Added sample code to show how to specify common page title,
+	which is comment-outed.
+
 2005-01-21  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* kahua-web/macro.kahua
