@@ -3,7 +3,9 @@
 	* kahua-web/kahua-web.kahua : various fixups, including page
 	renaming support, making edit an entry, fancier error page,
 	page alias.
-	
+	(save-page): redirect to edit page again if the user tries to
+	change the pagename to the one that conflicts to an exiting page.
+
 	* kahua-web/macro.kahua : proper toc macro support
 	* kahua-web/kahua-web.css : minor adjustment in 'pre' block and
 	side-pane.

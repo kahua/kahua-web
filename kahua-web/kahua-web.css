@@ -1,5 +1,5 @@
 /* style sheet for kahua-web */
-/* $Id: kahua-web.css,v 1.3 2004/01/23 11:17:00 shiro Exp $ */
+/* $Id: kahua-web.css,v 1.4 2004/01/23 23:45:21 shiro Exp $ */
 
 /*
  * Common stuff
@@ -36,6 +36,10 @@ pre {
   border-color: #bbccbb;
   border-width: 1px;
   border-style: solid;
+}
+
+p.warning {
+  color: #ff0000;
 }
 
 /*

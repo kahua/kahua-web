@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.7 2004/01/23 11:37:27 shiro Exp $
+;; $Id: kahua-web.kahua,v 1.8 2004/01/23 23:45:21 shiro Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -30,14 +30,12 @@
 ;;   The <error> would be considered as a program error.
 ;;   NB: <kahua-error> should go to kahua module?
 
-(define-class <kahua-error> (<error>)
+(define-class <kahua-error> (<exception>)
   ((form :init-keyword :form :init-value #f) ;; form to display.  [SXML]
    ))
 
 (define (kahua-error form)
-  (raise (make <kahua-error>
-           :message "kahua application error"
-           :form form)))
+  (raise (make <kahua-error> :form form)))
 
 ;;========================================================
 ;; Page-data
@@ -119,18 +117,26 @@
 ;; save page.
 (define (save-page page cont)
   (define (get-page-data/check id)
-    (let ((data (get-page-data-from-id id)))
-      (unless (equal? (ref data 'name) (ref page 'key))
+    (let* ((data (get-page-data-from-id id))
+           (newname (ref page 'key))
+           (oldname (ref data 'name)))
+      (unless (equal? oldname newname)
         ;; page name is changed.  make sure it doesn't conflict.
-        (let1 other (get-page-data (ref page 'key))
+        (let1 other (get-page-data newname)
           (when (and other (not (equal? (ref data 'id) (ref other 'id))))
-            (error "duplicated page name:" (ref page 'key))))
-        (set! (ref data 'name) (ref page 'key)))
+            (set! (ref page 'key) oldname)
+            (kahua-error (duplicated-page-name newname))))
+        (set! (ref data 'name) newname))
       data))
   (define (get-new-page/check name)
     (let1 other (get-page-data name)
-      (when other (error "duplicated page name:" name))
+      (when other (kahua-error (duplicated-page-name name)))
       (make <page-data> :name (ref page 'key))))
+  (define (duplicated-page-name name)
+    (edit-page page
+               `(p (@ (class "warning"))
+                   "A page with name \"" ,name "\" already exists. "
+                   "Use different name.")))
 
   (let ((data (cond ((ref page 'persistent-id) => get-page-data/check)
                     (else (get-new-page/check (ref page 'key))))))
@@ -229,15 +235,17 @@
           ((string-prefix? "/.." path) (fix-up (string-drop path 3)))
           ((string-suffix? "/" path) (string-drop-right path 1))
           (else path)))
+  (define (canon-path path . more-paths)
+    (fix-up (simplify-path (apply build-path path more-paths))))
   (if (absolute-path? pagename)
-    (fix-up (simplify-path pagename))
+    (canon-path pagename)
     (and-let* ((curpage (get-optional current
                                       (ref (wiliki:current-page) 'key))))
-      (fix-up (cond ((equal? pagename "$") curpage)
-                    ((string-prefix? "$/" pagename)
-                     (fix-up (simplify-path (build-path curpage (string-drop pagename 2)))))
-                    (else
-                     (fix-up (simplify-path (build-path (sys-dirname curpage) pagename)))))))))
+      (cond ((equal? pagename "$") curpage)
+            ((string-prefix? "$/" pagename)
+             (canon-path curpage (string-drop pagename 2)))
+            (else
+             (canon-path (sys-dirname curpage) pagename))))))
 
 ;; Base name to be used for display
 ;;  NB: it is arguable that whether we should display the pathname
@@ -383,7 +391,7 @@
 
 (define (error-proc exc)
   (if (is-a? exc <kahua-error>)
-    (standard-page (ref exc 'form))
+    (ref exc 'form)
     (standard-page
      (make-error-page "Error: program error"
                       `(,@(use-page "/$admin/program-error")
@@ -394,7 +402,7 @@
     (cond ((get-page pagename) => edit-page)
           (else (edit-page (make <page> :title pagename :key pagename))))))
 
-(define (edit-page page)
+(define (edit-page page . extra-contents)
   (define commit
     (entry-lambda (:keyword content donttouch addtonews
                             changename confirmchange)
@@ -413,7 +421,8 @@
       (make <page>
         :title #`"Editing ,(ref page 'title)" :key (ref page 'key)
         :content
-        `((form/cont
+        `(,@extra-contents
+          (form/cont
            (@@ (cont ,commit (donttouch) (content)))
            (textarea (@ (name "content") (rows 20) (cols 60))
                      ,(ref page 'content))
