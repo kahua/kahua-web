@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.17 2004/03/01 13:11:37 shiro Exp $
+;; $Id: kahua-web.kahua,v 1.18 2004/03/03 23:36:38 shiro Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -258,7 +258,7 @@
   (if (absolute-path? pagename)
     (canon-path pagename)
     (and-let* ((curpage (get-optional current
-                                      (cond ((wiliki:current-page)
+                                      (cond ((current-page)
                                              => (cut ref <> 'key))
                                             (else #f)))))
       (cond ((equal? pagename "$") curpage)
@@ -341,32 +341,32 @@
            (a/cont (@@ (cont ,edit ,@(pagename-split (ref page 'key))))
                    "[Edit]")
            "[History]")))
-  
-  (current-page page)
-  `((html
-     (extra-header (@ (name "content-type")
-                      (value "text/html; charset=euc-jp")));;for now
-     (head (title "Kahua"
-                  ,(string-join (pagename-split (ref page 'key))
-                                "|" 'prefix))
-           (link (@ (rel "stylesheet") (type "text/css")
-                    (href ,(kahua-static-document-url
-                            "kahua-web/kahua-web.css")))))
-     (body
-      (div (@ (id "title-pane")) ,@(use-page "/$admin/title-pane"))
-      ,@(page-navigation page)
-      (hr)
-      (table
-       (@ (id "body-pane"))
-       (tr (td (@ (id "side-pane")) ,@(use-page "/$admin/side-pane"))
-           (td (@ (id "main-pane"))
-               ,@(if (front-page? page) '() `((h1 ,(ref page 'title))))
-               ,@(wiliki:format-content page)
-               ,@(if (persistent-page? page) (footer page) '()))
-           ))
-      (hr)
-      (div (@ (id "bottom-pane")) ,@(use-page "/$admin/bottom-pane"))
-      ))))
+
+  (parameterize ((current-page page))
+    `((html
+       (extra-header (@ (name "content-type")
+                        (value "text/html; charset=euc-jp")));;for now
+       (head (title "Kahua"
+                    ,(string-join (pagename-split (ref page 'key))
+                                  "|" 'prefix))
+             (link (@ (rel "stylesheet") (type "text/css")
+                      (href ,(kahua-static-document-url
+                              "kahua-web/kahua-web.css")))))
+       (body
+        (div (@ (id "title-pane")) ,@(use-page "/$admin/title-pane"))
+        ,@(page-navigation page)
+        (hr)
+        (table
+         (@ (id "body-pane"))
+         (tr (td (@ (id "side-pane")) ,@(use-page "/$admin/side-pane"))
+             (td (@ (id "main-pane"))
+                 ,@(if (front-page? page) '() `((h1 ,(ref page 'title))))
+                 ,@(wiliki:format-content page)
+                 ,@(if (persistent-page? page) (footer page) '()))
+             ))
+        (hr)
+        (div (@ (id "bottom-pane")) ,@(use-page "/$admin/bottom-pane"))
+        )))))
 
 (define (page-navigation page)
   ;; ("/" "a" "b") => (() ("a") ("a" "b"))

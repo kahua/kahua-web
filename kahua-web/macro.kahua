@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.10 2004/03/01 12:03:57 tahara Exp $
+;; $Id: macro.kahua,v 1.11 2004/03/03 23:36:38 shiro Exp $
 
 (use gauche.collection)
 
@@ -126,11 +126,13 @@
 ;;---------------------------------------------------------
 ;; generate PDF
 (define-wiki-macro (pdf-page)
-  `((a/cont (@@ (cont ,(lambda ()
-                         `((pdf
-                            ,@(wiliki:format-content
-                               (ref (current-page) 'content)))))))
-            "PDF")))
+  (let1 p (current-page)
+    `((a/cont (@@ (cont ,(lambda ()
+                           `((pdf
+                              ,@(parameterize ((current-page p))
+                                  (wiliki:format-content
+                                   (ref p 'content))))))))
+              "PDF"))))
 
 ;;---------------------------------------------------------
 ;; Temporary Contents
