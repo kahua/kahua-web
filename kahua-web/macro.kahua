@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.4 2004/01/30 09:59:59 tahara Exp $
+;; $Id: macro.kahua,v 1.5 2004/02/04 07:16:55 shiro Exp $
 
 (define *macro-alist* '())
 
@@ -187,7 +187,7 @@
             ((and follow-includes?
                   (#/##(\(include .*)/ line))
              => (lambda (m)
-                  (let* ((s (open-input-string/private (m 1)))
+                  (let* ((s (open-input-string (m 1)))
                          (expr (read s)))
                     ;; NB: we ignore the rest of macros.  dont' write
                     ;; two ##(include)'s in one lnie.
