@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss.kahua,v 1.1 2004/10/12 06:50:38 nobsun Exp $
+;; $Id: rss.kahua,v 1.2 2004/10/13 00:47:41 nobsun Exp $
 
 (define (page-url page)
   (kahua-self-uri-full 
@@ -20,7 +20,7 @@
 
 (define (pubdate-mtime page)
   (let1 secs (ref (find-kahua-instance <page-data> page) 'mtime)
-        (sys-strftime "%a, %d %b %Y %H:%M:%S +0000" (sys-localtime secs))))
+        (sys-strftime "%a, %d %b %Y %H:%M:%S %z" (sys-localtime secs))))
 
 (define-entry (rss)
   (let* ((full-url (kahua-self-uri-full))
