@@ -1,3 +1,7 @@
+2004-03-01  Yusei Tahara  <tahara@timedia.co.jp>
+
+	* kahua-web/macro.kahua (pdf-page): added ##(pdf-page) macro.
+
 2004-03-01  Shiro Kawai  <shiro@acm.org>
 
 	* kahua-web/kahua-web.kahua:
