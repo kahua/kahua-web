@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: mailform.kahua,v 1.2 2004/02/20 10:59:27 tahara Exp $
+;; $Id: mailform.kahua,v 1.3 2004/05/08 03:23:03 nobsun Exp $
 (use-plugin sendmail)
 
 (define (mailform-link)
@@ -82,13 +82,16 @@
 	(begin
           ;;参加者宛て
           (sendmail your-mail "Kahua Project<info@kahua.org>"
-                    "Kahua Seminar Registration Confirmation"
+;                    "Kahua Seminar Registration Confirmation"
+                    "[Test0] Kahua Seminar Registration Confirmation"
                     confirmation)
           ;;我々宛て
+#|
           (sendmail "seminar@kahua.org" "Kahua Project<info@kahua.org>"
                     "Kahua Seminar Registration Confirmation"
                     (format "~a\n~a\n~a\n~a\n"
                             your-name your-mail how-many love-scheme))
+|#
           (thankyou)))))
 
   (define (thankyou)
@@ -103,50 +106,28 @@
 
 
 (define confirmation "
-この度は、アプリケーションサーバフレームワークKahuaセミナーにお申し込
-み下さいまして、誠にありがとうございます。
+この度は、第2回 アプリケーションサーバフレームワークKahuaセミナーに
+お申し込み下さいまして、誠にありがとうございます。
 
 お申し込みを受け付けました。当日会場受付までお越しください。
 
-当日の参加ができなくなった場合は、お手数ですが info@kahua.org までご連
-絡いただけますようお願いいたします。
-
-
-
-セミナー告知ページで会場ビルの階数が間違っておりましたので、訂正いたし
-ます。
-
-会場は、東京都文京区本駒込 文京グリーンコート 16階 IPA 第三 第四会議室
-になります。
+当日の参加ができなくなった場合は、お手数ですが info@kahua.org まで
+ご連絡いただけますようお願いいたします。
 
 ----------------------------------------------------------------------
 
-アプリケーションサーバフレームワーク Kahua セミナー
+第2回 アプリケーションサーバフレームワーク Kahua セミナー 
 
 
-【日時】2004年2月13日(金) 13:30〜16:30 (受付開始 13:00)
+【日時】2004年xx月xx日(土) 14:00〜17:00 (受付開始 13:30)
 
-【場所】東京都文京区本駒込 文京グリーンコート 16階 IPA 第三 第四会議室
+【場所】東京都新宿区坂町26-27
 
-        地図
-
-        http://www.ipa.go.jp/about/ipajoho/location.html
-
-        最寄駅
-
-        * 都営三田線「千石駅」（A1又はA3出口）徒歩4分
-        * JR山手線「駒込駅」徒歩10分
-        * JR山手線「巣鴨駅」徒歩12分
+        http://www.timedia.co.jp/company/map
 
 【プログラム】
 
- 13:00 受付開始
- 13:30〜14:20 GaucheによるSchemeプログラミング入門(川合)
- 14:20〜14:30 休憩
- 14:30〜15:20 継続ベースのWebアプリケーションの原理(川合)
- 15:20〜15:30 休憩
- 15:30〜16:20 アプリケーションサーバフレームワークKahuaの紹介(やました)
- 16:20〜16:30 質疑応答 
+ 未定
 
 --
 info@kahua.org
