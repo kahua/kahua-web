@@ -1,0 +1,45 @@
+;;-*-Scheme-*-
+;; Kahua website macro handling
+;;
+;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
+;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
+;;  See COPYING for terms and conditions of using this software
+;;
+;; $Id: rss.kahua,v 1.1 2004/10/12 06:50:38 nobsun Exp $
+
+(define (page-url page)
+  (kahua-self-uri-full 
+   #`"show,(pagename-join
+             (map uri-encode-string
+                  (pagename-split
+                     (ref (find-kahua-instance <page-data> page) 'name))))"))
+
+; <page-data>:id -> String
+(define (page-title page)
+  (base-pagename  (ref (find-kahua-instance <page-data> page) 'name)))
+
+(define (pubdate-mtime page)
+  (let1 secs (ref (find-kahua-instance <page-data> page) 'mtime)
+        (sys-strftime "%a, %d %b %Y %H:%M:%S +0000" (sys-localtime secs))))
+
+(define-entry (rss)
+  (let* ((full-url (kahua-self-uri-full))
+         ;; (List <page-data>:id)
+         (entries
+          (take* (ref (find-kahua-instance <page-set> "recent-changes")
+                      'pages)
+                 15)))
+    
+    ;; SXML
+    `((rss (@ (version "2.0"))
+           (channel
+            (title "Kahua-web")
+            (link  ,(string-append full-url "show"))
+            (description "Kahua-web TEST Site")
+            (lastBuildDate ,(pubdate-mtime (car entries)))
+            ,@(map (lambda (entry)
+                     `(item
+                       (title ,(page-title entry))
+                       (link ,(page-url entry))
+                       (pubDate  ,(pubdate-mtime entry))))
+                   entries))))))

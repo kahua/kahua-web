@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.15 2004/09/13 12:44:23 nobsun Exp $
+# $Id: Makefile.in,v 1.16 2004/10/12 06:50:38 nobsun Exp $
 
 package	          = kahua-web
 kahua		  = kahua
@@ -42,7 +42,8 @@ SCRIPTFILES = kahua-web/kahua-web.kahua \
               kahua-web/macro.kahua \
 	      kahua-web/login.kahua \
 	      kahua-web/search.kahua \
-	      kahua-web/comment.kahua
+	      kahua-web/comment.kahua \
+	      kahua-web/rss.kahua
 
 STATICFILES = kahua-web/kahua-web.css
 
