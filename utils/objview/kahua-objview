@@ -6,7 +6,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-objview,v 1.2 2004/03/02 05:11:25 shiro Exp $
+;; $Id: kahua-objview,v 1.3 2004/03/02 09:08:01 shiro Exp $
 
 ;; Requires:
 ;;  Gauche-gl
@@ -94,10 +94,11 @@
              :multiedit #t)
    (hidden   :init-keyword :hidden   :init-value #f
              :persistent-name 'hidden)
-   (children :init-keyword :children)
+   (children :init-keyword :children) ;; list of <page>
    (links    :init-keyword :links)
    (dirty    :init-value #f)
-   (touched  :init-value #f)
+   (touched  :init-value #f) ;; used by graph layout
+   (node-id  :init-value #f) ;; ditto
    ))
 
 ;; called by edit-dialog-detach
@@ -177,13 +178,12 @@
     (let* ((kstr #`",(ref page 'key)/")
            (kstrlen (string-length kstr)))
       (set! (ref page 'children)
-            (map (cut ref <> 'key)
-                 (filter (lambda (p)
-                           (let1 k (ref p 'key)
-                             (and (string-prefix? kstr k)
-                                  (not (string-scan (string-drop k kstrlen)
-                                                    #\/)))))
-                         all)))
+            (filter (lambda (p)
+                      (let1 k (ref p 'key)
+                        (and (string-prefix? kstr k)
+                             (not (string-scan (string-drop k kstrlen)
+                                               #\/)))))
+                    all))
       (set! (ref page 'links)
             (scan-links (ref page 'key) (ref page 'content) all))
       page))
@@ -259,8 +259,6 @@
 (define-constant PANGO_FONT_BOLD 0)
 (define-constant GRAPH_WINDOWWIDTH 800)
 (define-constant GRAPH_WINDOWHEIGHT 600)
-(define-constant MULTIEDIT_WIDTH 400)
-(define-constant MULTIEDIT_HEIGHT 130)
 (define-constant TEXTAREA_HEIGHT 200)
 
 ;; conversion
@@ -861,10 +859,8 @@
   (define (do-reparent parent-key page)
     (set! (ref page 'key) (build-path parent-key (ref page 'basename)))
     (mark-dirty! page)
-    (for-each (lambda (child-key)
-                (do-reparent (ref page 'key)
-                             (find (lambda (p) (equal? (ref p 'key) child-key))
-                                   (ref (the-db) 'pages))))
+    (for-each (lambda (child)
+                (do-reparent (ref page 'key) child))
               (ref page 'children)))
 
   ;; return #t if node is one of descendants of selections
@@ -893,110 +889,61 @@
      (else
       (for-each (cute do-reparent (ref parent 'key) <>) selected)
       (graph-selection-clear graph)
-      (app-refresh (the-app)))))
-  #f)
+      (app-refresh (the-app))))))
 
 ;;
 ;; Constract node&links from kahua data
 ;;
-(define (kahua-record-by-key kahua-data key)
-  (find (lambda (record) (equal? (ref record 'key) key)) kahua-data))
-
-(define (kahua-record-index-by-key kahua-data key)
-  (list-index (lambda (record) (equal? (ref record 'key) key)) kahua-data))
-
-(define (kahua-record-child-count record)
-  (length (ref record 'children)))
-    
-(define (kahua-record-link-count record)
-  (length (ref record 'links)))
-
-(define (kahua-data-touch kahua-data do-touch)
-  (dolist (record kahua-data)
-    (set! (ref record 'touched) do-touch))
-  #t)
-    
-(define (glgd-graph-node-from-kahua graph kahua-data node-id)
-  ;; Add this node to the graph
-  ;; --------------------------
-  (let1 node (glgd-node-create)
-    (let1 label (cv-out (ref (car kahua-data) 'basename))
-      (glgd-node-data-set node (car kahua-data))
-      (glgd-node-info-set node label node-id))
-    (glgd-node-attribute-set node KAHUA_DATA_NODE)
-    (glgd-graph-node-add graph node))
-  
-  ;; Recursively add next node
-  ;; -------------------------
-  (unless (null? (cdr kahua-data))
-    (glgd-graph-node-from-kahua graph (cdr kahua-data) (+ node-id 1)))
-  #t)
-
-(define (glgd-graph-link-from-kahua graph list parent-index parent children)
-  (let1 src-node (glgd-graph-node-by-id graph parent-index)
-    (set! (ref parent 'touched) #t)
-    (dolist (child-key children)
-      (let* ((child-record (kahua-record-by-key (ref (the-db) 'pages) child-key))
-             (child-index (kahua-record-index-by-key (ref (the-db) 'pages) child-key))
-             (dst-node (glgd-graph-node-by-id graph child-index))
-             (link (glgd-link-create)))
-        (glgd-link-set link src-node dst-node)
-        (glgd-graph-link-add graph list link)
-        (set! (ref child-record 'touched) #t)
-        (when (> (length (ref child-record 'children)) 0)
-          (glgd-graph-tree-from-kahua graph list child-record child-index)))))
-  #t)
-
-(define (glgd-graph-tree-from-kahua graph list record record-index)
-  (let* ((parent record)
-         (children (ref record 'children)))
-    (glgd-graph-link-from-kahua graph list record-index parent children))
-  #t)
-  
-(define (glgd-graph-loner-from-kahua graph list record record-index)
-  (let* ((link (glgd-link-create))
-         (src-node (glgd-graph-node-by-id graph record-index)))
-    (glgd-link-set link src-node src-node)
-    (glgd-graph-link-add graph list link))
-  #t)
-
 (define (graph-build graph kahua-data)
+
+  (define (link-tree lis data)
+    (let1 src-node (glgd-graph-node-by-id graph (ref data 'node-id))
+      (dolist (child (ref data 'children))
+        (let* ((dst-node (glgd-graph-node-by-id graph (ref child 'node-id)))
+               (link (glgd-link-create)))
+          (glgd-link-set link src-node dst-node)
+          (glgd-graph-link-add graph lis link)
+          (set! (ref child 'touched) #t)
+          (unless (null? (ref child 'children))
+            (link-tree lis child))))))
+
+  (define (link-loner lis data)
+    (let* ((link (glgd-link-create))
+           (src-node (glgd-graph-node-by-id graph (ref data 'node-id))))
+      (glgd-link-set link src-node src-node)
+      (glgd-graph-link-add graph lis link)))
+  
+  ;; Preparation.  Adds nodes to graph, and sets up some of datum's fields.
   (glgd-graph-init graph)
+  (for-each-with-index
+   (lambda (index data)
+     (let ((node (glgd-node-create))
+           (label (cv-out (ref data 'basename))))
+       (set! (ref data 'touched) #f) ;; used by layout routine to find cycle
+       (set! (ref data 'node-id) index)
+       (glgd-node-data-set node data)
+       (glgd-node-info-set node label index)
+       (glgd-node-attribute-set node KAHUA_DATA_NODE)
+       (glgd-graph-node-add graph node)))
+   kahua-data)
 
-  ;; Recursively add all kahua pages to the graph as <glgdNode's>
-  ;; ------------------------------------------------------------
-  (glgd-graph-node-from-kahua graph kahua-data 0)
-  
-  ;; Clear touch flags for kahua-data
-  ;; --------------------------------
-  (kahua-data-touch kahua-data #f)
+  ;; First Pass: kahua records with children
+  (dolist (data kahua-data)
+    (unless (or (ref data 'touched)
+                (null? (ref data 'children)))
+      (let1 lis (glgd-link-list-create)
+        (set! (ref data 'touched) #t)
+        (link-tree lis data)
+        (glgd-graph-link-list-add graph lis))))
 
-  ;; First Pass! kahua records with children
-  ;; ---------------------------------------
-  (let* ((records kahua-data)
-         (record-count (length records)))
-    (dotimes (record-index record-count)
-      (unless (eq? (ref (car records) 'touched) #t)
-        (when (> (kahua-record-child-count (car records)) 0)
-          (let* ((list (glgd-link-list-create))
-                 (record (car records)))
-            (glgd-graph-tree-from-kahua graph list record record-index)
-            (glgd-graph-link-list-add graph list))))
-      (set! records (cdr records))))
-  
-  ;; Second Pass! kahua records without children
-  ;; -------------------------------------------
-  (let* ((records kahua-data)
-         (record-count (length records)))
-    (dotimes (record-index record-count)
-      (unless (eq? (ref (car records) 'touched) #t)
-        (unless (> (kahua-record-child-count (car records)) 0)
-          (let* ((list (glgd-link-list-create))
-                 (record (car records)))
-            (glgd-graph-loner-from-kahua graph list record record-index)
-            (glgd-graph-link-list-add graph list))))
-      (set! records (cdr records))))
-
+  ;; Second Pass: kahua records without children
+  (dolist (data kahua-data)
+    (unless (ref data 'touched)
+      (let1 lis (glgd-link-list-create)
+        (set! (ref data 'touched) #t)
+        (link-loner lis data)
+        (glgd-graph-link-list-add graph lis))))
+      
   (glgd-graph-attribute-set graph KAHUA_DATA_NODE)
   (glgd-graph-auto-organize graph 0.0 0.0)
   (glgd-graph-callback-set graph GLGDGRAPH_FN_KEY key-callback)
@@ -1007,7 +954,7 @@
     (glgd-graph-link-list-dump graph))
   (if (> PANGO_FONT_BOLD 0)
     (glgd-graph-flags-set graph GLGDGRAPH_FLAG_PANGOBOLD GLGD_FLAGOP_SET))
-  #t)
+  )
   
 ;;----------------------------------------------------------------
 ;; Graph pane
