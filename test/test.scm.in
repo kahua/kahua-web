@@ -1,7 +1,6 @@
 ;; -*-Scheme-*-
 ;; test kahua-web script.
-;; $Id: test.scm.in,v 1.2 2004/02/20 10:59:27 tahara Exp $
-
+;; $Id: test.scm.in,v 1.3 2004/04/02 10:04:58 nobsun Exp $
 (use srfi-2)
 (use srfi-11)
 (use gauche.test)
@@ -17,17 +16,18 @@
 
 (test-start "kahua-web")
 
-(define GOSH "@GOSH@")
-(define KAHUA_SERVER "@KAHUA_SERVER@")
+(define GOSH "##GOSH##")
+(define KAHUA_SERVER "##KAHUA_SERVER##")
+(define (deb msg) (format "[Debug: ~a]" msg))
 
 (sys-system "rm -rf _tmp _work")
 (sys-mkdir "_tmp" #o755)
 (sys-mkdir "_work" #o755)
 (sys-mkdir "_work/plugins" #o755)
 (copy-file "../kahua-web/wiliki.scm"  "_work/plugins/wiliki.scm")
-(copy-file "/var/lib/kahua/plugins/allow-module.scm"
+(copy-file "##KAHUA_WORKING##/plugins/allow-module.scm"
            "_work/plugins/allow-module.scm")
-(copy-file "/var/lib/kahua/plugins/sendmail.scm"  "_work/plugins/sendmail.scm")
+(copy-file "##KAHUA_WORKING##/plugins/sendmail.scm"  "_work/plugins/sendmail.scm")
 
 (define *config* "./test.conf")
 
@@ -38,9 +38,8 @@
 (test-section "kahua-server kahua-web.kahua")
 
 (with-worker
- (w `(,GOSH "-I.." ,KAHUA_SERVER "-c" ,*config*
+ (w `(,GOSH "-I.." "-I##KAHUA_LIB##" ,KAHUA_SERVER "-c" ,*config*
             "../kahua-web/kahua-web.kahua"))
-
  (test* "run kahua-web.kahua" #t (worker-running? w))
  )
 

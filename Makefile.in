@@ -1,23 +1,39 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.7 2004/03/10 04:04:55 nobsun Exp $
+# $Id: Makefile.in,v 1.8 2004/04/02 10:04:58 nobsun Exp $
 
-SHELL       = @SHELL@
-prefix      = @prefix@
-exec_prefix = @exec_prefix@
-bindir      = @bindir@
-libdir      = @libdir@
-srcdir      = @srcdir@
-VPATH       = $(srcdir)
-top_builddir = @top_builddir@
-top_srcdir   = @top_srcdir@
+package	          = kahua-web
+kahua		  = kahua
+SHELL             = @SHELL@
+prefix            = @prefix@
+exec_prefix       = @exec_prefix@
+bindir            = @bindir@/$(kahua)
+sbindir           = @sbindir@/$(kahua)
+libexecdir	  = @libexecdir@/$(kahua)
+datadir		  = @datadir@/$(kahua)
+sysconfdir        = @sysconfdir@/$(kahua)
+sharedstatedir    = @sharedstatedir@/$(kahua)
+localstatedir     = @localstatedir@/$(kahua)
+libdir            = @libdir@/$(kahua)
+includedir        = @includedir@/$(kahua)
+oldincludedir     = @oldincludedir@/$(kahua)
+infodir           = @infodir@/$(kahua)
+mandir            = @mandir@/$(kahua)
+srcdir            = @srcdir@
+VPATH             = $(srcdir)
+top_builddir      = @top_builddir@
+top_srcdir        = @top_srcdir@
 
 DESTDIR  =
 
 GOSH = @GOSH@
 KAHUA_INSTALL = @KAHUA_INSTALL@
+KAHUA_SERVER  = @KAHUA_SERVER@
+KAHUA_WORKING = $(localstatedir)
+KAHUA_LIB     = $(libdir)
+
 
 # specify -c ../kahua.conf etc. to give an alternative conf file
-KAHUACONFIG = 
+KAHUACONFIG = -c $(sysconfdir)/kahua.conf
 
 SCRIPTFILES = kahua-web/kahua-web.kahua \
               kahua-web/macro.kahua \
@@ -34,11 +50,14 @@ CONFIG_GENERATED = Makefile VERSION test/test.scm \
 		   config.log config.status autom4* \
 .PHONY: all check clean distclean install maintainer-clean
 
-all:
+all:	test/test.scm
 
-check:
+test/test.scm:	test/test.scm.in
+	sed -e "s@##GOSH##@$(GOSH)@" -e "s@##KAHUA_SERVER##@$(libexecdir)/kahua-server.scm@" -e "s@##KAHUA_WORKING##@$(KAHUA_WORKING)@" -e "s@##KAHUA_LIB##@$(KAHUA_LIB)@" $< > $@
+
+check:  test/test.scm
 	rm -f test/test.log
-	cd test; $(GOSH) ./test.scm > test.log
+	cd test; $(GOSH) -I$(KAHUA_LIB) ./test.scm > test.log
 
 clean:
 	rm -rf core *~ kahua-web/*~ test/*~ test/_* test/test.log
