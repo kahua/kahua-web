@@ -6,7 +6,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-objview,v 1.7 2004/03/01 03:46:20 shiro Exp $
+;; $Id: kahua-objview,v 1.8 2004/03/01 06:55:23 shiro Exp $
 
 ;; Requires:
 ;;  Gauche-gl
@@ -65,7 +65,8 @@
 
 ;; In-memory image of page data
 (define-class <page> ()
-  ((key      :init-keyword :key)
+  ((id       :init-keyword :id)
+   (key      :init-keyword :key)
    (basename :init-keyword :basename)
    (content  :init-keyword :content)
    (children :init-keyword :children)
@@ -96,29 +97,39 @@
 ;; Read kahua-web contents and creates an in-memory copy
 (define (db-init dbname)
 
-  (define (page-extract page all)
-    (let ((children (map (cut ref <> 'name)
-                         (filter (lambda (p)
-                                   (string-prefix? #`",(ref page 'name)/"
-                                                   (ref p 'name)))
-                                 all)))
-          (links    (scan-links (ref page 'name) (ref page 'content) all)))
-      (make <page>
-        :key (ref page 'name)
-        :basename (sys-basename (ref page 'name))
-        :content (ref page 'content)
-        :children children
-        :links links
-        :ctime (safe-ref page 'ctime)
-        :cuser (safe-ref page 'cuser)
-        :mtime (safe-ref page 'mtime)
-        :muser (safe-ref page 'muser))))
-
+  (define (page-data->page data)
+    (make <page>
+      :id (ref data 'id) :key (ref data 'name)
+      :basename (sys-basename (ref data 'name))
+      :content (ref data 'content) :children '() :links '()
+      :ctime (safe-ref data 'ctime) :cuser (safe-ref data 'cuser)
+      :mtime (safe-ref data 'mtime) :muser (safe-ref data 'muser)))
+  
   (define (safe-ref obj slot)
     (and (slot-exists? obj slot)
          (slot-bound? obj slot)
          (slot-ref obj slot)))
-                    
+
+  ;; main body of db-init
+  (with-db (db dbname)
+    (let* ((<page-data> (obtain-persistent-class dbname '<page-data>))
+           (pages (map page-data->page (make-kahua-collection <page-data>)))
+           (db (make <db> :name dbname :pclass <page-data>)))
+      (the-db (db-setup-data db pages))))
+  )
+
+(define (db-setup-data db pages)
+
+  (define (setup-links page all)
+    (set! (ref page 'children)
+          (map (cut ref <> 'key)
+               (filter (lambda (p)
+                         (string-prefix? #`",(ref page 'key)/" (ref p 'key)))
+                       all)))
+    (set! (ref page 'links)
+          (scan-links (ref page 'key) (ref page 'content) all))
+    page)
+
   (define (scan-links self content all)
     (let loop ((content content)
                (links '()))
@@ -142,17 +153,11 @@
            (build-path (sys-dirname self) link))))  
 
   (define (ensure-link link all)
-    (find (lambda (p) (equal? (ref p 'name) link)) all))
+    (find (lambda (p) (equal? (ref p 'key) link)) all))
 
-  ;; main body of db-init
-  (with-db (db dbname)
-    (let* ((<page-data> (obtain-persistent-class dbname '<page-data>))
-           (pages (make-kahua-collection <page-data>)))
-      (the-db (make <db>
-                :name dbname
-                :pclass <page-data>
-                :pages (map (cut page-extract <> pages) pages)))))
-  )
+  (set! (ref db 'pages)
+        (map (cut setup-links <> pages) pages))
+  db)
 
 ;; commit any changes
 (define (db-commit)
@@ -236,11 +241,13 @@
 (define the-app (make-parameter #f)) ;; <app-objview> singleton
 
 (define-class <app-objview> () ;; application
-  ((window)   ;; <gtk-window> : toplevel window
-   (graph)    ;; <glgd-graph> : graph
-   (info-win) ;; <info-win> : pop-up information window
-   (menu-bg)  ;; popup menu
-   (pick-cursor :init-form (gtk-cursor-new GDK_HAND2)) ;; <gtk-cursor>
+  ((window)     ;; <gtk-window> : toplevel window
+   (graph)      ;; <glgd-graph> : graph
+   (graph-pane) ;; <gtk-drawing-area>
+   (info-win)   ;; <info-win> : pop-up information window
+   (menu-bg)    ;; popup menu
+   (normal-cursor :init-form (gdk-cursor-new GDK_LEFT_PTR));; <gdk-cursor>
+   (pick-cursor   :init-form (gdk-cursor-new GDK_HAND1))   ;; <gdk-cursor>
    (ctrl-held  :init-value #f)
    (shift-held :init-value #f)
    (select-cont :init-value #f) ;; continuation procs for special action
@@ -263,8 +270,8 @@
         (gtk-widget-set-size-request drawing-area
                                      GRAPH_WINDOWWIDTH GRAPH_WINDOWHEIGHT)
         (gtk-box-pack-start vbox drawing-area #t #t 0)
+        (set! (ref app 'graph-pane) drawing-area)
         (gtk-widget-show drawing-area))
-
 
       ;; Simple quit button -----------------------------
       (let1 button (gtk-button-new-with-label "Quit")
@@ -281,8 +288,30 @@
 
 (define-method app-initiate-pick ((app <app-objview>)
                                   select-cont cancel-cont)
-  #f
-  )
+  (define (reset-cursor)
+    (gdk-window-set-cursor (ref (ref app 'window) 'window)
+                           (ref app 'normal-cursor)))
+  (gdk-window-set-cursor (ref (ref app 'window) 'window)
+                         (ref app 'pick-cursor))
+  (set! (ref app 'select-cont)
+        (lambda (node link event)
+          (reset-cursor)
+          (set! (ref app 'select-cont) #f)
+          (when select-cont (select-cont node link event))))
+  (set! (ref app 'cancel-cont)
+        (lambda (node link event)
+          (reset-cursor)
+          (set! (ref app 'cancel-cont) #f)
+          (when cancel-cont (cancel-cont node link event))))
+  #f)
+
+(define-method app-refresh ((app <app-objview>))
+  (db-setup-data (the-db) (ref (the-db) 'pages))
+  (glgd-graph-fini (ref app 'graph))
+  (graph-build (ref app 'graph) (ref (the-db) 'pages))
+  (glgd-graph-connect (ref app 'graph)
+                      (ref app 'window)
+                      (ref app 'graph-pane)))
 
 (define (app-gl-config)
   (unless (gdk-gl-query-extension)
@@ -347,20 +376,17 @@
   #t)
 
 (define (multi-edit-commit multi-edit)
-  (let1 graph (g-object-get-data multi-edit 'graph)
-    (dotimes (node-id (glgd-graph-node-count graph))
-      (let* ((node (glgd-graph-node-by-id graph node-id))
-             (record (glgd-node-data-get node)))
-        (when (equal? (glgd-node-is-selected node) #t)
-          (let* ((cuser (g-object-get-data multi-edit 'multi-edit-cuser))
-                 (name (g-object-get-data cuser 'name-entry)))
-            (set! (ref record 'cuser) (cv-in (gtk-entry-get-text name)))
-            (mark-dirty! record))
-          (let* ((muser (g-object-get-data multi-edit 'multi-edit-muser))
-                 (name (g-object-get-data muser 'name-entry)))
-            (set! (ref record 'muser) (cv-in (gtk-entry-get-text name)))
-            (mark-dirty! record)))))
-    (glgd-graph-node-list-flag graph GLGDNODE_FLAG_SELECTED GLGD_FLAGOP_CLEAR))
+  (dolist (node (graph-selection-get (ref (the-app) 'graph)))
+    (let1 record (glgd-node-data-get node)
+      (let* ((cuser (g-object-get-data multi-edit 'multi-edit-cuser))
+             (name (g-object-get-data cuser 'name-entry)))
+        (set! (ref record 'cuser) (cv-in (gtk-entry-get-text name)))
+        (mark-dirty! record))
+      (let* ((muser (g-object-get-data multi-edit 'multi-edit-muser))
+             (name (g-object-get-data muser 'name-entry)))
+        (set! (ref record 'muser) (cv-in (gtk-entry-get-text name)))
+        (mark-dirty! record))))
+  (graph-selection-clear (ref (the-app) 'graph))
   #t)
 
 (define (multi-edit-respond widget response-id)
@@ -706,7 +732,10 @@
     (info-edit-show (ref (the-app) 'graph)) #t)
 
   (define (menu-cb-reparent event . _)
-    (app-initiate-pick (the-app) #f #f)
+    (app-initiate-pick (the-app)
+                       (lambda (node select event)
+                         (graph-reparent (ref (the-app) 'graph) node))
+                       #f)
     #t)
 
   (define (menu-cb-expand-all event . _)
@@ -804,29 +833,22 @@
 
 (define (mouse-right-callback graph node link event)
   (when (= (ref event 'type) GDK_BUTTON_PRESS)
+    (cond ((ref (the-app) 'cancel-cont) => (cut <> node link event)))
     (menu-popup (ref (the-app) 'menu-bg) event))
   #t)
 
-(define (select-single-node graph node)
-  (let1 node-state (glgd-node-is-selected node)
-    (glgd-graph-node-list-flag graph GLGDNODE_FLAG_SELECTED GLGD_FLAGOP_CLEAR)
-    (if (eq? node-state #f)
-      (glgd-node-flags-set node GLGDNODE_FLAG_SELECTED GLGD_FLAGOP_SET)))
-  #t)
-  
 (define (mouse-left-callback graph node link event)
   (when (= (ref event 'type) GDK_BUTTON_PRESS)
     (cond
-     ((ref (the-app) 'ctrl-held)
-      (glgd-node-flags-set node GLGDNODE_FLAG_SELECTED GLGD_FLAGOP_TOGGLE))
-     ((ref (the-app) 'shift-held)
-      (glgd-node-flags-set node GLGDNODE_FLAG_SELECTED GLGD_FLAGOP_TOGGLE))
+     ((ref (the-app) 'select-cont) => (cut <> node link event))
+     ((or (ref (the-app) 'ctrl-held)
+          (ref (the-app) 'shift-held))
+      (graph-selection-toggle graph node))
      ((>= (glgd-node-id-get node) 0)
-      (select-single-node graph node))
-     (else (glgd-graph-node-list-flag graph GLGDNODE_FLAG_SELECTED
-                                      GLGD_FLAGOP_CLEAR))))
-
-  (if (= (ref event 'type) GDK_BUTTON_RELEASE)
+      (graph-selection-clear graph)
+      (unless (glgd-node-is-selected node) (graph-selection-add graph node)))
+     (else (graph-selection-clear graph))))
+  (when (= (ref event 'type) GDK_BUTTON_RELEASE)
     (info-win-hide (ref (the-app) 'info-win)))
   #t)
 
@@ -836,6 +858,39 @@
     (if (>= (glgd-node-id-get node) -1)
       (glgd-node-flags-set node GLGDNODE_FLAG_HILITE GLGD_FLAGOP_SET)))
   #t)
+
+(define (graph-selection-add graph node)
+  (glgd-node-flags-set node GLGDNODE_FLAG_SELECTED GLGD_FLAGOP_SET))
+
+(define (graph-selection-toggle graph node)
+  (glgd-node-flags-set node GLGDNODE_FLAG_SELECTED GLGD_FLAGOP_TOGGLE))
+
+(define (graph-selection-clear graph)
+  (glgd-graph-node-list-flag graph GLGDNODE_FLAG_SELECTED GLGD_FLAGOP_CLEAR))
+
+(define (graph-selection-get graph)
+  (filter-map (lambda (index)
+                (and-let* ((node (glgd-graph-node-by-id graph index))
+                           ((glgd-node-is-selected node)))
+                  node))
+              (iota (glgd-graph-node-count graph))))
+
+(define (graph-reparent graph node)
+  (let ((parent    (and node (glgd-node-data-get node)))
+        (selection (graph-selection-get graph)))
+    (cond
+     ((not parent) (graph-selection-clear graph))
+     ((memq node selection)
+      (print "Can't be a parent node of itself."))
+     (else
+      (let1 parent-key (ref parent 'key)
+        (dolist (n selection)
+          (and-let* ((rec (glgd-node-data-get n)))
+            (set! (ref rec 'key) (build-path parent-key (ref rec 'basename)))
+            ))
+        (graph-selection-clear graph)
+        (app-refresh (the-app))))))
+  #f)
 
 ;; ===================================
 ;; Kahua Data to <glgdGraph> functions
@@ -901,7 +956,7 @@
     (glgd-graph-link-add graph list link))
   #t)
 
-(define (glgd-graph-build graph kahua-data)
+(define (graph-build graph kahua-data)
   (glgd-graph-init graph)
 
   ;; Recursively add all kahua pages to the graph as <glgdNode's>
@@ -954,10 +1009,6 @@
 ;; Graph pane
 ;;
 
-(define-class <graph-pane> (<gtk-drawing-area>)
-  ((graph :init-form (glgd-graph-create))   ;; <glgd-graph>
-   ))
-
 (define (build-graph-pane app glconfig)
 
   (define (draw widget . _)
@@ -996,16 +1047,17 @@
         (gdk-gl-drawable-gl-end gldrawable))))
 
   ;; build-graph-pane
-  (let1 self (make <graph-pane>)
+  (let ((self  (gtk-drawing-area-new))
+        (graph (glgd-graph-create)))
     (gtk-widget-set-gl-capability self glconfig #f #t GDK_GL_RGBA_TYPE)
     (gtk-widget-set-events self (logior GDK_EXPOSURE_MASK
                                         GDK_VISIBILITY_NOTIFY_MASK))
     (g-signal-connect self "realize" init)
     (g-signal-connect self "configure_event" reshape)
     (g-signal-connect self "expose_event" draw)
-    (glgd-graph-build (ref self 'graph) (ref (the-db) 'pages))
-    (glgd-graph-connect (ref self 'graph) (ref app 'window) self)
-    (set! (ref app 'graph) (ref self 'graph))
+    (graph-build graph (ref (the-db) 'pages))
+    (glgd-graph-connect graph (ref app 'window) self)
+    (set! (ref app 'graph) graph)
     self))
 
 ;;----------------------------------------------------------------
