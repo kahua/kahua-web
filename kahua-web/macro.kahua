@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.5 2004/02/04 07:16:55 shiro Exp $
+;; $Id: macro.kahua,v 1.6 2004/02/04 11:28:43 nobsun Exp $
 
 (define *macro-alist* '())
 
@@ -85,6 +85,27 @@
 ;;
 (define-wiki-macro (seminar-order)
   (mailform-link))
+
+;;---------------------------------------------------------
+;; Temporary Contents
+;;
+(define ***tmp*** (make-parameter '()))
+(define-wiki-macro (temporary-contents)
+  (***tmp***))
+
+;;---------------------------------------------------------
+;; Message to you
+;;
+;; ##(message-to ("alice" "bob") "Hi. Enjoy hacking?")
+;; ##(message-to "alice" "Do you love hacking with Kahua?")
+
+(define-wiki-macro (message-to you msg)
+  (or (and-let* ((user (kahua-current-user))
+		 (name (ref user 'login-name))
+                 (_ (or (and (list? you) (find (cut string=? name <>) you))
+			(string=? name you))))
+        `((p ,msg)))
+      '()))
 
 ;;---------------------------------------------------------
 ;; Include
