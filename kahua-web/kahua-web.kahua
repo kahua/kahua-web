@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.29 2005/01/25 00:29:21 nobsun Exp $
+;; $Id: kahua-web.kahua,v 1.30 2005/01/25 03:42:55 nobsun Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -24,6 +24,7 @@
 
 (log-open (kahua-logpath "kahua-web.log"))
 
+(load "kahua-web/version.kahua")
 (load "kahua-web/macro.kahua")
 (load "kahua-web/login.kahua")
 (load "kahua-web/search.kahua")
@@ -537,7 +538,21 @@
                          `(p (@ (class "warning"))
                              "To edit a page you have to login!"))
         (standard-page epage))))
-        
+
+;; display version
+(define-entry (version)
+  (if (and-let* ((name (kahua-current-user-name)))
+        (not (string-null? name)))
+      (let* ((content `(p "Kahua-Web Version: " ,*kahua-web-version*))
+             (vpage (make <page> :title "Kahua-Web version"
+                                 :key "/Version" :content content)))
+        (standard-page vpage))
+      (let1 epage
+            (make-error-page "Error: Not login"
+               `(p (@ (class "warning"))
+                   "To see kahua-web version, you have to login!"))
+        (standard-page epage))))
+
 ;; canonicalize EOL to #\newline
 (define (canon-content content)
   (string-join (call-with-input-string content port->string-list)

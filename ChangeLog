@@ -1,5 +1,15 @@
 2005-01-25  Nobuo Yamashita  <nobsun@sampou.org>
 
+	* kahua-web/version.kahua.in:
+	Added to define *kahua-web-version*
+
+	* kahua-web/kahua-web.kahua:
+	Modified to add entry 'version' allowing to display current 
+	Kahua Web version.
+	
+	* Makefile.in:
+	Modified to embed actual version info into kahua-web/version.kahua
+	
 	* kahua-web/kahua-web.kahua:
 	Enabled to specify common page title by *kahua-web-title*.
 
