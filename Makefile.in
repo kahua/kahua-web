@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.14 2004/09/13 03:20:51 nobsun Exp $
+# $Id: Makefile.in,v 1.15 2004/09/13 12:44:23 nobsun Exp $
 
 package	          = kahua-web
 kahua		  = kahua
@@ -90,7 +90,7 @@ distclean: clean
 	rm -rf $(CONFIG_GENERATED)
 
 maintainer-clean: clean
-	rm -rf $(CONFIG_GENERATED) configure
+	rm -rf $(CONFIG_GENERATED) configure VERSION DIST_EXCLUDE_X
 
 
 
