@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.6 2004/02/26 10:20:03 ko1 Exp $
+# $Id: Makefile.in,v 1.7 2004/03/10 04:04:55 nobsun Exp $
 
 SHELL       = @SHELL@
 prefix      = @prefix@
@@ -22,7 +22,8 @@ KAHUACONFIG =
 SCRIPTFILES = kahua-web/kahua-web.kahua \
               kahua-web/macro.kahua \
 	      kahua-web/login.kahua \
-              kahua-web/mailform.kahua
+              kahua-web/mailform.kahua \
+	      kahua-web/search.kahua
 
 STATICFILES = kahua-web/kahua-web.css
 
