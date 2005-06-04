@@ -1,3 +1,8 @@
+2005-06-04  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* kahua-web/search.kahua:
+	Slightly enriched display for search result.  
+	
 2005-01-26  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* Release 0.2.2:
