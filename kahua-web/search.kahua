@@ -5,31 +5,70 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: search.kahua,v 1.1 2004/03/09 10:35:27 ko1 Exp $
+;; $Id: search.kahua,v 1.2 2005/06/04 03:39:38 nobsun Exp $
 
 (use wiliki.pasttime)
+(use text.tree)
+(use gauche.charconv)
 
 ;; search page
-(define-entry (search :keyword word sort-by)
-  (define (search-result)
-    (let*(
-	  (sorter (cond 
-		   (else
-		    (lambda (x y) (> (ref x 'mtime) (ref y 'mtime))))))
-	  (pages (sort
-		  (filter (lambda (page)
-			    (string-contains-ci (ref page 'content) word))
-			  (make-kahua-collection <page-data>)) sorter)))
-      (string-concatenate 
-       (cons (format "* search key: ~a\n" word)
-	     (map (lambda (page) 
-		    (format "- [[~a]] (~a)\n"
-			    (ref page 'name) 
-			    (how-long-since (ref page 'mtime))))
-		  pages)))
-      ))
-  (standard-page
-   (make <page> :title "Search Result" :key "/Search" 
-	        :content (search-result))))
+(define-entry (search :keyword word sort-by usepath)
+  (let ((word (ces-convert word "*JP"))
+        (usepath (and usepath (ces-convert usepath "*JP")))
+        (reg #/(^|\n)\}\}\}($|\n)/)) ;; line which contains only "}}}"
+    (define (mk-links path)
+      (let1 str (pagename-join path)
+        (format "[[~a//~a]]" str str)))
+    (define (find-all regex content)
+      (let ((m (regex content)))
+        (if m
+            (list "{{{\n"
+                  (regexp-replace-all
+                   reg
+                   (m)
+                   "\n }}}\n") ;; space 
+                  "\n}}}\n"
+                  (find-all regex (m 'after)))
+          ""
+          )))
+    (define (sorter x y)
+      (> (ref x 'mtime) (ref y 'mtime)))
+    (define (search-result)
+      (define (in-content-or-name? page)
+        (or (string-contains-ci (ref page 'content) word)
+            (string-contains-ci (ref page 'name) word)))
+      (let* ((pages (sort
+                     (filter
+                      in-content-or-name?
+                      (filter (if usepath
+                                  (lambda (page)
+                                    (string-prefix? usepath (ref page 'name)))
+                                  identity)
+                              (all-page-data)))
+                     sorter)))
 
-
+        (string-concatenate
+         (cons (format "* search key: ~a (~a pages)\n" word (length pages))
+               (map (lambda (page)
+                      (format "- ~a (~a)\n~a\n"
+                              (mk-links (pagename-split (ref page 'name)))
+                              (how-long-since (ref page 'mtime))
+                              (let ((index (string-contains-ci (ref page 'content) word)))
+                                (if index
+                                    (let ((content (ref page 'content))
+                                          (start (if (< 0 (- index 20)) (- index 20) 0))
+                                          (end (+ index 20))
+                                          (search (string->regexp
+                                                   (format "([^\n]*\n|)([^\n]*~a[^\n]*)(\n[^\n]*|)" word)
+                                                   :case-fold #t)))
+                                      (tree->string
+                                       (find-all search content))
+                                      )
+                                    ""
+                                    ))))
+                    pages))
+         )))
+    `((div
+       ,@(wiliki:format-content
+          (make <page> :title "Search Result" :key "/Search" 
+	        :content (search-result)))))))
