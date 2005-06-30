@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.19 2005/01/25 03:42:55 nobsun Exp $
+# $Id: Makefile.in,v 1.20 2005/06/30 07:52:11 nobsun Exp $
 
 package	          = kahua-web
 kahua		  = kahua
@@ -54,7 +54,8 @@ SOURCEDIR   = kahua-web
 PLUGINFILE  = wiliki.scm
 
 CONFIG_GENERATED = Makefile test/test.scm \
-		   config.log config.status autom4* \
+		   config.log config.status autom4*.cache
+
 .PHONY: all check clean distclean install maintainer-clean
 
 all:	test/test.scm $(SCRIPTS) kahua-web/version.kahua

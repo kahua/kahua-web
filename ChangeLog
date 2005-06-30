@@ -1,3 +1,8 @@
+2005-06-30  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* Makefile.in:
+	a strange line for CONFIG_GENERATED fixed.
+
 2005-06-27  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* kahua-web/kahua-web.kahua:
