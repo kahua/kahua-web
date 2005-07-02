@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.32 2005/06/27 04:42:42 nobsun Exp $
+;; $Id: kahua-web.kahua,v 1.33 2005/07/02 16:02:54 nobsun Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -260,6 +260,52 @@
 ;; The "parent" page of the top page is the top page itself.
 ;; That is, "/a/../.." refers to "/", and "/a/../../b" refers to "/b".
 
+(define (bottom-hierarchy path)
+  (let1 spath (simplify-page-path path)
+    (last
+     (string-split
+      (if (string=? "/" (string-take-right spath 1))
+          (string-drop-right spath 1)
+          spath) #\/))))
+
+(define (upper-hierarchy path)
+  (let* ((spath (simplify-page-path path))
+         (uhier
+          (string-join
+           (drop-right*
+            (string-split
+             (if (string=? "/" (string-take-right spath 1))
+                 (string-drop-right spath 1)
+                 spath) #\/) 1) "/")))
+    (if (string-null? uhier) "/" uhier)))
+
+(define (absolute-page-path? path)
+  (string-prefix? "/" path))
+
+(define (simplify-page-path path)
+  (define (cancel-top xs)
+    (if (null? xs) xs (cdr xs)))
+  (define (iter ac xxs)
+    (if (null? xxs)
+        (reverse ac)
+        (receive (x xs)
+                 (car+cdr xxs)
+                 (cond ((string=? x ".") (iter ac xs))
+                       ((string=? x "..") (let1 new-ac (cancel-top ac)
+                                            (if (null? new-ac)
+                                                (append ac xxs)
+                                                (iter new-ac xs))))
+                       (else (iter (cons x ac) xs))))))
+  (let ((hd (if (char=? #\/ (string-ref path 0)) "/" ""))
+        (tl (if (char=? #\/ (string-ref path (- (string-length path) 1)))
+                "/" "")))
+    (string-append hd 
+                   (string-join
+                    (iter '()
+                          (filter (compose not string-null?)
+                                  (string-split path #\/))) "/")
+                   tl)))
+
 ;; Get canonical (absolute) pathname of the page.
 ;; Returns #f if pagename is invalid.
 (define (canon-pagename pagename . current)
@@ -269,8 +315,8 @@
           ((string-suffix? "/" path) (string-drop-right path 1))
           (else path)))
   (define (canon-path path . more-paths)
-    (fix-up (simplify-path (apply build-path path more-paths))))
-  (if (absolute-path? pagename)
+    (fix-up (simplify-page-path (apply build-path path more-paths))))
+  (if (absolute-page-path? pagename)
     (canon-path pagename)
     (and-let* ((curpage (get-optional current
                                       (cond ((current-page)
@@ -280,14 +326,14 @@
             ((string-prefix? "$/" pagename)
              (canon-path curpage (string-drop pagename 2)))
             (else
-             (canon-path (sys-dirname curpage) pagename))))))
+             (canon-path (upper-hierarchy curpage) pagename))))))
 
 ;; Base name to be used for display
 ;;  NB: it is arguable that whether we should display the pathname
 ;;  component if the pointed page is in different "directory".
 ;;  For now, I just take the basename (except the "/").
 (define (base-pagename pagename)
-  (if (equal? pagename "/") "/" (sys-basename pagename)))
+  (if (equal? pagename "/") "/" (bottom-hierarchy pagename)))
 
 ;; "/aa/bb/cc" -> '("aa" "bb" "cc")
 ;; "/" -> '()

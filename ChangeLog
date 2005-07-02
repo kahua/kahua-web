@@ -1,3 +1,11 @@
+2005-07-03  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* kahua-web/kahua-web.kahua:
+	Replaced file path functions with own functions for page name 
+	handling.  Sys-basename, sys-dirname and simplify-path were
+	replaced with bottom-hierarchy, upper-hierarchy and simplify-page-path
+	respectively.
+
 2005-06-30  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* Makefile.in:
