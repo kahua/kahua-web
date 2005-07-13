@@ -1,3 +1,9 @@
+2005-07-13  Nobuo Yamashita  <nobsun@sampou.org>
+	
+	* kahua-web/macro.kahua (simple-comment-form-bis):
+	enabled to specify email address from which notice mail is posted.
+	
+	
 2005-07-03  Nobuo Yamashita  <nobsun@sampou.org>
 	
 	* kahua-web/kahua-web.kahua:

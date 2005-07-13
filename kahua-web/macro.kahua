@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.20 2005/06/27 04:43:43 nobsun Exp $
+;; $Id: macro.kahua,v 1.21 2005/07/13 13:56:32 nobsun Exp $
 
 (use gauche.collection)
 (use sendmail)
@@ -363,7 +363,8 @@
 
 (define-wiki-macro (simple-comment-form-bis comment-name . rest)
   (let-keywords* rest ((page-name #f)
-                       (mail-to #f))
+                       (mail-to #f)
+                       (mail-from #f))
     (or (and-let* ((page (if (not page-name)
                              (current-page)
                              (get-page page-name)))
@@ -384,17 +385,17 @@
 		  (set! (ref set 'comments) 
 			(cons comment (ref set 'comments)))
                   (if mail-to
-                      (notice-mail mail-to comment))
+                      (notice-mail mail-to mail-from comment))
                   ))
 	    ;; redirect to this page
 	    (redirect-to page)))
-        (define (notice-mail mail-to comment)
+        (define (notice-mail mail-to mail-from comment)
           (let* ((author (ref comment 'author))
                  (contents (ref comment 'contents))
                  (page-path (ref page 'key))
                  (subject (string-append author " comments on " page-path)))
-            (sendmail mail-to *kahua-web-email* subject contents)))
-        
+            (sendmail mail-to
+                      (or mail-from *kahua-web-email*) subject contents)))
 	(define (comment-list)
 	  (let* ((comments (find-kahua-instance <simple-comment-set> key)))
 	    (if comments
