@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.33 2005/07/02 16:02:54 nobsun Exp $
+;; $Id: kahua-web.kahua,v 1.34 2005/07/14 02:19:31 nobsun Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -550,49 +550,55 @@
                    (when (equal? addtonews "on")
                      (page-set-push-unique! (page-set:news) page))
                    (redirect-to page)))))
-  (if (and-let* ((name (kahua-current-user-name)))
-        (not (string-null? name)))
-      (let1 epage
-        (make <page>
-          :title #`"Editing ,(ref page 'title)" :key (ref page 'key)
-          :content
-          `(,@extra-contents
-            (div
-             (form/cont
-              (@@ (cont ,commit (donttouch) (content)))
-              (textarea (@ (name "content") (rows 30) (cols 80))
-                        ,(ref page 'content))
-              (br)
-              (div (@ (class "edit-inputs"))
-                   (input (@ (type "submit") (name "commit") (value "Commit")))
-                   " "
-                   (input (@ (type "checkbox") (name "donttouch") (value "on")
-                             (id "donttouch")))
-                   (label (@ (for "donttouch")) "Don't update 'Recent Changes'")
-                   " "
-                   (input (@ (type "checkbox") (name "addtonews") (value "on")
-                             (id "addtonews")))
-                   (label (@ (for "addtonews")) "Add to news item")
-                   (br)
-                   "Change Page Name : "
-                   (input (@ (type "entry") (name "changename") (width 20)
-                             (value ,(ref page 'key))))
-                   " "
-                   (input (@ (type "checkbox") (name "confirmchange") (value "on")
-                             (id "confirmchange")))
-                   (label (@ (for "confirmchange")) "I'm sure"))
-              (br)
-              (div (@ (class "edit-help"))
-                   ,@(use-page "/$admin/edit-help"))
-
-              ))))
-        (standard-page epage))
-      
-      (let1 epage
-        (make-error-page "Error: Not login"
-                         `(p (@ (class "warning"))
-                             "To edit a page you have to login!"))
-        (standard-page epage))))
+  (let1 is-admin-page (equal? "$admin" (car (pagename-split (ref page 'key))))
+    (if (and-let* ((name (kahua-current-user-name)))
+                  (not (string-null? name)))
+        (let1 epage
+          (make <page>
+            :title #`"Editing ,(ref page 'title)" :key (ref page 'key)
+            :content
+            `(,@extra-contents
+              (div
+               (form/cont
+                (@@ (cont ,commit (donttouch) (content)))
+                (textarea (@ (name "content") (rows 30) (cols 80))
+                          ,(ref page 'content))
+                (br)
+                (div (@ (class "edit-inputs"))
+                     (input (@ (type "submit") (name "commit")
+                               (value "Commit")))
+                     " "
+                     ,(if is-admin-page
+                          `(input (@ (type "checkbox") (name "donttouch")
+                                     (value "on") (checked "checked")
+                                     (id "donttouch")))
+                          `(input (@ (type "checkbox") (name "donttouch")
+                                     (value "on") (id "donttouch"))))
+                     (label (@ (for "donttouch"))
+                            "Don't update 'Recent Changes'")
+                     " "
+                     (input (@ (type "checkbox") (name "addtonews")
+                               (value "on") (id "addtonews")))
+                     (label (@ (for "addtonews")) "Add to news item")
+                     (br)
+                     "Change Page Name : "
+                     (input (@ (type "entry") (name "changename") (width 20)
+                               (value ,(ref page 'key))))
+                     " "
+                     (input (@ (type "checkbox") (name "confirmchange")
+                               (value "on") (id "confirmchange")))
+                     (label (@ (for "confirmchange")) "I'm sure"))
+                (br)
+                (div (@ (class "edit-help"))
+                     ,@(use-page "/$admin/edit-help"))
+                
+                ))))
+          (standard-page epage))
+        (let1 epage
+          (make-error-page "Error: Not login"
+                           `(p (@ (class "warning"))
+                               "To edit a page you have to login!"))
+          (standard-page epage)))))
 
 ;; display version
 (define-entry (version)
