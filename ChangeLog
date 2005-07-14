@@ -1,5 +1,9 @@
 2005-07-14  Nobuo Yamashita  <nobsun@sampou.org>
 	
+	* Release 0.2.3:
+	
+2005-07-14  Nobuo Yamashita  <nobsun@sampou.org>
+	
 	* kahua-web/kahua-web.kahua (edit-page):
 	set donttouch flag ON (checked) for $admin page.
 	
