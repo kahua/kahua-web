@@ -1,3 +1,13 @@
+2005-07-28  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* kahua-web/kahua-web.kahua (save-page):
+	Modified to check if login-user of not.  This prevents page-data
+	posted by non-login who knows cgsid from being saved.
+
+	* kahua-web/comment.kahua (modify-visibility-of-comment):
+	Modified to check if login-user of not.  This prevents visibility
+	by non-login who knows cgsid from being modified.
+	
 2005-07-14  Nobuo Yamashita  <nobsun@sampou.org>
 	
 	* Release 0.2.3:
