@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.34 2005/07/14 02:19:31 nobsun Exp $
+;; $Id: kahua-web.kahua,v 1.35 2005/07/28 05:15:00 nobsun Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -168,18 +168,25 @@
                    "A page with name \"" ,name "\" already exists. "
                    "Use a different name.")))
 
-  (let ((data (cond ((ref page 'persistent-id) => get-page-data/check)
-                    (else (get-new-page/check (ref page 'key))))))
-    (set! (ref data 'content) (ref page 'content))
-    (unless (ref page 'persistent-id)
-      (set! (ref data 'cuser) (kahua-current-user-name)))
-    (set! (ref data 'mtime) (sys-time))
-    (set! (ref data 'muser) (kahua-current-user-name))
-    (kahua-db-sync)
-    (if (ref page 'persistent-id)
-      (cont page)
-      (cont (page-data->page (get-page-data (ref page 'key)))))
-    ))
+  (if (let1 name (kahua-current-user-name)
+        (or (not name) (string-null? name)))
+      (let1 epage
+            (make-error-page "Error: Not login"
+                             `(p (@ (class "warning"))
+                                 "To edit a page you have to login!"))
+            (standard-page epage))
+      (let ((data (cond ((ref page 'persistent-id) => get-page-data/check)
+                        (else (get-new-page/check (ref page 'key))))))
+        (set! (ref data 'content) (ref page 'content))
+        (unless (ref page 'persistent-id)
+          (set! (ref data 'cuser) (kahua-current-user-name)))
+        (set! (ref data 'mtime) (sys-time))
+        (set! (ref data 'muser) (kahua-current-user-name))
+        (kahua-db-sync)
+        (if (ref page 'persistent-id)
+            (cont page)
+            (cont (page-data->page (get-page-data (ref page 'key)))))
+        )))
 
 (define (front-page? page)
   (equal? (ref page 'key) "/"))
