@@ -1,3 +1,11 @@
+2005-09-04  SHIBATA Tomohisa  <shibata@timedia.co.jp>
+
+	* kahua-web/search.kahua (search):
+	Modified to check if search word is too short.
+	Modified not to use wiliki formatted page.
+	Modified not to use regex.
+	Added keyword highlight.
+
 2005-07-28  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* kahua-web/kahua-web.kahua (save-page):
