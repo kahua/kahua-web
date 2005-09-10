@@ -1,5 +1,8 @@
 2005-09-10  Shiro Kawai  <shiro@acm.org>
 
+	* kahua-web/kahua-web.kahua (*kahua-web-title* etc):
+	  Fixed non-R5RS usage of define.
+
 	* kahua-web/macro.kahua (toc): fixed bug in the nesting of TOC
 	  entries (patch ported from the same code in WiLiKi).
 

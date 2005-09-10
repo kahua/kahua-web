@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.36 2005/09/10 10:11:17 shibata Exp $
+;; $Id: kahua-web.kahua,v 1.37 2005/09/10 10:52:56 shiro Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -33,19 +33,22 @@
 (load "kahua-web/local.kahua")
 (load "kahua-web/history.kahua")
 
-(or (symbol-bound? '*kahua-web-title*)
-    (define *kahua-web-title* "Kahua"))
+(define-syntax define-if-not-bound
+  (syntax-rules ()
+    ((_ var expr)
+     (define var (if (symbol-bound? 'var) var expr)))))
 
-(or (symbol-bound? '*kahua-web-rss*)
-    (define *kahua-web-rss* "/cgi-bin/kahua.cgi/kahua-web/rss"))
+(define-if-not-bound *kahua-web-title*
+  "kahua")
 
-(or (symbol-bound? '*kahua-web-email*)
-    (define *kahua-web-email* "kahua-web@example.org"))
+(define-if-not-bound *kahua-web-rss*
+  "/cgi-bin/kahua.cgi/kahua-web/rss")
 
-(or (symbol-bound? '*history-file*)
-    (define *history-file*
-      (build-path (ref (kahua-config) 'working-directory) "kahua-web" "wikidata.log")))
+(define-if-not-bound *kahua-web-email*
+  "kahua-web@example.org")
 
+(define-if-not-bound *history-file*
+  (build-path (ref (kahua-config) 'working-directory) "kahua-web" "wikidata.log"))
 
 ;;========================================================
 ;; Application error handling
