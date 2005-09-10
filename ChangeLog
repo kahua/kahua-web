@@ -1,3 +1,14 @@
+2005-09-10  SHIBATA Tomohisa  <shibata@timedia.co.jp>
+
+	* kahua-web/history.kahua (history):
+	Added history entry (code from wiliki).
+
+	* kahua-web/kahua-web.kahua (save-page):
+	Modified to save history comment.
+
+	* kahua-web/wiliki.scm:
+	Added util.lcs and text.diff module for history.
+
 2005-09-04  SHIBATA Tomohisa  <shibata@timedia.co.jp>
 
 	* kahua-web/search.kahua (search):

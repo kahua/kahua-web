@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.35 2005/07/28 05:15:00 nobsun Exp $
+;; $Id: kahua-web.kahua,v 1.36 2005/09/10 10:11:17 shibata Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -31,6 +31,7 @@
 (load "kahua-web/comment.kahua")
 (load "kahua-web/rss.kahua")
 (load "kahua-web/local.kahua")
+(load "kahua-web/history.kahua")
 
 (or (symbol-bound? '*kahua-web-title*)
     (define *kahua-web-title* "Kahua"))
@@ -40,6 +41,11 @@
 
 (or (symbol-bound? '*kahua-web-email*)
     (define *kahua-web-email* "kahua-web@example.org"))
+
+(or (symbol-bound? '*history-file*)
+    (define *history-file*
+      (build-path (ref (kahua-config) 'working-directory) "kahua-web" "wikidata.log")))
+
 
 ;;========================================================
 ;; Application error handling
@@ -145,7 +151,7 @@
         (else #f)))
 
 ;; save page.
-(define (save-page page cont)
+(define (save-page page cont comment)
   (define (get-page-data/check id)
     (let* ((data (get-page-data-from-id id))
            (newname (ref page 'key))
@@ -176,8 +182,15 @@
                                  "To edit a page you have to login!"))
             (standard-page epage))
       (let ((data (cond ((ref page 'persistent-id) => get-page-data/check)
-                        (else (get-new-page/check (ref page 'key))))))
-        (set! (ref data 'content) (ref page 'content))
+                        (else (get-new-page/check (ref page 'key)))))
+            (new-content (ref page 'content)))
+        (when (ref page 'persistent-id)
+          (write-log (ref page 'persistent-id)
+                     (ref data 'content)
+                     new-content
+                     (or comment "")
+                     (kahua-current-user-name)))
+        (set! (ref data 'content) new-content)
         (unless (ref page 'persistent-id)
           (set! (ref data 'cuser) (kahua-current-user-name)))
         (set! (ref data 'mtime) (sys-time))
@@ -409,7 +422,8 @@
            `((div (@ (id "edit-menu"))
                   (a/cont (@@ (cont ,edit ,@(pagename-split (ref page 'key))))
                           "[Edit]")
-                  "[History]"))
+                  (a/cont (@@ (cont ,history ,@(pagename-split (ref page 'key))))
+                          "[History]")))
            '())))
 
   (parameterize ((current-page page))
@@ -502,9 +516,13 @@
                                                (pagename-split
                                                  (ref page 'key))))"))))))))
 
+(define (format-time t)
+    (sys-strftime "%Y/%m/%d %H:%M:%S" (sys-localtime t)))
+
 (let ((formatter (wiliki:formatter)))
   (set! (ref formatter 'bracket) format-wikiname)
   (set! (ref formatter 'macro) format-macro)
+  (set! (ref formatter 'time) format-time)
   )
 
 ;; A common routine to format a customizable pane
@@ -545,7 +563,7 @@
 (define (edit-page page . extra-contents)
   (define commit
     (entry-lambda (:keyword content donttouch addtonews
-                            changename confirmchange)
+                            changename confirmchange comment)
       (set! (ref page 'content) (canon-content content))
       (and-let* (((equal? confirmchange "on"))
                  (newname (canon-pagename changename)))
@@ -556,7 +574,8 @@
                      (page-set-push-unique! (page-set:recent-changes) page))
                    (when (equal? addtonews "on")
                      (page-set-push-unique! (page-set:news) page))
-                   (redirect-to page)))))
+                   (redirect-to page))
+                 comment)))
   (let1 is-admin-page (equal? "$admin" (car (pagename-split (ref page 'key))))
     (if (and-let* ((name (kahua-current-user-name)))
                   (not (string-null? name)))
@@ -574,6 +593,11 @@
                 (div (@ (class "edit-inputs"))
                      (input (@ (type "submit") (name "commit")
                                (value "Commit")))
+                     " "
+                     (div "log message : "
+                          (input (@ (type "text")
+                                    (name "comment")
+                                    (size 30) (value ""))))
                      " "
                      ,(if is-admin-page
                           `(input (@ (type "checkbox") (name "donttouch")

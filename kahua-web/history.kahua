@@ -1,0 +1,259 @@
+;;-*-Scheme-*-
+;; Kahua website
+;;
+;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
+;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
+;;  See COPYING for terms and conditions of using this software
+;;
+;; $Id: history.kahua,v 1.1 2005/09/10 10:11:17 shibata Exp $
+
+(use util.lcs)
+
+(define (write-log pagename old new logmsg user)
+  (let ((content (wiliki-log-create
+                  pagename new old
+                  :message logmsg
+                  :remote-user user)))
+    (call-with-output-file *history-file*
+      (lambda (p) (display content p) (flush p))
+      :if-exists :append)))
+
+(define-entry (history :rest page-path)
+  (let ((pagename (pagename-join page-path)))
+    (cmd-history pagename)))
+
+;; "Edit History" page. ---------------------------------------
+(define (cmd-history pagename)
+
+  (define (td a . c)
+    `(td (@ (class "history_td")
+            (style "background-color:#ffffff; color:#000000")
+            ,@a)
+         ,@c))
+  (define (tdr a . c)
+    `(td (@ (class "history_td")
+            (style "background-color:#ffffff; color:#000000; text-align:right")
+            ,@a)
+         ,@c))
+  (define (th a . c)
+    `(th (@ (class "history_th")
+            (style "background-color:#ccccff; color:#000000")
+            ,@a)
+         ,@c))
+  (define (diff-to-prev entry prev-timestamp)
+    `(a/cont (@@ (cont ,(cut cmd-diff pagename prev-timestamp (ref entry 'timestamp))))
+             "previous"))
+  (define (diff-to-current entry)
+    `(a/cont (@@ (cont ,(cut cmd-diff pagename (ref entry 'timestamp) 0)))
+             "current"))
+
+  (define (history-table-row first entry rev prev-timestamp)
+    `((tr (@ (class ,(if (odd? rev) "odd" "even")))
+          ,(td '((rowspan 2)) (x->string rev))
+          ,(td '()
+               (how-long-since (ref entry 'timestamp)) " ago")
+          ,(td '() (let* ((adds (length (ref entry 'added-lines)))
+                          (dels (length (ref entry 'deleted-lines)))
+                          (sum (+ adds dels)))
+                     `(span (@ (style
+                                   ,(when (< 0 sum)
+                                      (format "color:rgb(~d, 0, ~d);"
+                                              (x->integer (* 255 (/ dels sum))) ;red
+                                              (x->integer (* 255 (/ adds sum))) ;blue
+                                              ))))
+                            ,(format "+~a -~a line(s)"
+                                     adds
+                                     dels))))
+          ,(apply tdr '()
+                  "[" `(a/cont (@@ (cont ,(cut cmd-viewold pagename (ref entry 'timestamp))))
+                               "View")
+                  " this version] "
+                  (if (eq? first entry)
+                    `("[Diff to ",(diff-to-prev entry prev-timestamp)"]")
+                    `("[Diff to ",(diff-to-current entry)
+                      "|",(diff-to-prev entry prev-timestamp)"]"))))
+
+      (tr ,(td '((colspan 2))
+               (let1 l (ref entry 'log-message)
+                 (cond ((or (not l) (equal? l ""))
+                        "*** no log message ***")
+                       ((> (string-length l) 80)
+                        (string-take l 80))
+                       (else l))))
+          ,(td '()
+               (ref entry 'remote-user)
+                 ))))
+
+  (define (history-table entries)
+    `(table
+      (@ (width "90%"))
+      (tr ,(th '((rowspan 2)) "Rev")
+          ,(th '() "Time") ,(th '() "Changes") ,(th '() "Operations"))
+      (tr ,(th '((colspan 2)) "Log") ,(th '() "User"))
+      ,@(if (not (null? entries))
+            (append-map
+             (cut history-table-row (car entries) <> <> <>)
+             entries
+             (iota (length entries) (length entries) -1)
+             (fold-right (lambda (e r) (cons (ref e 'timestamp) r))
+                         '(0) (drop* entries 1)))
+          '())
+      (tr ,(tdr '((colspan 4))
+                "[" `(a/cont (@@ (cont ,(cut cmd-diff pagename 0 0)))
+                             "Diff from epoch")
+                "]"))))
+
+  (if (and-let* ((name (kahua-current-user-name)))
+        (not (string-null? name)))
+      (standard-page
+       (make <page>
+         :title (format "Edit History of ~a" (base-pagename pagename))
+         :key   pagename
+         :content
+         (or (and-let* ((data (get-page pagename))
+                        (id (ref data 'persistent-id))
+                        (picked (wiliki-log-pick-from-file id *history-file*))
+                        ((not (null? picked))))
+               `(div 
+                 ,(history-table
+                   (map wiliki-log-parse-entry picked);; entrys
+                   )))
+             (no-history-info pagename))))
+    (standard-page
+     (make-error-page "Error: Not login"
+                     `(p (@ (class "warning"))
+                         "To view page history you have to login!")))))
+
+;; "Edit History:Diff" page. -----------------------------------
+(define (cmd-diff pagename old-time new-time)
+
+  (define (explanation)
+    `(ul (li ,(wiliki:format-diff-line `(+ . "added lines")))
+         (li ,(wiliki:format-diff-line `(- . "deleted lines")))))
+
+  (define (diff-to-current entries current)
+    (let* ((diffpage (wiliki-log-diff* entries current)))
+      `((h2 ,(format "Changes of ~a since ~a"
+                     (base-pagename pagename)
+                     (format-time old-time)))
+        ,(explanation)
+        ,(return-to-edit-history pagename)
+        ,(wiliki:format-diff-pre diffpage))))
+
+  (define (diff2 entries current)
+    (let* ((both-proc/pc #f)
+           (oldpage (wiliki-log-revert* entries current))
+           (newpage (wiliki-log-revert*
+                     (take-while (lambda (e)
+                                   (< new-time (ref e 'timestamp)))
+                                 entries)
+                     current))
+           (rdiff (lcs-fold (cut acons '- <> <>)
+                            (cut acons '+ <> <>)
+                            (let/pc k (begin (set! both-proc/pc k)
+                                             (k cons)))
+                            '() oldpage newpage)))
+      `((h2,(format "Changes of ~a between ~a and ~a"
+                    (base-pagename pagename)
+                    (format-time old-time)
+                    (format-time new-time)))
+        (a/cont (@@ (cont ,(lambda () (both-proc/pc (lambda (a b) b)))))
+                "Changes")
+        (br)
+        (a/cont (@@ (cont ,(lambda () (both-proc/pc cons))))
+                "All")
+        ,(explanation)
+        ,(return-to-edit-history pagename)
+        ,(wiliki:format-diff-pre (reverse! rdiff)))))
+
+  (standard-page
+   (make <page>
+     :title (format "Edit History:Diff")
+     :key   pagename
+     :content
+     (or (and-let* ((logfile *history-file*)
+                    (page    (get-page pagename))
+                    (picked  (wiliki-log-pick-from-file (ref page 'persistent-id) logfile)))
+           (let ((entries  (wiliki-log-entries-after picked old-time)))
+             (if (>= old-time new-time)
+                 (diff-to-current entries (ref page 'content))
+               (diff2 entries (ref page 'content)))))
+         (no-history-info pagename)))))
+
+;; "Edit History:View" page. -----------------------------------
+(define (cmd-viewold pagename old-time)
+
+  (define (source reverted)
+    `(fieldset (legend "Source")
+               ,(wiliki:format-diff-pre reverted)))
+
+  (define (formatted pagename content)
+    (let ((page (get-page pagename)))
+      (parameterize
+          ((current-page page))
+        `(fieldset (legend "Formatted")
+                   ,@(wiliki:format-content
+                      (make <page>
+                        :title "formatted"
+                        :key   pagename
+                        :content content))))))
+
+  (define (revert-page pagename reverted old-time cont)
+    (define (revert!)
+      (let ((content (string-join reverted "\n"))
+            (page (get-page pagename)))
+        (save-page
+         (begin (set! (ref page 'content) content) page)
+         (lambda (page)
+           (redirect-to page))
+         (format "* Revert to  ~a *" (format-time old-time)))))
+    `(div (@ (style "text-align:center"))
+          (div "Are You sure?")
+          (a/cont (@@ (cont ,revert!))
+                  "[YES] ")
+          (a/cont (@@ (cont ,(cut cmd-viewold pagename old-time)))
+                  " [NO]")))
+
+  (standard-page
+   (make <page>
+     :title "Edit History:View"
+     :key   pagename
+     :content
+     (or (and-let* ((logfile *history-file*)
+                    (page    (get-page pagename))
+                    (picked  (wiliki-log-pick-from-file (ref page 'persistent-id) logfile)))
+           (let* ((entries  (wiliki-log-entries-after picked old-time))
+                  (reverted (wiliki-log-revert* entries (ref page 'content)))
+                  (view/pc #f))
+             `((h2 ,(format "Content of ~a at ~a" (base-pagename pagename) (format-time old-time)))
+               (a/cont (@@ (cont ,(lambda ()
+                                    (view/pc (formatted (ref page 'key) (string-join reverted "\n"))))))
+                       "Formatted")
+               (br)
+               (a/cont (@@ (cont ,(lambda ()
+                                    (view/pc (source reverted)))))
+                       "Source")
+               (p (@ (style "text-align:right"))
+                  (a/cont (@@ (cont ,(lambda ()
+                                       (view/pc (revert-page pagename
+                                                             reverted old-time view/pc)))))
+                          "Revert to this version")
+                  (br)
+                  (a/cont (@@ (cont ,(cut cmd-diff pagename old-time 0)))
+                          "View diff from current version"))
+               ,(return-to-edit-history pagename)
+               ,(let/pc k
+                  (begin
+                    (set! view/pc k)
+                    (k (source reverted)))))))
+         (no-history-info pagename)))))
+
+(define (no-history-info pagename)
+  `((p ,(format "No edit history available for page ~a"
+                (base-pagename pagename)))))
+
+(define (return-to-edit-history pagename)
+  `(p (@ (style "text-align:right"))
+      (a/cont (@@ (cont ,history ,@(pagename-split pagename)))
+              "Return to the edit history")))
+
