@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.21 2005/07/13 13:56:32 nobsun Exp $
+;; $Id: macro.kahua,v 1.22 2005/09/10 10:45:45 shiro Exp $
 
 (use gauche.collection)
 (use sendmail)
@@ -197,22 +197,28 @@
     (if (not page)
       (unhandled-macro 'toc maybe-pagename)
       (let1 pagename (and page (ref page 'key))
+        ;; MAKE-UL takes one heading entry (level . text) and tries to fit
+        ;; it in a tree.  If the entry is the same level, we accumulate
+        ;; the heading entries to ITEMS.  If the entry is deeper than the
+        ;; current, we recurse into the deeper level but uses CPS to continue
+        ;; the current level after the lower levels are collected.
         ;; NB: hs is a _reverse_ ordered list of all headings (level . text).
         ;; Since it's reversed, we can scan forward to find the heading
         ;; nesting.
         (define (make-ul hs cur items cont)
           (cond ((null? hs)
                  (cont '() `(ul ,@items)))
-                ((= (caar hs) cur)
+                ((= (caar hs) cur) ;; same level
                  (make-ul (cdr hs) cur
                           (cons (make-anchor (nestings hs)) items)
                           cont))
-                ((< (caar hs) cur)
-                 (cont hs `(ul ,@items)))
-                (else
-                 (make-ul hs (caar hs)'()
+                ((> (caar hs) cur) ;; deeper level
+                 (make-ul hs (+ cur 1) '()
                           (lambda (hs ul)
-                            (make-ul hs cur (cons ul items) cont))))))
+                            (make-ul hs cur (cons ul items) cont))))
+                (else ;; we finished the current level and under.  pass
+                      ;; the result to the continuation proc.
+                 (cont hs `(ul ,@items)))))
 
         (define (nestings hs)
           (reverse!
