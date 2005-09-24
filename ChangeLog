@@ -1,5 +1,10 @@
 2005-09-24  SHIBATA Tomohisa  <shibata@kahua.org>
 
+	* kahua-web/kahua-web.kahua (<page-data>):
+	Fiexed to use :init-form option.
+
+2005-09-24  SHIBATA Tomohisa  <shibata@kahua.org>
+
 	* kahua-web/kahua-web.kahua (*kahua-web-rss*):
 	change to use kahua-self-uri-full
 
