@@ -1,3 +1,8 @@
+2005-09-24  SHIBATA Tomohisa  <shibata@kahua.org>
+
+	* kahua-web/kahua-web.kahua (*kahua-web-rss*):
+	change to use kahua-self-uri-full
+
 2005-09-10  Shiro Kawai  <shiro@acm.org>
 
 	* kahua-web/kahua-web.kahua (*kahua-web-title* etc):

@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.37 2005/09/10 10:52:56 shiro Exp $
+;; $Id: kahua-web.kahua,v 1.38 2005/09/24 03:02:50 shibata Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -42,7 +42,7 @@
   "kahua")
 
 (define-if-not-bound *kahua-web-rss*
-  "/cgi-bin/kahua.cgi/kahua-web/rss")
+  (kahua-self-uri-full "rss"))
 
 (define-if-not-bound *kahua-web-email*
   "kahua-web@example.org")
