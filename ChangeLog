@@ -1,3 +1,8 @@
+2005-10-02  SHIBATA Tomohisa  <shibata@kahua.org>
+
+	* kahua-web/search.kahua (highlight):
+	Fiexed keyword highlight bug.
+
 2005-09-24  SHIBATA Tomohisa  <shibata@kahua.org>
 
 	* kahua-web/kahua-web.kahua (<page-data>):

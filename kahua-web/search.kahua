@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: search.kahua,v 1.4 2005/09/03 15:58:45 shibata Exp $
+;; $Id: search.kahua,v 1.5 2005/10/01 16:09:00 shibata Exp $
 
 (use wiliki.pasttime)
 (use gauche.charconv)
@@ -24,7 +24,7 @@
                 (node-set: (string-take line idx)
                            (span: (@: (class "highlight")
                                       (style "background-color:yellow"))
-                                  word)
+                                  (substring/shared line idx (+ idx word-len)))
                            (highlight
                             (string-drop line (+ idx word-len))))
               (node-set: line "\n"))))
