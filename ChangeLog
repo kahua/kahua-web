@@ -1,3 +1,11 @@
+2005-10-25  SHIBATA Tomohisa  <shibata@kahua.org>
+
+	* kahua-web/history.kahua:
+	* kahua-web/history.scm:
+	* kahua-web/kahua-web.kahua:
+	* Makefile.in:
+	changed to use history plugin.
+
 2005-10-02  SHIBATA Tomohisa  <shibata@kahua.org>
 
 	* kahua-web/search.kahua (highlight):
