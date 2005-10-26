@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.40 2005/10/25 14:06:06 shibata Exp $
+;; $Id: kahua-web.kahua,v 1.41 2005/10/26 12:24:05 yasuyuki Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -445,7 +445,8 @@
                       (href ,*kahua-web-rss*)))
              (link (@ (rel "stylesheet") (type "text/css")
                       (href ,(kahua-static-document-url
-                              "kahua-web/kahua-web.css")))))
+                              "kahua-web/kahua-web.css"))))
+	     ,@(ref page 'extra-head-elements))
        (body
         (div (@ (id "title-pane")) ,@(use-page "/$admin/title-pane"))
         ,@(page-navigation page)
