@@ -1,6 +1,6 @@
 ;; -*-Scheme-*-
 ;; test kahua-web script.
-;; $Id: test.scm.in,v 1.4 2004/10/19 07:54:12 shiro Exp $
+;; $Id: test.scm.in,v 1.5 2005/10/26 12:14:59 shibata Exp $
 (use srfi-2)
 (use srfi-11)
 (use gauche.test)
@@ -27,6 +27,7 @@
 (copy-file "##KAHUA_WORKING##/plugins/allow-module.scm"
            "_work/plugins/allow-module.scm")
 (copy-file "##KAHUA_WORKING##/plugins/sendmail.scm"  "_work/plugins/sendmail.scm")
+(copy-file "##KAHUA_WORKING##/plugins/history.scm"  "_work/plugins/history.scm")
 
 (define *config* "./test.conf")
 
