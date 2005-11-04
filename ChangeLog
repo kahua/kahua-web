@@ -1,6 +1,11 @@
 2005-11-02  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* Release 0.2.4:
+
+2005-10-31  ENDO Yasuyuki <yasuyuki@javaopen.org>
+
+	* kahua-web/kahua-web.scm:
+	check extra-head-elements slot of <page> in standard-page.
 	
 2005-10-25  SHIBATA Tomohisa  <shibata@kahua.org>
 
