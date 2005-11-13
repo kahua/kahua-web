@@ -4,7 +4,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: lsuser.scm,v 1.1 2004/01/25 14:51:32 shiro Exp $
+;; $Id: kahua-web-lsuser.scm,v 1.1 2005/11/13 08:48:11 nobsun Exp $
 
 (use kahua)
 (use file.util)

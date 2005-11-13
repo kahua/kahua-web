@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.22 2005/10/25 14:06:06 shibata Exp $
+# $Id: Makefile.in,v 1.23 2005/11/13 08:48:11 nobsun Exp $
 
 package	          = kahua-web
 kahua		  = kahua
@@ -36,7 +36,7 @@ KAHUA_WEB_VERSION = $(shell cat $(top_srcdir)/VERSION)
 # specify -c ../kahua.conf etc. to give an alternative conf file
 KAHUACONFIG = -c $(sysconfdir)/kahua.conf
 
-SCRIPTS	= adduser lsuser
+SCRIPTS	= kahua-web-adduser kahua-web-lsuser
 
 SCRIPTFILES = kahua-web/kahua-web.kahua \
               kahua-web/macro.kahua \
@@ -87,7 +87,7 @@ install:
 
 	$(GOSH) -I$(libdir) ./init.scm $(KAHUACONFIG)
 	for f in $(SCRIPTS); do \
-	  $(INSTALL) -m 555 $$f $(bindir)/kahua-web-$$f; \
+	  $(INSTALL) -m 555 $$f $(bindir)/$$f; \
 	  $(INSTALL) -m 555 $$f.scm $(libdir)/$$f.scm; \
 	done
 

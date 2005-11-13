@@ -4,7 +4,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: adduser.scm,v 1.1 2004/01/25 14:51:32 shiro Exp $
+;; $Id: kahua-web-adduser.scm,v 1.1 2005/11/13 08:48:11 nobsun Exp $
 
 (use kahua)
 (use file.util)
@@ -13,7 +13,7 @@
 (define (main args)
   (let-args (cdr args) ((conf-file "c=s") . args)
     (unless (= (length args) 2)
-      (print "Usage: gosh adduser.scm [-c conf-file] username password")
+      (print "Usage: gosh kahua-web-adduser.scm [-c conf-file] username password")
       (exit 70))
     (kahua-init conf-file)
     (let ((dbname (build-path (ref (kahua-config) 'working-directory)

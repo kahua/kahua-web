@@ -1,3 +1,8 @@
+2005-11-13  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* adduser.scm, lsuser.scm:
+	renamed to kahua-web-adduser.scm and kahua-web-lsuser.scm respectively.
+
 2005-11-02  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* Release 0.2.4:
