@@ -1,11 +1,11 @@
-;;-*-Scheme-*-
+;;-*- mode: Scheme; coding: euc-jp -*-
 ;; Kahua website
 ;;
 ;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.42 2005/11/02 07:01:13 yasuyuki Exp $
+;; $Id: kahua-web.kahua,v 1.43 2006/01/24 12:13:22 cut-sea Exp $
 
 (use srfi-1)
 (use srfi-2)

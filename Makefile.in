@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.23 2005/11/13 08:48:11 nobsun Exp $
+# $Id: Makefile.in,v 1.24 2006/01/24 12:13:21 cut-sea Exp $
 
 package	          = kahua-web
 kahua		  = kahua
@@ -65,10 +65,10 @@ $(SCRIPTS):
 	$(top_srcdir)/mkscript $(GOSH) $(libdir) $(libdir) $@
 
 test/test.scm:	test/test.scm.in
-	sed -e "s@##GOSH##@$(GOSH)@" -e "s@##KAHUA_WORKING##@$(KAHUA_WORKING)@" -e "s@##KAHUA_LIB##@$(KAHUA_LIB)@" $< > $@
+	sed -e "s@##GOSH##@$(GOSH)@" -e "s@##KAHUA_WORKING##@$(KAHUA_WORKING)@" -e "s@##KAHUA_LIB##@$(KAHUA_LIB)@" $? > $@
 
 kahua-web/version.kahua: kahua-web/version.kahua.in
-	sed -e "s@###KAHUA_WEB_VERSION###@$(KAHUA_WEB_VERSION)@" $< > $@
+	sed -e "s@###KAHUA_WEB_VERSION###@$(KAHUA_WEB_VERSION)@" $? > $@
 
 check:  test/test.scm
 	rm -f test/test.log
