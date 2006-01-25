@@ -12,7 +12,7 @@
 
 (define (write-log name old new logmsg user)
   (let ((content (wiliki-log-create
-                  pagename new old
+                  name new old
                   :message logmsg
                   :remote-user user)))
     (if (history-file)
