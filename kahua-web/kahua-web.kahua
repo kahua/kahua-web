@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.44 2006/01/25 07:57:45 nobsun Exp $
+;; $Id: kahua-web.kahua,v 1.45 2006/01/25 16:26:01 shibata Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -16,6 +16,7 @@
 (use gauche.logger)
 (use gauche.sequence)
 (use gauche.parameter)
+(use gauche.hook)
 (use wiliki.format)
 (use wiliki.log)
 (use wiliki.page)
@@ -26,6 +27,12 @@
  (build-path (ref (kahua-config) 'working-directory) "kahua-web"))
 
 (log-open (kahua-logpath "kahua-web.log"))
+
+(define save-page-hook (make-hook))
+(define %kahua-web-rss-uri% (make-parameter  (cut kahua-self-uri-full "rss")))
+(define (kahua-web-rss-uri)
+  ((%kahua-web-rss-uri%)))
+(define kahua-web-charset (gauche-character-encoding))
 
 (load "kahua-web/version.kahua")
 (load "kahua-web/macro.kahua")
@@ -43,9 +50,6 @@
 
 (define-if-not-bound *kahua-web-title*
   "kahua")
-
-(define-if-not-bound *kahua-web-rss*
-  (kahua-self-uri-full "rss"))
 
 (define-if-not-bound *kahua-web-email*
   "kahua-web@example.org")
@@ -190,6 +194,7 @@
       (let ((data (cond ((ref page 'persistent-id) => get-page-data/check)
                         (else (get-new-page/check (ref page 'key)))))
             (new-content (ref page 'content)))
+        (run-hook save-page-hook)
         (when (ref page 'persistent-id)
           (write-log (ref page 'persistent-id)
                      (ref data 'content)
@@ -435,15 +440,15 @@
   (parameterize ((current-page page))
     `((html
        (extra-header (@ (name "content-type")
-                        (value "text/html; charset=euc-jp")));;for now
+                        (value ,#`"text/html; charset=,|kahua-web-charset|")))
        (head (title ,*kahua-web-title*
                     ,(string-join (pagename-split (ref page 'key))
                                   "|" 'prefix))
 	     (meta (@ (http-equiv "Content-type")
-		      (content "text/html; charset=euc-jp")))
+		      (content ,#`"text/html; charset=,|kahua-web-charset|")))
              (link (@ (rel "alternate") (type "application/rss+xml")
                       (title ,(string-append *kahua-web-title* " RSS"))
-                      (href ,*kahua-web-rss*)))
+                      (href ,(kahua-web-rss-uri))))
              (link (@ (rel "stylesheet") (type "text/css")
                       (href ,(kahua-static-document-url
                               "kahua-web/kahua-web.css"))))

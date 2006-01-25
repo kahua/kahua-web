@@ -4,3 +4,4 @@
 (allow-module wiliki.pasttime)
 (allow-module util.lcs)
 (allow-module text.diff)
+(allow-module gauche.hook)

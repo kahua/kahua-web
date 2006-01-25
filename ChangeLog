@@ -1,3 +1,12 @@
+2006-01-25  SHIBATA Tomohisa <shibata@kahua.org>
+
+	* kahua-web/kahua-web.kahua, kahua-web/rss.kahua, kahua-web/wiliki.scm:
+	Added save-page-hook.
+	Changed page charset to use gauche-character-encoding.
+	Added write-rss.
+
+	* kahua-web/history.scm: Fixed typo (pagename -> name).
+
 2006-01-25  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* kahua-web/kahua-web.kahua,macro.kahua,wiliki.scm

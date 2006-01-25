@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss.kahua,v 1.2 2004/10/13 00:47:41 nobsun Exp $
+;; $Id: rss.kahua,v 1.3 2006/01/25 16:26:01 shibata Exp $
 
 (define (page-url page)
   (kahua-self-uri-full 
@@ -26,10 +26,10 @@
   (let* ((full-url (kahua-self-uri-full))
          ;; (List <page-data>:id)
          (entries
-          (take* (ref (find-kahua-instance <page-set> "recent-changes")
-                      'pages)
-                 15)))
-    
+          (let1 recent-changes (find-kahua-instance <page-set> "recent-changes")
+            (if recent-changes
+                (take* (ref recent-changes 'pages) 15)
+              '()))))
     ;; SXML
     `((rss (@ (version "2.0"))
            (channel
@@ -43,3 +43,13 @@
                        (link ,(page-url entry))
                        (pubDate  ,(pubdate-mtime entry))))
                    entries))))))
+
+(define (write-rss)
+  (kahua-write-static-file #`",(kahua-worker-type)/rss.xml"
+   (rss)
+   '()))
+
+(when (find (pa$ equal? "write-rss") (kahua-app-args))
+  (%kahua-web-rss-uri% (cut kahua-static-document-url #`",(kahua-worker-type)/rss.xml"))
+  ;; (kahua-add-hook! 'initial write-rss)
+  (add-hook! save-page-hook write-rss))
