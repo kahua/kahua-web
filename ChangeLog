@@ -1,3 +1,8 @@
+2006-01-25  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* kahua-web/kahua-web.kahua,macro.kahua,wiliki.scm
+	Adjust to use WiLiKi library of CVS HEAD version.
+
 2005-11-13  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* adduser.scm, lsuser.scm:

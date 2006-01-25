@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.22 2005/09/10 10:45:45 shiro Exp $
+;; $Id: macro.kahua,v 1.23 2006/01/25 07:57:45 nobsun Exp $
 
 (use gauche.collection)
 (use sendmail)
@@ -193,7 +193,7 @@
   (let1 page (or (and-let* ((name (get-optional maybe-pagename #f))
                             (cname (canon-pagename (x->string name))))
                    (get-page cname))
-                 (wiliki:current-page))
+                 (wiliki-current-page))
     (if (not page)
       (unhandled-macro 'toc maybe-pagename)
       (let1 pagename (and page (ref page 'key))
