@@ -1,7 +1,10 @@
 (allow-module wiliki.format)
-(allow-module wiliki.page)
+(cond ((not (global-variable-bound? 'user 'wiliki:current-page))
+       (allow-module wiliki.page))
+      (else #f))
 (allow-module wiliki.log)
 (allow-module wiliki.pasttime)
 (allow-module util.lcs)
 (allow-module text.diff)
 (allow-module gauche.hook)
+

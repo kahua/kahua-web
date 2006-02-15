@@ -1,3 +1,8 @@
+2006-02-15  Nobuo Yamashita  <nobsun@sampou.org>
+
+	* kahua-web/kahua-web.kahua, kahua-web/wiliki.scm
+	bug fixed for WiLiKi module using.
+
 2006-01-25  SHIBATA Tomohisa <shibata@kahua.org>
 
 	* kahua-web/kahua-web.kahua, kahua-web/rss.kahua, kahua-web/wiliki.scm:
@@ -9,7 +14,7 @@
 
 2006-01-25  Nobuo Yamashita  <nobsun@sampou.org>
 
-	* kahua-web/kahua-web.kahua,macro.kahua,wiliki.scm
+	* kahua-web/kahua-web.kahua,kahua-web/macro.kahua,kahua-web/wiliki.scm
 	Adjust to use WiLiKi library of CVS HEAD version.
 
 2005-11-13  Nobuo Yamashita  <nobsun@sampou.org>
