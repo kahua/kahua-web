@@ -1,3 +1,9 @@
+2006-05-29  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Makefile.in, configure.ac: Fit install path to recent Kahua.
+
+	* kahua-web/macro.kahua: Ignore #f in slot "comments" of <simple-comment-set> instance.
+
 2006-02-15  Nobuo Yamashita  <nobsun@sampou.org>
 
 	* kahua-web/kahua-web.kahua, kahua-web/wiliki.scm

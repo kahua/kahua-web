@@ -5,9 +5,8 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.24 2006/05/29 10:01:00 bizenn Exp $
+;; $Id: macro.kahua,v 1.25 2006/05/29 10:38:04 bizenn Exp $
 
-(use srfi-1)
 (use gauche.collection)
 (use sendmail)
 

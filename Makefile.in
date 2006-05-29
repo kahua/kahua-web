@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.25 2006/05/29 09:59:27 bizenn Exp $
+# $Id: Makefile.in,v 1.26 2006/05/29 10:37:50 bizenn Exp $
 
 package	          = kahua-web
 kahua		  = kahua
@@ -75,7 +75,7 @@ check:  test/test.scm
 	cd test; $(GOSH) -I$(KAHUA_LIB) ./test.scm > test.log
 
 clean:
-	rm -rf core *~ kahua-web/*~ test/*~ test/_* test/test.log $(SCRIPTS)
+	rm -rf core *~ kahua-web/*~ test/*~ test/_* test/test.log  kahua-web/version.kahua $(SCRIPTS)
 
 install: 
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t script $(SCRIPTFILES)
