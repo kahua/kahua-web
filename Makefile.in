@@ -1,14 +1,14 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.24 2006/01/24 12:13:21 cut-sea Exp $
+# $Id: Makefile.in,v 1.25 2006/05/29 09:59:27 bizenn Exp $
 
 package	          = kahua-web
 kahua		  = kahua
 SHELL             = @SHELL@
 prefix            = @prefix@
 exec_prefix       = @exec_prefix@
-bindir            = @bindir@/$(kahua)
-sbindir           = @sbindir@/$(kahua)
-libexecdir	  = @libexecdir@/$(kahua)
+bindir            = @bindir@
+sbindir           = @sbindir@
+libexecdir	  = @libexecdir@
 datadir		  = @datadir@/$(kahua)
 sysconfdir        = @sysconfdir@/$(kahua)
 sharedstatedir    = @sharedstatedir@/$(kahua)
@@ -16,8 +16,8 @@ localstatedir     = @localstatedir@/$(kahua)
 libdir            = @libdir@/$(kahua)
 includedir        = @includedir@/$(kahua)
 oldincludedir     = @oldincludedir@/$(kahua)
-infodir           = @infodir@/$(kahua)
-mandir            = @mandir@/$(kahua)
+infodir           = @infodir@
+mandir            = @mandir@
 srcdir            = @srcdir@
 VPATH             = $(srcdir)
 top_builddir      = @top_builddir@

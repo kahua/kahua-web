@@ -5,8 +5,9 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.23 2006/01/25 07:57:45 nobsun Exp $
+;; $Id: macro.kahua,v 1.24 2006/05/29 10:01:00 bizenn Exp $
 
+(use srfi-1)
 (use gauche.collection)
 (use sendmail)
 
@@ -332,20 +333,21 @@
 	  (let* ((comments (find-kahua-instance <simple-comment-set> key)))
 	    (if comments
 		`(div 
-		  ,@(map (lambda (c)
-			   (if (visible? c)
-			       `(div (@ (class "comment"))
-				     (div (@ (class "comment-header"))
-					  ,(ref c 'author)
-					  ": (" ,(sys-ctime (ref c 'date)) ")")
-				     (div (@ (class "comment-contents"))
-					  ,@(wiliki:format-content
-                                             (string-append
-                                              "{{{\n"
-                                              (or (ref c 'contents) "")
-                                              "\n}}}"))))
-			       '()))
-			 (reverse (ref comments 'comments))))
+		  ,@(filter-map (lambda (c)
+				  (and c
+				       (if (visible? c)
+					   `(div (@ (class "comment"))
+						 (div (@ (class "comment-header"))
+						      ,(ref c 'author)
+						      ": (" ,(sys-ctime (ref c 'date)) ")")
+						 (div (@ (class "comment-contents"))
+						      ,@(wiliki:format-content
+							 (string-append
+							  "{{{\n"
+							  (or (ref c 'contents) "")
+							  "\n}}}"))))
+					   '())))
+				(reverse (ref comments 'comments))))
 		"There is no comment.")))
 	;; form
 	`(div (@ (class "simplecommentmacro"))
