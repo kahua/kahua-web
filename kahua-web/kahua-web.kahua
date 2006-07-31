@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.46 2006/02/15 08:03:02 nobsun Exp $
+;; $Id: kahua-web.kahua,v 1.47 2006/07/31 08:10:09 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -18,9 +18,9 @@
 (use gauche.parameter)
 (use gauche.hook)
 (use wiliki.format)
-(if (global-variable-bound? 'user 'wiliki:current-page)
+(if (global-variable-bound? (current-module) 'wiliki:current-page)
     (define wiliki-current-page wiliki:current-page)
-    (use wiliki.page))
+    (eval '(use wiliki.page) (current-module)))
 (use wiliki.log)
 (use history)
 
@@ -47,7 +47,7 @@
 (define-syntax define-if-not-bound
   (syntax-rules ()
     ((_ var expr)
-     (define var (if (symbol-bound? 'var) var expr)))))
+     (define var (if (global-variable-bound? (current-module) 'var) var expr)))))
 
 (define-if-not-bound *kahua-web-title*
   "kahua")
