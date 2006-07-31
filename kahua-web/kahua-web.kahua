@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.47 2006/07/31 08:10:09 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.48 2006/07/31 09:40:35 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -170,7 +170,7 @@
       (unless (equal? oldname newname)
         ;; page name is changed.  make sure it doesn't conflict.
         (let1 other (get-page-data newname)
-          (when (and other (not (equal? (ref data 'id) (ref other 'id))))
+          (when (and other (not (equal? (kahua-persistent-id data) (kahua-persistent-id other))))
             (set! (ref page 'key) oldname)
             (kahua-error (duplicated-page-name newname))))
         (set! (ref data 'name) newname))

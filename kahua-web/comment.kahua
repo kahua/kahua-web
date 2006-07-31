@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: comment.kahua,v 1.2 2005/07/28 06:17:01 nobsun Exp $
+;; $Id: comment.kahua,v 1.3 2006/07/31 09:40:35 bizenn Exp $
 
 (define-class <simple-comment-set> (<kahua-persistent-base>)
   ((name     :allocation   :persistent 
@@ -51,7 +51,7 @@
           (begin
             (for-each
              (lambda (c)
-               (let* ((val (kahua-context-ref (x->string (ref c 'id))))
+               (let* ((val (kahua-context-ref (x->string (kahua-persistent-id c))))
                       (val (if (equal? val "true") #t #f)))
                  (set! (ref c 'visible) val)))
              (ref set 'comments))
@@ -71,7 +71,7 @@
                                         (td ,(ref c 'contents))
                                         (td (input 
                                              (@ (type "checkbox") 
-                                                (name  ,(ref c 'id))
+                                                (name  ,(kahua-persistent-id c))
                                                 (value "true")
                                                 ,@(if (visible? c)
                                                       '((checked checked)) '()))))))
