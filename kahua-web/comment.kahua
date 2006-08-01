@@ -5,9 +5,10 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: comment.kahua,v 1.4 2006/08/01 06:42:48 bizenn Exp $
+;; $Id: comment.kahua,v 1.5 2006/08/01 08:05:07 bizenn Exp $
 
 (use srfi-1)
+(use gauche.collection)
 
 (define-class <simple-comment-set> (<kahua-persistent-base>)
   ((name     :allocation   :persistent 
@@ -53,9 +54,10 @@
           (begin
             (for-each
              (lambda (c)
-               (let* ((val (kahua-context-ref (x->string (kahua-persistent-id c))))
-                      (val (if (equal? val "true") #t #f)))
-                 (set! (ref c 'visible) val)))
+	       (when c
+		 (let* ((val (kahua-context-ref (x->string (kahua-persistent-id c))))
+			(val (if (equal? val "true") #t #f)))
+		   (set! (ref c 'visible) val))))
              (ref set 'comments))
             (edit-set set))))
     (define (edit-set set)
