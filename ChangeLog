@@ -1,3 +1,7 @@
+2006-08-01  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Fix error occurrence when encounter #f comment.
+
 2006-05-29  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Makefile.in, configure.ac: Fit install path to recent Kahua.

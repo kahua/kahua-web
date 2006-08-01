@@ -5,7 +5,9 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: comment.kahua,v 1.3 2006/07/31 09:40:35 bizenn Exp $
+;; $Id: comment.kahua,v 1.4 2006/08/01 06:42:48 bizenn Exp $
+
+(use srfi-1)
 
 (define-class <simple-comment-set> (<kahua-persistent-base>)
   ((name     :allocation   :persistent 
@@ -67,14 +69,15 @@
                    (@@ (cont ,(lambda () (edit-set-commit set))))
                    (table (@ (border 1))
                           ,@(map (lambda (c)
-                                   `(tr (td ,(ref c 'author))
-                                        (td ,(ref c 'contents))
-                                        (td (input 
-                                             (@ (type "checkbox") 
-                                                (name  ,(kahua-persistent-id c))
-                                                (value "true")
-                                                ,@(if (visible? c)
-                                                      '((checked checked)) '()))))))
+				   (and c
+					`(tr (td ,(ref c 'author))
+					     (td ,(ref c 'contents))
+					     (td (input 
+						  (@ (type "checkbox") 
+						     (name  ,(kahua-persistent-id c))
+						     (value "true")
+						     ,@(if (visible? c)
+							   '((checked checked)) '())))))))
                                  (ref set 'comments)))
                    (input (@ (type "submit") (name "submit") (value "commit")))
                    ))))))
