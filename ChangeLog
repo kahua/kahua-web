@@ -1,3 +1,7 @@
+2006-08-05  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* kahua-web/macro.kahua: Add applet macro.
+
 2006-08-01  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Fix error occurrence when encounter #f comment.
