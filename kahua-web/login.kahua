@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: login.kahua,v 1.3 2004/05/18 08:59:01 nobsun Exp $
+;; $Id: login.kahua,v 1.4 2006/09/26 08:02:04 bizenn Exp $
 
 (define non-member-edit-flag
   (and-let* ((args (kahua-app-args))
@@ -26,7 +26,11 @@
                 (a/cont (@@ (cont ,login-form ,@page-path)) "[login]"))))))
 
 (define-entry (logout :rest page-path)
-  (set! (kahua-current-user-name) #f)
+  (if non-member-edit-flag
+      (parameterize ((current-db #f))
+	(set! (kahua-current-user-name) #f))
+      (set! (kahua-current-user-name) #f))
+  (set! (kahua-current-user) #f)
   ;; if we're in the persistent page, stay on the same page.
   ;; otherwise, redirect to the top.
   (if (and (current-page) (ref (current-page) 'persistent-id))
@@ -95,8 +99,9 @@
                    "Please enter your nickname"))
               #f #f))
             (else
-             (begin 
-               (set! (kahua-current-user-name) logname)
+             (begin
+	       (parameterize ((current-db #f))
+		 (set! (kahua-current-user-name) logname))
                (redirect-to (get-page (pagename-join return-page-path))))))))
   (if non-member-edit-flag
       (show-form-bis '() #f #f)
