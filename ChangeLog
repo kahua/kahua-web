@@ -1,3 +1,7 @@
+2006-09-27  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Rename <kahua-error> to <kahua-web-error>.
+
 2006-09-26  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Fit for security fix of Kahua CVS 2006-09-26.

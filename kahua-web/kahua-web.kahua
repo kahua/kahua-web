@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.48 2006/07/31 09:40:35 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.49 2006/09/27 04:51:46 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -62,16 +62,14 @@
 ;; Application error handling
 ;;
 ;;   An error that causes a normal occasion (e.g. input error)
-;;   can be thrown by <kahua-error> object.
+;;   can be thrown by <kahua-web-error> object.
 ;;   The <error> would be considered as a program error.
-;;   NB: <kahua-error> should go to kahua module?
 
-(define-class <kahua-error> (<exception>)
-  ((form :init-keyword :form :init-value #f) ;; form to display.  [SXML]
-   ))
+(define-condition-type <kahua-web-error> <exception> kahua-web-error?
+  (form form-of))
 
-(define (kahua-error form)
-  (raise (make <kahua-error> :form form)))
+(define (kahua-web-error form)
+  (error <kahua-web-error> :form form))
 
 ;;========================================================
 ;; Page-data
@@ -172,12 +170,12 @@
         (let1 other (get-page-data newname)
           (when (and other (not (equal? (kahua-persistent-id data) (kahua-persistent-id other))))
             (set! (ref page 'key) oldname)
-            (kahua-error (duplicated-page-name newname))))
+            (kahua-web-error (duplicated-page-name newname))))
         (set! (ref data 'name) newname))
       data))
   (define (get-new-page/check name)
     (let1 other (get-page-data name)
-      (when other (kahua-error (duplicated-page-name name)))
+      (when other (kahua-web-error (duplicated-page-name name)))
       (make <page-data> :name (ref page 'key))))
   (define (duplicated-page-name name)
     (edit-page page
@@ -563,12 +561,12 @@
   (make <page> :title title :key "/Error" :content body))
 
 (define (error-proc exc)
-  (if (is-a? exc <kahua-error>)
-    (ref exc 'form)
-    (standard-page
-     (make-error-page "Error: program error"
-                      `(,@(use-page "/$admin/program-error")
-                        (pre ,(kahua-error-string exc (kahua-current-user))))))))
+  (if (kahua-web-error? exc)
+      (ref exc 'form)
+      (standard-page
+       (make-error-page "Error: program error"
+			`(,@(use-page "/$admin/program-error")
+			  (pre ,(kahua-error-string exc (kahua-current-user))))))))
 
 (define-entry (edit :rest page-path)
   (let ((pagename (pagename-join page-path)))
