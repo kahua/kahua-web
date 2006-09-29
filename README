@@ -1,12 +1,12 @@
-$Id: README,v 1.5 2005/07/14 02:25:44 nobsun Exp $
+$Id: README,v 1.6 2006/09/29 07:13:54 bizenn Exp $
 
-kahua-web : Kahua-based WiLiKi-like CMS
+kahua-web : Kahua-based WiLiKi-like simple CMS
 
 [Requirements]
 
-Gauche-0.8.5
-WiLiKi-0.5.1
-Kahua-0.3.2
+Gauche-0.8.7 or later
+WiLiKi-0.5.3 or later
+Kahua-0.7 or later
 
 [Installation]
 
@@ -28,12 +28,12 @@ And then
 
 Then, edit app-servers to add "kahua-web" entry.
 
-  (kahua-web :argument () :run-by-default 0)
+  (kahua-web :argument () :run-by-default 2)
 
 If you want to allow non registered user to edit page, 
 give 'non-member-edit as a argument.
 
-  (kahua-web :argument (non-member-edit) :run-by-default 0)
+  (kahua-web :argument (non-member-edit) :run-by-default 2)
 
 [Information]
 
