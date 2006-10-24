@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.26 2006/08/05 02:23:57 bizenn Exp $
+;; $Id: macro.kahua,v 1.27 2006/10/24 09:45:17 yasuyuki Exp $
 
 (use gauche.collection)
 (use sendmail)
@@ -449,3 +449,9 @@
 		   ,(comment-list))))
       '()))
   )
+
+
+;; rss-include
+(define-wiki-macro (rss-include uri . count&format)
+  (let-keywords* count&format ((count #f)(format #f))
+    (rss-include uri count format)))
