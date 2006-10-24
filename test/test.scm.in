@@ -1,6 +1,6 @@
 ;; -*-Scheme-*-
 ;; test kahua-web script.
-;; $Id: test.scm.in,v 1.6 2005/10/26 12:21:24 shibata Exp $
+;; $Id: test.scm.in,v 1.7 2006/10/24 09:43:33 yasuyuki Exp $
 (use srfi-2)
 (use srfi-11)
 (use gauche.test)
@@ -28,6 +28,7 @@
 (copy-file "##KAHUA_WORKING##/plugins/allow-module.scm"
            "_work/plugins/allow-module.scm")
 (copy-file "##KAHUA_WORKING##/plugins/sendmail.scm"  "_work/plugins/sendmail.scm")
+(copy-file "../kahua-web/rss-reader.scm"  "_work/plugins/rss-reader.scm")
 
 
 (define *config* "./test.conf")
