@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.49 2006/09/27 04:51:46 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.50 2006/10/24 09:44:05 yasuyuki Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -23,6 +23,8 @@
     (eval '(use wiliki.page) (current-module)))
 (use wiliki.log)
 (use history)
+
+(use rss-reader)
 
 (primary-database-name
  (build-path (ref (kahua-config) 'working-directory) "kahua-web"))
