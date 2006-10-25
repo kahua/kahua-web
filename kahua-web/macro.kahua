@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.28 2006/10/24 10:13:06 yasuyuki Exp $
+;; $Id: macro.kahua,v 1.29 2006/10/25 03:00:42 yasuyuki Exp $
 
 (use gauche.collection)
 (use srfi-19)
@@ -452,12 +452,29 @@
   )
 
 
+;; rss-title
+(define-wiki-macro (rss-title uri . count&format)
+  (let-optionals* count&format ((count #f)
+				(format (lambda (item)
+					  (let ((date  (list-ref item 0 #f))
+						(title (list-ref item 1 #f))
+						(link  (list-ref item 2 #f)))
+					    `(div  (a (@ (href ,link)) ,(date->string date "~Y-~m-~d") " " ,title))))))
+    (rss-include uri count format)))
+
 ;; rss-include
 (define-wiki-macro (rss-include uri . count&format)
   (let-optionals* count&format ((count #f)
 				(format (lambda (item)
-					  (let ((date (car item))
-						(title (cadr item))
-						(link (caddr item)))
-					    `(div  (a (@ (href ,link)) ,(date->string date "~Y-~m-~d") " " ,title))))))
+					  (let ((date     (list-ref item 0 #f))
+						(title    (list-ref item 1 #f))
+						(link     (list-ref item 2 #f))
+						(content  (list-ref item 3 #f))
+						(author   (list-ref item 4 #f))
+						(comments (list-ref item 5 #f)))
+					    `(div  (h3 (a (@ (href ,link)) ,(date->string date "~Y-~m-~d") " " ,title))
+						   ,content
+						   (hr)
+						   (div "by" (& "nbsp") ,author (& "nbsp") "|" (& "nbsp") (a (@ (href ,comments)) "Comments"))
+						   (hr))))))
     (rss-include uri count format)))
