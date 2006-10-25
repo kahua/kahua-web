@@ -3,7 +3,7 @@
 ;;  Copyright (c) 2005 Kahua.Org, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss-reader.scm,v 1.1 2006/10/24 09:40:45 yasuyuki Exp $
+;; $Id: rss-reader.scm,v 1.2 2006/10/25 02:34:18 yasuyuki Exp $
 
 (use rfc.uri)
 (use rfc.http)
@@ -46,12 +46,25 @@
 				   (('item ('title t)
 					   ('link l)
 					   ('pubDate d)
+					   ('description c)
+					   ('author a)
+					   ('comments m))
+				    (list (rfc822-date->date d) t l c a m))
+				   (('item ('title t)
+					   ('link l)
+					   ('pubDate d)
+					   ('description c)
+					   ('author a))
+				    (list (rfc822-date->date d) t l c a #f))
+				   (('item ('title t)
+					   ('link l)
+					   ('pubDate d)
 					   ('description c))
-				    (list (rfc822-date->date d) t l c))
+				    (list (rfc822-date->date d) t l c #f #f))
 				   (('item ('title t)
 					   ('link l)
 					   ('pubDate d))
-				    (list (rfc822-date->date d) t l #f))))
+				    (list (rfc822-date->date d) t l #f #f #f))))
 			((sxpath '(rss channel item)) sx))))
 	(let ((l (if count
 		     (take* item-list count)
