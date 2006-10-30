@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.29 2006/10/25 03:00:42 yasuyuki Exp $
+;; $Id: macro.kahua,v 1.30 2006/10/30 06:04:20 yasuyuki Exp $
 
 (use gauche.collection)
 (use srfi-19)
@@ -450,6 +450,14 @@
 		   ,(comment-list))))
       '()))
   )
+
+;; rss-date
+(define-wiki-macro (rss-date uri . count&format)
+  (let-optionals* count&format ((count #f)
+				(format (lambda (item)
+					  (let ((date  (list-ref item 0 #f)))
+					    (string-apped "(" (date->string date "~Y-~m-~d") ")")))))
+    (rss-include uri count format)))
 
 
 ;; rss-title

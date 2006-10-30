@@ -1,3 +1,7 @@
+2006-10-30  ENDO Yasuyuki  <yasuyuki@javaopen.org>
+
+	* kahua-web/macro.kahua (rss-date): add .
+
 2006-10-25  ENDO Yasuyuki  <yasuyuki@javaopen.org>
 
 	* kahua-web/macro.kahua (rss-include): add (hr) to bottom.
