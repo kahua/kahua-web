@@ -1,3 +1,7 @@
+2006-11-23  ENDO Yasuyuki  <yasuyuki@javaopen.org>
+
+	* kahua-web/macro.kahua (lingr-badge, youtube): add.
+
 2006-10-30  ENDO Yasuyuki  <yasuyuki@javaopen.org>
 
 	* kahua-web/macro.kahua (rss-date): add .

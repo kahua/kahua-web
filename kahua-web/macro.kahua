@@ -5,11 +5,14 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.30 2006/10/30 06:04:20 yasuyuki Exp $
+;; $Id: macro.kahua,v 1.31 2006/11/23 12:04:02 yasuyuki Exp $
 
 (use gauche.collection)
 (use srfi-19)
 (use sendmail)
+(use util.list)
+(use www.cgi)
+(use rfc.uri)
 
 (define *macro-alist* '())
 
@@ -486,3 +489,28 @@
 						   (div "by" (& "nbsp") ,author (& "nbsp") "|" (& "nbsp") (a (@ (href ,comments)) "Comments"))
 						   (hr))))))
     (rss-include uri count format)))
+
+;; lingr badge
+(define-wiki-macro (lingr-badge uri)
+  `((script (@ (type "text/javascript")
+	      (src ,#`",|uri|/badge/render")
+	      (charset= "utf-8")))))
+
+;; youtube
+(define-wiki-macro (youtube uri)
+  (receive (scm uinfo host port path query frag) (uri-parse uri)
+    (let* ((param-list (cgi-parse-parameters :query-string query))
+	   (video-list (assoc-ref param-list "v"))
+	   (video-id (and (pair? video-list) (car video-list))))
+    `((object (@ (width "425")
+		(height "350"))
+	     (param (@ (name "movie")
+		       (value ,#`"http://www.youtube.com/v/,|video-id|")))
+	     (param (@ (name "wmode")
+		       (value "transparent")))
+	     (embed (@ (src ,#`"http://www.youtube.com/v/,|video-id|")
+		       (type "application/x-shockwave-flash")
+		       (wmode "transparent")
+		       (width "425")
+		       (height "350"))))))))
+
