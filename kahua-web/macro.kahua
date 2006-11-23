@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.31 2006/11/23 12:04:02 yasuyuki Exp $
+;; $Id: macro.kahua,v 1.32 2006/11/23 14:03:02 yasuyuki Exp $
 
 (use gauche.collection)
 (use srfi-19)
@@ -459,7 +459,7 @@
   (let-optionals* count&format ((count #f)
 				(format (lambda (item)
 					  (let ((date  (list-ref item 0 #f)))
-					    (string-apped "(" (date->string date "~Y-~m-~d") ")")))))
+					    (string-append "(" (date->string date "~Y-~m-~d") ")")))))
     (rss-include uri count format)))
 
 

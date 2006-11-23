@@ -1,5 +1,7 @@
 2006-11-23  ENDO Yasuyuki  <yasuyuki@javaopen.org>
 
+	* kahua-web/macro.kahua (rss-date): fix typo.
+
 	* test/test.scm.in (kahua-web-modules.scm): add.
 
 	* Makefile.in (PLUGINDIR): add.
