@@ -1,5 +1,9 @@
 2006-11-23  ENDO Yasuyuki  <yasuyuki@javaopen.org>
 
+	* test/test.scm.in (kahua-web-modules.scm): add.
+
+	* Makefile.in (PLUGINDIR): add.
+
 	* kahua-web/macro.kahua (lingr-badge, youtube): add.
 
 2006-10-30  ENDO Yasuyuki  <yasuyuki@javaopen.org>
