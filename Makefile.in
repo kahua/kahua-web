@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.27 2006/10/25 03:01:53 yasuyuki Exp $
+# $Id: Makefile.in,v 1.28 2006/11/23 12:03:29 yasuyuki Exp $
 
 package	          = kahua-web
 kahua		  = kahua
@@ -52,7 +52,7 @@ LOCALSCRIPTFILES = kahua-web/local.kahua
 STATICFILES = kahua-web/kahua-web.css
 
 SOURCEDIR   = kahua-web
-PLUGINFILES  = wiliki.scm history.scm rss-reader.scm
+PLUGINFILES  = plugins/wiliki.scm plugins/history.scm plugins/rss-reader.scm pgulins/kahua-web-modules.scm
 
 CONFIG_GENERATED = Makefile test/test.scm \
 		   config.log config.status autom4*.cache
