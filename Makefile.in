@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.28 2006/11/23 12:03:29 yasuyuki Exp $
+# $Id: Makefile.in,v 1.29 2006/11/23 13:47:11 yasuyuki Exp $
 
 package	          = kahua-web
 kahua		  = kahua
@@ -52,7 +52,9 @@ LOCALSCRIPTFILES = kahua-web/local.kahua
 STATICFILES = kahua-web/kahua-web.css
 
 SOURCEDIR   = kahua-web
-PLUGINFILES  = plugins/wiliki.scm plugins/history.scm plugins/rss-reader.scm pgulins/kahua-web-modules.scm
+
+PLUGINDIR   = plugins
+PLUGINFILES  = wiliki.scm history.scm rss-reader.scm kahua-web-modules.scm
 
 CONFIG_GENERATED = Makefile test/test.scm \
 		   config.log config.status autom4*.cache
@@ -82,7 +84,7 @@ install:
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t script --no-overwrite $(LOCALSCRIPTFILES)
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t static --no-overwrite $(STATICFILES)
 	for f in $(PLUGINFILES); do \
-	  $(KAHUA_INSTALL) $(KAHUACONFIG) -t plugin -r $$f $(SOURCEDIR)/$$f;\
+	  $(KAHUA_INSTALL) $(KAHUACONFIG) -t plugin -r $$f $(PLUGINDIR)/$$f;\
 	done
 
 	$(GOSH) -I$(libdir) ./init.scm $(KAHUACONFIG)
@@ -95,7 +97,7 @@ uninstall :
 	$(KAHUA_INSTALL) -U $(KAHUACONFIG) -t script $(SCRIPTFILES)
 	$(KAHUA_INSTALL) -U $(KAHUACONFIG) -t static $(STATICFILES)
 	for f in $(PLUGINFILES); do \
-		$(KAHUA_INSTALL) $(KAHUACONFIG) -t plugin -r $$f $(SOURCEDIR)/$$f;\
+		$(KAHUA_INSTALL) $(KAHUACONFIG) -t plugin -r $$f $(PLUGINDIR)/$$f;\
 	done
 
 distclean: clean
