@@ -1,3 +1,14 @@
+2006-11-24  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Now init.scm doesn't echo back input password.
+
+	* Fix initialize hitory-file properly(under database
+	  itself).
+
+	* Fix initialization of WiLiKi history file path properly.
+
+	* Change primary-database-name to "efs:kahua-web".
+
 2006-11-23  ENDO Yasuyuki  <yasuyuki@javaopen.org>
 
 	* kahua-web/macro.kahua (rss-date): fix typo.

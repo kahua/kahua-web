@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.51 2006/11/24 01:05:11 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.52 2006/11/24 13:27:33 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -56,8 +56,14 @@
 (define-if-not-bound *kahua-web-email*
   "kahua-web@example.org")
 
-(history-file
- (build-path (ref (kahua-config) 'working-directory) "kahua-web" "wikidata.log"))
+;; Initialization for history file of WiLiKi module.
+(define-constant *history-file* "wikidata.log")
+(history-file (delay (or (and-let* ((db (current-db)))
+			   (and (slot-bound? db 'real-path)
+				(build-path (slot-ref db 'real-path)  *history-file*)))
+			 (let1 p (build-path (kahua-database-directory) "kahua-web" *history-file*)
+			   (make-directory* (sys-dirname p))
+			   p))))
 
 ;;========================================================
 ;; Application error handling

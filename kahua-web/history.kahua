@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: history.kahua,v 1.2 2005/10/25 14:06:06 shibata Exp $
+;; $Id: history.kahua,v 1.3 2006/11/24 13:27:33 bizenn Exp $
 
 (use util.lcs)
 
@@ -103,7 +103,7 @@
          :content
          (or (and-let* ((data (get-page pagename))
                         (id (ref data 'persistent-id))
-                        (picked (wiliki-log-pick-from-file id (history-file)))
+                        (picked (wiliki-log-pick-from-file id (force (history-file))))
                         ((not (null? picked))))
                `(div 
                  ,(history-table
@@ -162,7 +162,7 @@
      :title (format "Edit History:Diff")
      :key   pagename
      :content
-     (or (and-let* ((logfile (history-file))
+     (or (and-let* ((logfile (force (history-file)))
                     (page    (get-page pagename))
                     (picked  (wiliki-log-pick-from-file (ref page 'persistent-id) logfile)))
            (let ((entries  (wiliki-log-entries-after picked old-time)))
@@ -210,7 +210,7 @@
      :title "Edit History:View"
      :key   pagename
      :content
-     (or (and-let* ((logfile (history-file))
+     (or (and-let* ((logfile (force (history-file)))
                     (page    (get-page pagename))
                     (picked  (wiliki-log-pick-from-file (ref page 'persistent-id) logfile)))
            (let* ((entries  (wiliki-log-entries-after picked old-time))

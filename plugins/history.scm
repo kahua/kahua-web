@@ -15,9 +15,8 @@
                   name new old
                   :message logmsg
                   :remote-user user)))
-    (if (history-file)
-        (call-with-output-file (history-file)
-          (lambda (p) (display content p) (flush p))
-          :if-exists :append)
-      (error "please set history-file"))))
+    (or (and-let* ((h (force (history-file))))
+	  (call-with-output-file h (lambda (p) (display content p) (flush p))
+				 :if-exists :append))
+	(error "please set history-file"))))
 
