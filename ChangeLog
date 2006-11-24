@@ -1,11 +1,11 @@
 2006-11-24  Tatsuya BIZENN  <bizenn@arthub.net>
 
+	* init.scm handle site bundle via command-line option.
+
 	* Now init.scm doesn't echo back input password.
 
 	* Fix initialize hitory-file properly(under database
 	  itself).
-
-	* Fix initialization of WiLiKi history file path properly.
 
 	* Change primary-database-name to "efs:kahua-web".
 
