@@ -1,3 +1,9 @@
+2006-12-29  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: Makefile.in, configure.ac
+	  Add support to install into a site bundle.
+	  Drop installation of command-line script temporarily.
+
 2006-11-24  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* init.scm handle site bundle via command-line option.
