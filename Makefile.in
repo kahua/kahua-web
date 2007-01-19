@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.30 2006/12/29 11:33:51 bizenn Exp $
+# $Id: Makefile.in,v 1.31 2007/01/19 09:24:58 bizenn Exp $
 
 package	          = kahua-web
 kahua		  = kahua
@@ -89,16 +89,24 @@ install:
 	done
 
 	$(GOSH) -I$(libdir) ./init.scm $(KAHUACONFIG)
-#	for f in $(SCRIPTS); do \
-#	  $(INSTALL) -m 555 $$f $(bindir)/$$f; \
-#	  $(INSTALL) -m 555 $$f.scm $(libdir)/$$f.scm; \
-#	done
 
-uninstall :
+install-scripts:
+	for f in $(SCRIPTS); do \
+	  $(INSTALL) -m 555 $$f $(bindir)/$$f; \
+	  $(INSTALL) -m 555 $$f.scm $(libdir)/$$f.scm; \
+	done
+
+uninstall:
 	$(KAHUA_INSTALL) -U $(KAHUACONFIG) -t script $(SCRIPTFILES)
 	$(KAHUA_INSTALL) -U $(KAHUACONFIG) -t static $(STATICFILES)
 	for f in $(PLUGINFILES); do \
 		$(KAHUA_INSTALL) $(KAHUACONFIG) -t plugin -r $$f $(PLUGINDIR)/$$f;\
+	done
+
+uninstall-scripts:
+	for f in $(SCRIPTS); do \
+	  rm -f $(bindir)/$$f; \
+	  rm -f $(libdir)/$$f.scm; \
 	done
 
 distclean: clean
