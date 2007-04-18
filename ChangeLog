@@ -1,3 +1,12 @@
+2007-04-18  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: init.scm
+	  Initialize default database or the database specified with
+	  -D option.
+
+	* Change: kahua-web/kahua-web.kahua
+	  Use default database instead of "efs:kahua-web".
+
 2007-01-19  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: Makefile.in
