@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: comment.kahua,v 1.5 2006/08/01 08:05:07 bizenn Exp $
+;; $Id: comment.kahua,v 1.6 2007/04/23 07:17:14 yasuyuki Exp $
 
 (use srfi-1)
 (use gauche.collection)
@@ -97,3 +97,70 @@
 			 `(li ,(edit-set-link set))) sets))
 	      '(div "There is no comment."))))
         (standard-page epage))))
+
+(define-entry (comment-list)
+  (define (comment-list-form)
+    (let ((comments (sort
+		     (filter
+		      (lambda (c) (visible? c))
+		      (make-kahua-collection <simple-comment>))
+		     (lambda (x y) (> (ref x 'date) (ref y 'date)))
+		     )))
+      (standard-page
+       (make <page> :title "Comment List" :key "/"
+	     :content
+	     `((h1 "コメント一覧")
+	       (form/cont
+		(@ (name "commentForm"))
+		(@@ (cont ,check-comment-list))
+		(table (@ (width "100%"))
+		       (tr
+			(td)
+			(td (input (@ (type "submit")(name "delete-button")(value "削除")))))
+		       (tr
+			(td (input (@ (type "checkbox")(name "onOff")(title "全て選択")
+				      (onClick "var chkd = document.commentForm.onOff.checked; for (var i=0; i<document.commentForm.commentId.length; i++) { document.commentForm.commentId[i].checked=chkd; }"))))
+			(th "Date")(th "Author")(th "Contents"))
+		       ,@(map
+			  (lambda (c)
+			    (let ((author (ref c 'author))
+				  (contents (if (> (string-length (ref c 'contents)) 80)
+						#`",(string-take (ref c 'contents) 80)..."
+						(ref c 'contents)))
+				  (date (and c (ref c 'date)
+					      (sys-strftime "%Y-%m-%d %H:%M:%S"
+							    (sys-localtime (ref c 'date))))))
+			      `(tr
+				(td (@ (title ,(or (key-of c) "")))
+				    (input (@ (type "checkbox") (name "commentId") (value ,(or (key-of c) "")))))
+				(td ,(or date ""))
+				(td ,(or author ""))
+				(td ,(or contents ""))
+				)))
+			  comments)
+		       (tr (td)
+			   (td (input (@ (type "submit")(name "delete-button")(value "削除"))))))))))))
+  (define check-comment-list
+     (entry-lambda (:mvkeyword commentId :keyword delete-button)
+       (begin
+	 (if (and delete-button commentId)
+	     (for-each
+	      (lambda (cid)
+		(let ((cmnt (and cid (find-kahua-instance <simple-comment> cid))))
+		  (if cmnt
+		      ;;(remove-kahua-instance tb)
+		      (set! (ref cmnt 'visible) #f))))
+	      commentId))
+	 (comment-list-form)
+      )))
+  (or
+   (and-let* ((user (kahua-current-user)))
+     (cond
+      ((kahua-user-has-role? '(admin) user)
+       (standard-page
+	(make <page> :title "Comment List Error" :key "/"
+	      :content '((h3 "Permittion Error.")))))
+      (else (comment-list-form))))
+   (standard-page
+    (make <page> :title "Comment List Error" :key "/"
+	  :content '((h3 "You are not logged in."))))))
