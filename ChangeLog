@@ -1,3 +1,10 @@
+2007-04-28  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/kahua-web.kahua
+	  Change wikidata.log file's path.  If Kahua support
+	  kahua-data-directory, it's placed
+	  (kahua-datapath "kahua-web" "wikidata.log").
+
 2007-04-23  ENDO Yasuyuki  <yasuyuki@javaopen.org>
 
 	* kahua-web/comment.kahua (comment-list): add.
