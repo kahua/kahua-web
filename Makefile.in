@@ -1,7 +1,8 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.31 2007/01/19 09:24:58 bizenn Exp $
+# $Id: Makefile.in,v 1.32 2007/05/12 03:19:56 bizenn Exp $
 
-package	          = kahua-web
+package	          = @PACKAGE_NAME@
+package_version   = @PACKAGE_VERSION@
 kahua		  = kahua
 SHELL             = @SHELL@
 prefix            = @prefix@
@@ -31,12 +32,9 @@ INSTALL = @INSTALL@
 KAHUA_INSTALL = @KAHUA_INSTALL@
 KAHUA_WORKING = $(localstatedir)
 KAHUA_LIB     = $(libdir)
-
-KAHUA_WEB_VERSION = $(shell cat $(top_srcdir)/VERSION)
-
-# specify -c ../kahua.conf etc. to give an alternative conf file
 KAHUACONFIG = @KAHUACONFIG_OPTION@
 
+# Obsolete but not yet removed.
 SCRIPTS	= kahua-web-adduser kahua-web-lsuser
 
 SCRIPTFILES = kahua-web/kahua-web.kahua \
@@ -47,15 +45,15 @@ SCRIPTFILES = kahua-web/kahua-web.kahua \
 	      kahua-web/rss.kahua \
 	      kahua-web/history.kahua \
 	      kahua-web/version.kahua
-
 LOCALSCRIPTFILES = kahua-web/local.kahua
-
 STATICFILES = kahua-web/kahua-web.css
 
-SOURCEDIR   = kahua-web
-
+SOURCEDIR   = $(package)
 PLUGINDIR   = plugins
-PLUGINFILES  = wiliki.scm history.scm rss-reader.scm kahua-web-modules.scm
+PLUGINFILES = wiliki.scm history.scm rss-reader.scm kahua-web-modules.scm
+
+TEMPLATEDIR = templates
+XMLFILES    = standard-page.xml
 
 CONFIG_GENERATED = Makefile test/test.scm \
 		   config.log config.status autom4*.cache
@@ -68,17 +66,20 @@ $(SCRIPTS):
 	$(top_srcdir)/mkscript $(GOSH) $(libdir) $(libdir) $@
 
 test/test.scm:	test/test.scm.in
-	sed -e "s@##GOSH##@$(GOSH)@" -e "s@##KAHUA_WORKING##@$(KAHUA_WORKING)@" -e "s@##KAHUA_LIB##@$(KAHUA_LIB)@" $? > $@
+	sed -e "s@##GOSH##@$(GOSH)@" \
+	    -e "s@##KAHUA_WORKING##@$(KAHUA_WORKING)@" \
+	    -e "s@##KAHUA_LIB##@$(KAHUA_LIB)@" $? > $@
 
 kahua-web/version.kahua: kahua-web/version.kahua.in
-	sed -e "s@###KAHUA_WEB_VERSION###@$(KAHUA_WEB_VERSION)@" $? > $@
+	sed -e "s@###KAHUA_WEB_VERSION###@$(package_version)@" $? > $@
 
 check:  test/test.scm
 	rm -f test/test.log
 	cd test; $(GOSH) -I$(KAHUA_LIB) ./test.scm > test.log
 
 clean:
-	rm -rf core *~ kahua-web/*~ test/*~ test/_* test/test.log  kahua-web/version.kahua $(SCRIPTS)
+	rm -rf core *~ kahua-web/*~ test/*~ test/_* test/test.log \
+	       kahua-web/version.kahua $(SCRIPTS)
 
 install: 
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t script $(SCRIPTFILES)
@@ -87,7 +88,11 @@ install:
 	for f in $(PLUGINFILES); do \
 	  $(KAHUA_INSTALL) $(KAHUACONFIG) -t plugin -r $$f $(PLUGINDIR)/$$f;\
 	done
+	for f in $(XMLFILES); do \
+	  $(KAHUA_INSTALL) $(KAHUACONFIG) -t template -r $(package)/$$f $(TEMPLATEDIR)/$$f;\
+	done
 
+init:
 	$(GOSH) -I$(libdir) ./init.scm $(KAHUACONFIG)
 
 install-scripts:

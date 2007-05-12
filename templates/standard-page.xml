@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+  <!-- $Id: standard-page.xml,v 1.1 2007/05/12 03:19:56 bizenn Exp $ -->
+  <head>
+    <meta id='extra-header-elements' />
+    <link id='rss-link' />
+    <link id='style-link' />
+    <title id='title'>Kahua-web</title>
+  </head>
+  <body>
+    <div id='body-container'>
+      <div id='title-pane'>
+	<div id='title-pane-contents' />
+      </div>
+      <div id='side-pane'>
+	<div id='side-pane-contents' />
+      </div>
+      <div id='main-pane'>
+	<div id='main-pane-contents' />
+      </div>
+      <div id='bottom-pane'>
+	<div id='bottom-pane-contents' />
+      </div>
+    </div>
+  </body>
+</html>

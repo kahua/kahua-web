@@ -1,3 +1,12 @@
+2007-05-12  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: configure.ac, Makefile.in
+	  Use PCKAGE_NAME and PACKAGE_VERSION.
+	  New "init" target for initial user.
+
+	* New: templates/standard-page.xml
+	  Prepare to use page template.
+
 2007-04-28  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: kahua-web/kahua-web.kahua
