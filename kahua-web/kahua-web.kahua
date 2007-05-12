@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.54 2007/04/28 04:27:21 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.55 2007/05/12 13:35:36 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -421,6 +421,10 @@
 ;; +---------------------------------------------------+
 ;; |                   bottom-pane                     |
 ;; +---------------------------------------------------+
+
+(define standard-page-tmplate
+  (kahua:make-xml-template
+   (kahua-template-path "kahua-web" "standard-page.xml")))
 
 (define (standard-page page)
 

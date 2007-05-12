@@ -1,6 +1,6 @@
 ;; -*-Scheme-*-
 ;; test kahua-web script.
-;; $Id: test.scm.in,v 1.8 2006/11/23 13:47:54 yasuyuki Exp $
+;; $Id: test.scm.in,v 1.9 2007/05/12 13:35:36 bizenn Exp $
 (use srfi-2)
 (use srfi-11)
 (use gauche.test)
@@ -20,13 +20,15 @@
 (define (deb msg) (format "[Debug: ~a]" msg))
 
 (sys-system "rm -rf _tmp _work")
-(sys-mkdir "_tmp" #o755)
-(sys-mkdir "_work" #o755)
-(sys-mkdir "_work/plugins" #o755)
+(make-directory* "_tmp" #o755)
+(make-directory* "_work" #o755)
+(make-directory* "_work/plugins" #o755)
+(make-directory* "_work/templates/kahua-web" #o755)
 (copy-file "../plugins/wiliki.scm"  "_work/plugins/wiliki.scm")
 (copy-file "../plugins/history.scm"  "_work/plugins/history.scm")
 (copy-file "../plugins/rss-reader.scm"  "_work/plugins/rss-reader.scm")
 (copy-file "../plugins/kahua-web-modules.scm"  "_work/plugins/kahua-web-modules.scm")
+(copy-file "../templates/standard-page.xml" "_work/templates/kahua-web/standard-page.xml")
 (copy-file "##KAHUA_WORKING##/plugins/allow-module.scm"
            "_work/plugins/allow-module.scm")
 (copy-file "##KAHUA_WORKING##/plugins/sendmail.scm"  "_work/plugins/sendmail.scm")
