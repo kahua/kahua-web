@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.56 2007/05/13 05:01:26 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.57 2007/05/13 23:48:55 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -467,12 +467,14 @@
 			  (href (kahua-web-rss-uri))))
      :style-link (link/ (@/ (rel "stylesheet") (type "text/css")
 			    (href (kahua-static-document-url "kahua-web" "kahua-web.css"))))
-     :title-pane-contents (use-page "/$admin/title-pane")
+     :title-pane-contents
+     (h1/ (if (front-page? page)
+	      *kahua-web-title*
+	      (slot-ref page 'title)))
      :navigation-pane-contents (page-navigation page)
      :side-pane-contents (use-page "/$admin/side-pane")
      :bottom-pane-contents (use-page "/$admin/bottom-pane")
      :main-pane `((div (@ (id "main-pane"))
-		       ,@(if (front-page? page) '() `((h1 ,(slot-ref page 'title))))
 		       ,@(wiliki:format-content page)
 		       ,@(if (persistent-page? page) (footer page) '())))
      )))
@@ -501,7 +503,6 @@
 		  (type "text") (name "word") (size 10)))))
   ;; body
   `((table
-     (@ (id "navigation-pane"))
      (tr (td (@ (id "navigation-pane-left"))
              ,@(navi-links (pagename-split (ref page 'key))))
          (td (@ (id "navigation-pane-right"))

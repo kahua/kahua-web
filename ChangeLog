@@ -1,3 +1,10 @@
+2007-05-14  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/kahua-web.kahua, kahua-web/kahua-web.css
+	  templates/standard-page.xml
+	  New layout with div/float method.  It's simplified than
+	  prior one.
+
 2007-05-12  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: configure.ac, Makefile.in
