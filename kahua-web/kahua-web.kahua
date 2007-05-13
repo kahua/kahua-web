@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.55 2007/05/12 13:35:36 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.56 2007/05/13 05:01:26 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -422,7 +422,7 @@
 ;; |                   bottom-pane                     |
 ;; +---------------------------------------------------+
 
-(define standard-page-tmplate
+(define standard-page-template
   (kahua:make-xml-template
    (kahua-template-path "kahua-web" "standard-page.xml")))
 
@@ -451,38 +451,31 @@
            '())))
 
   (parameterize ((current-page page))
-    `((html
-       (extra-header (@ (name "content-type")
-                        (value ,#`"text/html; charset=,|kahua-web-charset|")))
-       (head (title ,*kahua-web-title*
-                    ,(string-join (pagename-split (ref page 'key))
-                                  "|" 'prefix))
-	     (meta (@ (http-equiv "Content-type")
-		      (content ,#`"text/html; charset=,|kahua-web-charset|")))
-             (link (@ (rel "alternate") (type "application/rss+xml")
-                      (title ,(string-append *kahua-web-title* " RSS"))
-                      (href ,(kahua-web-rss-uri))))
-             (link (@ (rel "stylesheet") (type "text/css")
-                      (href ,(kahua-static-document-url
-                              "kahua-web/kahua-web.css"))))
-	     ,@(if (slot-exists? page 'extra-head-elements)
-		   (ref page 'extra-head-elements)
-		   '()))
-       (body
-        (div (@ (id "title-pane")) ,@(use-page "/$admin/title-pane"))
-        ,@(page-navigation page)
-        (hr)
-        (table
-         (@ (id "body-pane"))
-         (tr (td (@ (id "side-pane")) ,@(use-page "/$admin/side-pane"))
-             (td (@ (id "main-pane"))
-                 ,@(if (front-page? page) '() `((h1 ,(ref page 'title))))
-                 ,@(wiliki:format-content page)
-                 ,@(if (persistent-page? page) (footer page) '()))
-             ))
-        (hr)
-        (div (@ (id "bottom-pane")) ,@(use-page "/$admin/bottom-pane"))
-        )))))
+    (kahua:xml-template->sxml
+     standard-page-template
+     :title (title/ *kahua-web-title*
+		    (string-join (pagename-split (slot-ref page 'key)) "|" 'prefix))
+     ;; FIXME!!
+     :extra-header-elements (if (slot-exists? page 'extra-head-elements)
+				(let1 els (slot-ref page 'extra-head-elements)
+				  (if (null? els)
+				      '(node-set)
+				      els))
+				'(node-set))
+     :rss-link (link/ (@/ (rel "alternate") (type "application/rss+xml")
+			  (title (string-append *kahua-web-title* " RSS"))
+			  (href (kahua-web-rss-uri))))
+     :style-link (link/ (@/ (rel "stylesheet") (type "text/css")
+			    (href (kahua-static-document-url "kahua-web" "kahua-web.css"))))
+     :title-pane-contents (use-page "/$admin/title-pane")
+     :navigation-pane-contents (page-navigation page)
+     :side-pane-contents (use-page "/$admin/side-pane")
+     :bottom-pane-contents (use-page "/$admin/bottom-pane")
+     :main-pane `((div (@ (id "main-pane"))
+		       ,@(if (front-page? page) '() `((h1 ,(slot-ref page 'title))))
+		       ,@(wiliki:format-content page)
+		       ,@(if (persistent-page? page) (footer page) '())))
+     )))
 
 (define (page-navigation page)
   ;; ("/" "a" "b") => (() ("a") ("a" "b"))

@@ -2,7 +2,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
-  <!-- $Id: standard-page.xml,v 1.1 2007/05/12 03:19:56 bizenn Exp $ -->
+  <!-- $Id: standard-page.xml,v 1.2 2007/05/13 05:01:26 bizenn Exp $ -->
   <head>
     <meta id='extra-header-elements' />
     <link id='rss-link' />
@@ -14,12 +14,17 @@
       <div id='title-pane'>
 	<div id='title-pane-contents' />
       </div>
+      <div id='navigation-pane'>
+	<div id='navigation-pane-contents' />
+      </div>
+      <hr />
       <div id='side-pane'>
 	<div id='side-pane-contents' />
       </div>
       <div id='main-pane'>
 	<div id='main-pane-contents' />
       </div>
+      <hr />
       <div id='bottom-pane'>
 	<div id='bottom-pane-contents' />
       </div>
