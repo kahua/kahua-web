@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.57 2007/05/13 23:48:55 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.58 2007/05/14 01:35:48 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -465,8 +465,11 @@
      :rss-link (link/ (@/ (rel "alternate") (type "application/rss+xml")
 			  (title (string-append *kahua-web-title* " RSS"))
 			  (href (kahua-web-rss-uri))))
-     :style-link (link/ (@/ (rel "stylesheet") (type "text/css")
-			    (href (kahua-static-document-url "kahua-web" "kahua-web.css"))))
+     :style-link
+     (node-set/ (link/ (@/ (rel "stylesheet") (type "text/css")
+			   (href (kahua-static-document-url "kahua-web" "kahua-web.css"))))
+		(link/ (@/ (rel "stylesheet") (type "text/css")
+			   (href (kahua-static-document-url "kahua-web" "kahua-web-local.css")))))
      :title-pane-contents
      (h1/ (if (front-page? page)
 	      *kahua-web-title*

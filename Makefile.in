@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.32 2007/05/12 03:19:56 bizenn Exp $
+# $Id: Makefile.in,v 1.33 2007/05/14 01:35:42 bizenn Exp $
 
 package	          = @PACKAGE_NAME@
 package_version   = @PACKAGE_VERSION@
@@ -37,18 +37,19 @@ KAHUACONFIG = @KAHUACONFIG_OPTION@
 # Obsolete but not yet removed.
 SCRIPTS	= kahua-web-adduser kahua-web-lsuser
 
-SCRIPTFILES = kahua-web/kahua-web.kahua \
-              kahua-web/macro.kahua \
-	      kahua-web/login.kahua \
-	      kahua-web/search.kahua \
-	      kahua-web/comment.kahua \
-	      kahua-web/rss.kahua \
-	      kahua-web/history.kahua \
-	      kahua-web/version.kahua
-LOCALSCRIPTFILES = kahua-web/local.kahua
-STATICFILES = kahua-web/kahua-web.css
-
 SOURCEDIR   = $(package)
+SCRIPTFILES = $(SOURCEDIR)/kahua-web.kahua \
+              $(SOURCEDIR)/macro.kahua \
+	      $(SOURCEDIR)/login.kahua \
+	      $(SOURCEDIR)/search.kahua \
+	      $(SOURCEDIR)/comment.kahua \
+	      $(SOURCEDIR)/rss.kahua \
+	      $(SOURCEDIR)/history.kahua \
+	      $(SOURCEDIR)/version.kahua
+LOCALSCRIPTFILES = $(SOURCEDIR)/local.kahua
+STATICFILES = $(SOURCEDIR)/$(package).css
+LOCALSTATICFILES = $(SOURCEDIR)/$(package)-local.css
+
 PLUGINDIR   = plugins
 PLUGINFILES = wiliki.scm history.scm rss-reader.scm kahua-web-modules.scm
 
@@ -84,7 +85,8 @@ clean:
 install: 
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t script $(SCRIPTFILES)
 	$(KAHUA_INSTALL) $(KAHUACONFIG) -t script --no-overwrite $(LOCALSCRIPTFILES)
-	$(KAHUA_INSTALL) $(KAHUACONFIG) -t static --no-overwrite $(STATICFILES)
+	$(KAHUA_INSTALL) $(KAHUACONFIG) -t static $(STATICFILES)
+	$(KAHUA_INSTALL) $(KAHUACONFIG) -t static --no-overwrite $(LOCALSTATICFILES)
 	for f in $(PLUGINFILES); do \
 	  $(KAHUA_INSTALL) $(KAHUACONFIG) -t plugin -r $$f $(PLUGINDIR)/$$f;\
 	done

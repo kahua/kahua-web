@@ -1,5 +1,10 @@
 2007-05-14  Tatsuya BIZENN  <bizenn@arthub.net>
 
+	* New: kahua-web/kahua-web-local.css
+	  Now site local style should be in this file, and installer
+	  doesn't overwrite this.  Now kahua-web.css is overwritten
+	  when installed.
+
 	* Change: kahua-web/kahua-web.kahua, kahua-web/kahua-web.css
 	  templates/standard-page.xml
 	  New layout with div/float method.  It's simplified than
