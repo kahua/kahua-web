@@ -1,3 +1,4 @@
+;; -*- mode: scheme; coding: utf-8 -*-
 ;; history plugin.
 
 (use gauche.parameter)

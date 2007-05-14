@@ -1,6 +1,6 @@
-;; -*-Scheme-*-
+;; -*- mode: scheme; coding: utf-8 -*-
 ;; test kahua-web script.
-;; $Id: test.scm.in,v 1.9 2007/05/12 13:35:36 bizenn Exp $
+;; $Id: test.scm.in,v 1.10 2007/05/14 08:51:17 bizenn Exp $
 (use srfi-2)
 (use srfi-11)
 (use gauche.test)

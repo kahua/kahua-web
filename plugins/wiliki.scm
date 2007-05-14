@@ -1,3 +1,4 @@
+;; -*- mode: scheme; coding: utf-8 -*-
 (allow-module wiliki.format)
 (guard (e (else #f))
   (allow-module wiliki.page))
