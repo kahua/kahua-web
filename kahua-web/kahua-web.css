@@ -1,5 +1,5 @@
 /* style sheet for kahua-web */
-/* $Id: kahua-web.css,v 1.9 2007/05/13 23:48:55 bizenn Exp $ */
+/* $Id: kahua-web.css,v 1.10 2007/05/14 02:09:04 bizenn Exp $ */
 
 * {
   color: black;
@@ -59,7 +59,7 @@ div#bottom-pane {
   width: 100%;
 }
 div#bottom-pane p {
-  font-size: 70%;
+  font-size: 90%;
   color: #999999;
   text-align: center;
 }
