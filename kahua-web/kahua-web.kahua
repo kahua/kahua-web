@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.59 2007/05/14 06:58:40 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.60 2007/05/14 07:44:08 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -408,13 +408,13 @@
 ;;
 
 ;; +---------------------------------------------------+
-;; |title-pane                                         |
-;; +---------------------------------------------------+
 ;; |navigation-pane                  [login]  [search] |
 ;; +---------------------------------------------------+
-;; |side-pane |Page Title                              |
+;; |title-pane    Page Title                           |
+;; +---------------------------------------------------+
+;; |side-pane |   contents...                          |
 ;; |          |                                        |
-;; |          |  contents...                           |
+;; |          |                                        |
 ;; |          |                                        |
 ;; :          :                                        :
 ;; |          |                                        |
