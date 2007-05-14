@@ -1,5 +1,8 @@
 2007-05-14  Tatsuya BIZENN  <bizenn@arthub.net>
 
+	* Change: kahua-web/kahua-web.kahua, templates/standard-page.xml
+	  Moved edit-menu to top of main-pane.
+
 	* Change: kahua-web/kahua-web.kahua
 	  Reverse order of title class.
 

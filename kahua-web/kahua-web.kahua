@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.60 2007/05/14 07:44:08 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.61 2007/05/14 08:11:28 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -440,15 +440,16 @@
               (#t '(br))
               ((ref page 'mtime)
                => (lambda (t) (format "Modified: ~a" (fmt-time t))))
-              ((ref page 'muser) => (cut format " by ~a" <>))))
-      ,@(if (and-let* ((name (kahua-current-user-name)))
-             (not (string-null? name)))
-           `((div (@ (id "edit-menu"))
-                  (a/cont (@@ (cont ,edit ,@(pagename-split (ref page 'key))))
-                          "[Edit]")
-                  (a/cont (@@ (cont ,history ,@(pagename-split (ref page 'key))))
-                          "[History]")))
-           '())))
+              ((ref page 'muser) => (cut format " by ~a" <>))))))
+
+  (define (edit-menu page)
+    (if (and-let* ((name (kahua-current-user-name)))
+	  (not (string-null? name)))
+	(let1 path (pagename-split (ref page 'key))
+	  `((div (@ (id "edit-menu"))
+		 (a/cont (@@ (cont ,edit ,@path)) "[Edit]")
+		 (a/cont (@@ (cont ,history ,@path)) "[History]"))))
+	'()))
 
   (parameterize ((current-page page))
     (kahua:xml-template->sxml
@@ -478,6 +479,7 @@
      :side-pane-contents (use-page "/$admin/side-pane")
      :bottom-pane-contents (use-page "/$admin/bottom-pane")
      :main-pane `((div (@ (id "main-pane"))
+		       ,@(if (persistent-page? page) (edit-menu page) '())
 		       ,@(wiliki:format-content page)
 		       ,@(if (persistent-page? page) (footer page) '())))
      )))
