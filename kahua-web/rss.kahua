@@ -1,11 +1,11 @@
-;;-*-Scheme-*-
+;;-*- mode: kahua; coding: utf-8 -*-
 ;; Kahua website macro handling
 ;;
 ;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss.kahua,v 1.4 2006/09/15 07:14:19 yasuyuki Exp $
+;; $Id: rss.kahua,v 1.5 2007/05/14 08:46:10 bizenn Exp $
 
 (define (page-url page)
   (kahua-self-uri-full 

@@ -1,11 +1,11 @@
-;;-*-Scheme-*-
+;;-*- mode: kahua; coding: utf-8 -*-
 ;; Kahua web commenting
 ;;
 ;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: comment.kahua,v 1.6 2007/04/23 07:17:14 yasuyuki Exp $
+;; $Id: comment.kahua,v 1.7 2007/05/14 08:46:10 bizenn Exp $
 
 (use srfi-1)
 (use gauche.collection)
@@ -109,16 +109,16 @@
       (standard-page
        (make <page> :title "Comment List" :key "/"
 	     :content
-	     `((h1 "$B%3%a%s%H0lMw(B")
+	     `((h2 "コメント一覧")
 	       (form/cont
 		(@ (name "commentForm"))
 		(@@ (cont ,check-comment-list))
 		(table (@ (width "100%"))
 		       (tr
 			(td)
-			(td (input (@ (type "submit")(name "delete-button")(value "$B:o=|(B")))))
+			(td (input (@ (type "submit")(name "delete-button")(value "削除")))))
 		       (tr
-			(td (input (@ (type "checkbox")(name "onOff")(title "$BA4$FA*Br(B")
+			(td (input (@ (type "checkbox")(name "onOff")(title "全て選択")
 				      (onClick "var chkd = document.commentForm.onOff.checked; for (var i=0; i<document.commentForm.commentId.length; i++) { document.commentForm.commentId[i].checked=chkd; }"))))
 			(th "Date")(th "Author")(th "Contents"))
 		       ,@(map
@@ -139,7 +139,7 @@
 				)))
 			  comments)
 		       (tr (td)
-			   (td (input (@ (type "submit")(name "delete-button")(value "$B:o=|(B"))))))))))))
+			   (td (input (@ (type "submit")(name "delete-button")(value "削除"))))))))))))
   (define check-comment-list
      (entry-lambda (:mvkeyword commentId :keyword delete-button)
        (begin

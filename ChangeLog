@@ -1,5 +1,13 @@
 2007-05-14  Tatsuya BIZENN  <bizenn@arthub.net>
 
+	* Change: kahua-web/comment.kahua, kahua-web/history.kahua,
+	          kahua-web/kahua-web.kahua, kahua-web/local.kahua,
+	          kahua-web/login.kahua, kahua-web/macro.kahua,
+	          kahua-web/macro.kahua, kahua-web/rss.kahua,
+	          kahua-web/search.kahua, kahua-web/version.kahua.in
+	  Add magic comment: -*- mode: kahua; coding: utf-8 -*-,
+	  and change character encoding of files into utf-8.
+
 	* Change: kahua-web/kahua-web.kahua, templates/standard-page.xml
 	  Moved edit-menu to top of main-pane.
 

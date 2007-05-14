@@ -1,11 +1,11 @@
-;;-*-Scheme-*-
+;;-*- mode: kahua; coding: utf-8 -*-
 ;; Kahua website
 ;;
 ;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: login.kahua,v 1.4 2006/09/26 08:02:04 bizenn Exp $
+;; $Id: login.kahua,v 1.5 2007/05/14 08:46:10 bizenn Exp $
 
 (define non-member-edit-flag
   (and-let* ((args (kahua-app-args))
@@ -43,7 +43,7 @@
      (make <page>
        :title "Login" :key "/"
        :content
-       `((h1 "Login")
+       `((h2 "Login")
          ,@extra-contents
          (form/cont
           (@@ (cont ,login-check (logname) (pass)))
@@ -64,7 +64,7 @@
      (make <page>
        :title "Login" :key "/"
        :content
-       `((h1 "Login")
+       `((h2 "Login")
          ,@extra-contents
          (form/cont
           (@@ (cont ,login-check-bis (logname)))
@@ -117,7 +117,7 @@
        (make <page>
          :title #`"User ',logname'" :key "/"
          :content
-         `((h1 "User '",logname"'")
+         `((h2 "User '",logname"'")
            (p "User " ,logname " has role(s): "
               ,(string-join (map x->string (ref user 'role-alist)) ", "))
            (h3 "Change password:")

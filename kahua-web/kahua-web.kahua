@@ -1,11 +1,11 @@
-;;-*- mode: Scheme; coding: euc-jp -*-
+;;-*- mode: kahua; coding: utf-8 -*-
 ;; Kahua website
 ;;
 ;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.61 2007/05/14 08:11:28 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.62 2007/05/14 08:46:10 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -503,7 +503,7 @@
       (@  (style "margin:0pt; padding:0pt"))
       (@@ (cont ,search))
       ,@(login-link)
-	" ¸¡º÷: "
+	" æ¤œç´¢: "
 	(input (@ (style "margin:0pt; padding:0pt")
 		  (type "text") (name "word") (size 10)))))
   ;; body
@@ -568,7 +568,7 @@
 ;; assumes pagename is canonicalized
 (define (make-nonexistent-page pagename)
   (make-error-page "Error: nonexistent page"
-                   `(p "¥Ú¡¼¥¸" ,pagename "¤ÏÂ¸ºß¤·¤Ş¤»¤ó")))
+                   `(p "ãƒšãƒ¼ã‚¸" ,pagename "ã¯å­˜åœ¨ã—ã¾ã›ã‚“")))
 
 (define (make-error-page title body)
   (make <page> :title title :key "/Error" :content body))

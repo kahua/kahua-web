@@ -1,11 +1,11 @@
-;;-*-Scheme-*-
+;;-*- mode: kahua; coding: utf-8 -*-
 ;; kahua-web: search
 ;;
 ;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: search.kahua,v 1.5 2005/10/01 16:09:00 shibata Exp $
+;; $Id: search.kahua,v 1.6 2007/05/14 08:46:10 bizenn Exp $
 
 (use wiliki.pasttime)
 (use gauche.charconv)
@@ -56,27 +56,27 @@
 
       (if (< 1 word-len)
           (let* ((pages (sort
-                       (filter
-                        in-content-or-name?
-                        (filter (if usepath
-                                    (lambda (page)
-                                      (string-prefix? usepath (ref page 'name)))
-                                  identity)
-                              (all-page-data)))
-                       sorter)))
-          (div:
-            (h1: (format "search key: ~a (~a pages)\n" word (length pages)))
-            (node-list-to-node-set
-             (map (lambda (page)
-                   (let ((content (ref page 'content)))
+			 (filter
+			  in-content-or-name?
+			  (filter (if usepath
+				      (lambda (page)
+					(string-prefix? usepath (ref page 'name)))
+				      identity)
+				  (all-page-data)))
+			 sorter)))
+	    (div:
+	     (h2: (format "search key: ~a (~a pages)\n" word (length pages)))
+	     (node-list-to-node-set
+	      (map (lambda (page)
+		     (let ((content (ref page 'content)))
                        (div: (h4: (make-link (ref page 'name))
-                                 (format " (~a ago)" (how-long-since (ref page 'mtime))))
+				  (format " (~a ago)" (how-long-since (ref page 'mtime))))
                              (blockquote: (node-list-to-node-set
                                            (if (string-contains-ci content word)
                                                (find-all content word)
-                                             '()))))))
-                  pages))))
-        (h1: "Keyword is too short: " word)))
+					       '()))))))
+		   pages))))
+	  (h2: "Keyword is too short: " word)))
 
     (standard-page
      (make <page> :title "Search Result" :key "/Search"
