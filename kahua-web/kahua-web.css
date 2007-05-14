@@ -1,5 +1,5 @@
 /* style sheet for kahua-web */
-/* $Id: kahua-web.css,v 1.11 2007/05/14 02:52:50 bizenn Exp $ */
+/* $Id: kahua-web.css,v 1.12 2007/05/14 06:58:40 bizenn Exp $ */
 
 * {
   color: black;
@@ -83,22 +83,32 @@ div#page-footer {
 h1, h2, h3, h4, h5, h6 {
    text-align: left;
    color: #29661a;
+   font-weight: bold;
 }
 h1 { font-size: 190%; color: white; }
-h2 { font-size: 150%; }
-h3 { font-size: 130%; }
-h4 { font-size: 110%; }
-h5 { font-size: 100%; }
-h6 { font-size: 100%; font-style: italic }
+h2 { font-size: 150%; padding: .5em 0; }
+h3 { font-size: 130%; padding: .3em 0; }
+h4 { font-size: 120%; padding: .2em 0; }
+h5 { font-size: 110%; padding: .2em 0; }
+h6 { font-size: 100%; padding: .2em 0; font-style: italic }
+
+div#main-pane p {
+  padding: .2em 0;
+}
 
 div#side-pane > h2 {
-  font-size: 100%;
+  font-size: 120%;
   margin: 0 -5px 0 -5px;
-  padding: 0pt;
+  padding: 0;
   text-align: center;
   background: solid;
   background-color: #aaddbb;
 }
+
+div#side-pane > h3 { font-size: 100%; font-weight: normal; padding: .1em 0; }
+div#side-pane > h4 { font-size: 100%; font-weight: normal; padding: .1em .5em; }
+div#side-pane > h5 { font-size: 100%; font-weight: normal; padding: .1em 1.0em; }
+div#side-pane > h6 { font-size: 100%; font-weight: normal; padding: .1em 1.5em; }
 
 ol {
   margin: .5em 0 .5em 2.5em;

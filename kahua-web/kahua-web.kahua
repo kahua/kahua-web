@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.58 2007/05/14 01:35:48 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.59 2007/05/14 06:58:40 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -453,8 +453,8 @@
   (parameterize ((current-page page))
     (kahua:xml-template->sxml
      standard-page-template
-     :title (title/ *kahua-web-title*
-		    (string-join (pagename-split (slot-ref page 'key)) "|" 'prefix))
+     :title (title/ (string-join (reverse (pagename-split (slot-ref page 'key))) " | " 'suffix)
+		    *kahua-web-title*)
      ;; FIXME!!
      :extra-header-elements (if (slot-exists? page 'extra-head-elements)
 				(let1 els (slot-ref page 'extra-head-elements)
