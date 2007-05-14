@@ -1,5 +1,5 @@
 /* style sheet for kahua-web */
-/* $Id: kahua-web.css,v 1.10 2007/05/14 02:09:04 bizenn Exp $ */
+/* $Id: kahua-web.css,v 1.11 2007/05/14 02:52:50 bizenn Exp $ */
 
 * {
   color: black;
@@ -57,6 +57,9 @@ div#main-pane {
 }
 div#bottom-pane {
   width: 100%;
+  border-width: 1px 0 0 0;
+  border-color: #729669;
+  border-style: solid;
 }
 div#bottom-pane p {
   font-size: 90%;
