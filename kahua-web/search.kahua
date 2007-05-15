@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: search.kahua,v 1.6 2007/05/14 08:46:10 bizenn Exp $
+;; $Id: search.kahua,v 1.7 2007/05/15 02:32:01 bizenn Exp $
 
 (use wiliki.pasttime)
 (use gauche.charconv)
@@ -22,8 +22,7 @@
           (let ((idx (string-contains-ci line word)))
             (if idx
                 (node-set: (string-take line idx)
-                           (span: (@: (class "highlight")
-                                      (style "background-color:yellow"))
+                           (span: (@: (class "highlight"))
                                   (substring/shared line idx (+ idx word-len)))
                            (highlight
                             (string-drop line (+ idx word-len))))

@@ -1,5 +1,5 @@
 /* style sheet for kahua-web */
-/* $Id: kahua-web.css,v 1.13 2007/05/15 01:53:43 bizenn Exp $ */
+/* $Id: kahua-web.css,v 1.14 2007/05/15 02:32:01 bizenn Exp $ */
 
 * {
   color: black;
@@ -11,15 +11,20 @@
   font-family: verdana, arial, helvetica, sans-serif;
 }
 
-body {
-  margin: 10px;
+body { margin: 10px; }
+div { clear: both; }
+hr { clear: both; }
+strong {
+  font-weight: bolder;
+  font-style: inherit;
+  font-size: inherit;
+  color: inherit;
 }
-
-div {
-  clear: both;
-}
-hr {
-  clear: both;
+em {
+  font-weight: inherit;
+  font-style: italic;
+  font-size: inherit;
+  color: inherit;
 }
 
 div#body-container {
@@ -144,6 +149,7 @@ pre {
   border-width: 1px;
   border-style: solid;
   padding: 0.5em;
+  font-family: monospace;
 }
 
 p.warning {
@@ -155,18 +161,15 @@ table.user-form th {
   padding-right: 5pt;
 }
 
-.macro-error {
-    background-color: #ee5555;
+form.search input {
+  border-style: solid;
+  border-color: #cccccc;
+  border-width: thin;
 }
+form.search input[type="text"]{ padding: 1px; }
 
-.simplecommentmacro {
-  font-size: 80%;
-}
-
-.commentform {
-  font-size: 80%;
-}
-
-.comments {
-  font-size: 80%;
-}
+.macro-error { background-color: #ee5555; }
+.simplecommentmacro { font-size: 80%; }
+.commentform { font-size: 80%; }
+.comments { font-size: 80%; }
+.highlight { background-color: yellow; }

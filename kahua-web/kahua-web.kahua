@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.62 2007/05/14 08:46:10 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.63 2007/05/15 02:32:01 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -500,12 +500,12 @@
   ;; 
   (define (navigation-right)
     `(form/cont 
-      (@  (style "margin:0pt; padding:0pt"))
       (@@ (cont ,search))
+      (@ (class "search"))
       ,@(login-link)
-	" 検索: "
-	(input (@ (style "margin:0pt; padding:0pt")
-		  (type "text") (name "word") (size 10)))))
+      " "
+      (input (@ (type "submit") (value "検索:")))
+      (input (@ (type "text") (name "word") (size 10)))))
   ;; body
   `((table
      (tr (td (@ (id "navigation-pane-left"))
