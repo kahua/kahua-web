@@ -1,5 +1,5 @@
 /* style sheet for kahua-web */
-/* $Id: kahua-web.css,v 1.12 2007/05/14 06:58:40 bizenn Exp $ */
+/* $Id: kahua-web.css,v 1.13 2007/05/15 01:53:43 bizenn Exp $ */
 
 * {
   color: black;
@@ -85,12 +85,12 @@ h1, h2, h3, h4, h5, h6 {
    color: #29661a;
    font-weight: bold;
 }
-h1 { font-size: 190%; color: white; }
+h1 { font-size: 190%; color: white; font-style: oblique; }
 h2 { font-size: 150%; padding: .5em 0; }
 h3 { font-size: 130%; padding: .3em 0; }
 h4 { font-size: 120%; padding: .2em 0; }
 h5 { font-size: 110%; padding: .2em 0; }
-h6 { font-size: 100%; padding: .2em 0; font-style: italic }
+h6 { font-size: 100%; padding: .2em 0; font-style: italic; }
 
 div#main-pane p {
   padding: .2em 0;
