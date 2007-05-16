@@ -1,3 +1,12 @@
+2007-05-16  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/macro.kahua
+	  Extend img macro:
+	    - It can have 'href' as external link.
+	    - It can have 'wikiname' as internal(wiki) link.
+	    - It can have full URI as image src as well as
+	      internal(relative) path.
+
 2007-05-14  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: kahua-web/comment.kahua, kahua-web/history.kahua,

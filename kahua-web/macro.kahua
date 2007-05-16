@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.34 2007/05/15 02:32:01 bizenn Exp $
+;; $Id: macro.kahua,v 1.35 2007/05/16 04:18:22 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-19)
@@ -121,12 +121,37 @@
 ;; Inline image
 ;;
 (define-wiki-macro (img url . attrs)
-  `((img (@ (src ,(imgpath (x->string url)))
-                 ,@(filter allowed-img-attr? attrs)))))
+  (let1 img `((img (@ (src ,(imgpath (x->string url)))
+		      ,@(filter allowed-img-attr? attrs))))
+    (cond ((external-link-maker attrs) => (cut <> img))
+	  ((wikiname-link-maker attrs) => (cut <> img))
+	  (else                           img))))
 
-(define (imgpath path)  ;; remove leading /
-  (let1 npath (if (char=? #\/ (string-ref path 0)) (string-drop path 1) path)
-    (kahua-static-document-url "kahua-web" npath)))
+(define (external-link-maker attrs)
+  (and-let* ((v (assq-ref attrs 'href))
+	     ((pair? v)))
+    (lambda (elm) `((a (@ (href ,(car v))) ,@elm)))))
+
+(define (wikiname-link-maker attrs)
+  (and-let* ((v (assq-ref attrs 'wikiname))
+	     ((pair? v))
+	     (absname (canon-pagename (car v))))
+    (if (or (lookup-virtual-page absname)
+	    (page-data-exists? absname))
+	(lambda (elm)
+	  `((a/cont (@@ (cont ,show ,@(pagename-split absname))) ,@elm)))
+	(lambda (elm)
+	  `((span ,@elm
+		  (a/cont (@@ (cont ,edit ,@(pagename-split absname))) "?")))))))
+
+(define (imgpath path)
+  (receive (scheme _ _ _ npath _ _) (uri-parse path)
+    (if scheme
+	path				; Full URI
+	(let1 npath (if (char=? #\/ (string-ref npath 0))
+			(string-drop npath 1)
+			npath)
+	  (kahua-static-document-url "kahua-web" npath)))))
 
 (define allowed-img-attrs 
   (append '(class id title)
