@@ -1,11 +1,11 @@
 ;;-*- mode: kahua; coding: utf-8 -*-
 ;; kahua-web: search
 ;;
-;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
-;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
+;;  Copyright (c) 2004-2007 Scheme Arts, L.L.C., All rights reserved.
+;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: search.kahua,v 1.7 2007/05/15 02:32:01 bizenn Exp $
+;; $Id: search.kahua,v 1.8 2007/05/16 08:43:45 bizenn Exp $
 
 (use wiliki.pasttime)
 (use gauche.charconv)

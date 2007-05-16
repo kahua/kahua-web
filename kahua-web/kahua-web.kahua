@@ -1,11 +1,11 @@
 ;;-*- mode: kahua; coding: utf-8 -*-
 ;; Kahua website
 ;;
-;;  Copyright (c) 2004 Scheme Arts, L.L.C., All rights reserved.
-;;  Copyright (c) 2004 Time Intermedia Corporation, All rights reserved.
+;;  Copyright (c) 2004-2007 Scheme Arts, L.L.C., All rights reserved.
+;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.63 2007/05/15 02:32:01 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.64 2007/05/16 08:43:45 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)

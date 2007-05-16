@@ -1,11 +1,7 @@
 ;;-*- mode: kahua; coding: utf-8 -*-
 ;; kahua-web version
 ;;
-;;  Copyright (c) 2005 Scheme Arts, L.L.C., All rights reserved.
-;;  Copyright (c) 2005 Time Intermedia Corporation, All rights reserved.
-;;  See COPYING for terms and conditions of using this software
-;;
-;; $Id: version.kahua.in,v 1.2 2007/05/14 08:46:10 bizenn Exp $
+;; $Id: version.kahua.in,v 1.3 2007/05/16 08:43:45 bizenn Exp $
 
 ;;---------------------------------------------------------
 (define *kahua-web-version* "###KAHUA_WEB_VERSION###")

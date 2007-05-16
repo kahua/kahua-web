@@ -1,9 +1,9 @@
 ;; -*- mode: scheme coding: utf-8 -*-
 ;;
-;;  Copyright (c) 2005 Kahua.Org, All rights reserved.
+;;  Copyright (c) 2005-2007 Kahua Project, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss-reader.scm,v 1.2 2007/05/14 08:51:10 bizenn Exp $
+;; $Id: rss-reader.scm,v 1.3 2007/05/16 08:43:45 bizenn Exp $
 
 (use rfc.uri)
 (use rfc.http)
