@@ -4,12 +4,14 @@
 ;;  Copyright (c) 2007 Kahua Project, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: upload.kahua,v 1.1 2007/05/17 05:56:55 bizenn Exp $
+;; $Id: upload.kahua,v 1.2 2007/05/17 08:13:17 bizenn Exp $
 
 (use file.util)
 (use fileio)
 (use rfc.uri)
 (use util.list)
+
+(define kahua-web-static-uploadable? kahua-authorized?)
 
 (define (canonical-static-path-info path)
   (define (simplify-path-info path-info)
@@ -37,3 +39,24 @@
      (@ (class "inline-object-upload") (enctype "multipart/form-data"))
      (input (@ (type "file") (name "inlineobj")))
      (input (@ (type "submit") (value "upload"))))))
+
+(define (uploadable-inline-static-object elem-maker validator url)
+  (define (->path-info path)
+    (receive (scheme _ _ _ npath _ _) (uri-parse path)
+      (if scheme
+	  path
+	  (canonical-static-path-info path))))
+
+  (let1 path-info  (->path-info (x->string url))
+    (cond
+     ;; Full URI(external link).
+     ((string? path-info) (values (elem-maker path-info) #f))
+     ;; Relative Path(internal link).
+     (else
+      (unless (validator url)
+	(error "Invalid Image URL: " url))
+      (let1 fullpath (apply kahua-static-document-path "kahua-web" path-info)
+	(if (or (file-exists? fullpath)
+		(not (kahua-web-static-uploadable?)))
+	    (values (elem-maker (apply kahua-static-document-url "kahua-web" path-info)) #f)
+	    (values (static-object-upload-form fullpath (current-page)) #t)))))))

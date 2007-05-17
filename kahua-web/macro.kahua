@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.38 2007/05/17 07:15:08 bizenn Exp $
+;; $Id: macro.kahua,v 1.39 2007/05/17 08:13:17 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-11)
@@ -124,23 +124,18 @@
 (define-wiki-macro (img url . attrs)
   (define (make-img url)
     `((img (@ (src ,url) ,@(filter allowed-img-attr? attrs)))))
-  (let*-values (((path-info) (img-path-info (x->string url)))
-		((img form?)
-		 (cond ((string? path-info) (make-img path-info))
-		       (else				; list
-			(when (invalid-img-src? url)
-			  (error "Invalid Image URL: " url))
-			(let1 fullpath (apply kahua-static-document-path "kahua-web" path-info)
-			  (if (or (file-exists? fullpath) (not (kahua-authorized?)))
-			      (values (make-img (apply kahua-static-document-url "kahua-web" path-info)) #f)
-			      (values (static-object-upload-form fullpath (current-page)) #t)))))))
+  (define (valid-src? url)
+    (#/\.(?:jpg|png|gif)$/ url))
+  (define allowed-img-attrs 
+    (append '(class id title)
+	    '(alt longdesc width height)))
+  (define (allowed-img-attr? attr)
+    (memq (car attr) allowed-img-attrs))
+  (receive (img form?) (uploadable-inline-static-object make-img valid-src? url)
     (cond (form?                          img)
 	  ((external-link-maker attrs) => (cut <> img))
 	  ((wikiname-link-maker attrs) => (cut <> img))
 	  (else                           img))))
-
-(define (invalid-img-src? url)
-  (not (#/\.(?:jpg|png|gif)$/ url)))
 
 (define (external-link-maker attrs)
   (and-let* ((v (assq-ref attrs 'href))
@@ -158,19 +153,6 @@
 	(lambda (elm)
 	  `((span ,@elm
 		  (a/cont (@@ (cont ,edit ,@(pagename-split absname))) "?")))))))
-
-(define (img-path-info path)
-  (receive (scheme _ _ _ npath _ _) (uri-parse path)
-    (if scheme
-	path				     ; Full URI(string)
-	(canonical-static-path-info path)))) ; Path Info (list)
-
-(define allowed-img-attrs 
-  (append '(class id title)
-          '(alt longdesc width height)))
-
-(define (allowed-img-attr? attr)
-  (memq (car attr) allowed-img-attrs))
 
 ;;---------------------------------------------------------
 ;; Java Applet Embedding
