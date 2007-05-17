@@ -5,107 +5,94 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: login.kahua,v 1.6 2007/05/16 08:43:45 bizenn Exp $
+;; $Id: login.kahua,v 1.7 2007/05/17 14:12:44 bizenn Exp $
 
 (define non-member-edit-flag
   (and-let* ((args (kahua-app-args))
-             (_ (not (null? args))))
+	     ((pair? args)))
     (string-ci=? (car args) "non-member-edit")))
+
+(define show-login-form
+  (letrec (;; Allow anonymous login
+	   (show-anon-login-form
+	    (lambda (extra-contents page)
+	      (define (make-login-check-entry)
+		(entry-lambda (:keyword logname)
+		  (cond ((kahua-find-user logname)
+			 (show-normal-login-form
+			  '((p (@ (class "warning"))
+			       "You are registered user. Please enter password."))
+			  page))
+			((string-null? logname)
+			 (show-anon-login-form
+			  '((p (@ (class "warning"))
+			       "Please enter your nickname"))
+			  page))
+			(else
+			 (parameterize ((current-db #f))
+			   (set! (kahua-current-user-name) logname))
+			 (redirect-to (get-page (pagename-join return-page-path)))))))
+	      (standard-page
+	       (make <page> :title "Login" :key "/"
+		     :content
+		     `((h2 "Login") ,@extra-contents
+		       (form/cont
+			(@@ (cont ,(make-login-check-entry)))
+			(table
+			 (@ (class "user-form"))
+			 (tr (th "Nickname")
+			     (td (input (@ (type "text") (name "logname")))))
+			 (tr (th)
+			     (td (input (@ (type "submit") (value "Login"))))))))))))
+	   ;; Only normal login
+	   (show-normal-login-form
+	    (lambda (extra-contents page)
+	      (define (make-login-check-entry)
+		(entry-lambda (:keyword logname pass)
+		  (if (kahua-login logname pass)
+		      (redirect-to page)
+		      (show-normal-login-form
+		       '((p (@ (class "warning"))
+			    "Username or password does not match.  Try again."))
+		       page))))
+	      (standard-page
+	       (make <page>
+		 :title "Login" :key "/"
+		 :content
+		 `((h2 "Login")
+		   ,@extra-contents
+		   (form/cont
+		    (@@ (cont ,(make-login-check-entry)))
+		    (table
+		     (@ (class "user-form"))
+		     (tr (th "Username")
+			 (td (input (@ (type "text") (name "logname")))))
+		     (tr (th "Password")
+			 (td (input (@ (type "password") (name "pass")))))
+		     (tr (th)
+			 (td (input (@ (type "submit") (value "Login")))))))))))))
+    (if non-member-edit-flag
+	show-anon-login-form
+	show-normal-login-form)))
              
 ;; login account can only be issued by "admin" role.
 
 (define (login-link)
-  (let1 page-path (or (and-let* ((page (current-page)))
-                        (pagename-split (ref page 'key)))
-                      '())
-    (or (and-let* ((name (kahua-current-user-name)))
-          `((span (@ (class "login-link"))
-                  "User '" (a/cont (@@ (cont ,user-admin ,name)) ,name) "' "
-                  (a/cont (@@ (cont ,logout ,@page-path)) "[logout]"))))
-        `((span (@ (class "login-link"))
-                (a/cont (@@ (cont ,login-form ,@page-path)) "[login]"))))))
+  (define (make-login-entry page)
+    (lambda () (show-login-form '() page)))
+  (define (make-logout-entry page)
+    (lambda ()
+      (when non-member-edit-flag
+	(parameterize ((current-db #f)) (set! (kahua-current-user-name) #f)))
+      (kahua-logout)
+      (redirect-to page)))
 
-(define-entry (logout :rest page-path)
-  (if non-member-edit-flag
-      (parameterize ((current-db #f))
-	(set! (kahua-current-user-name) #f))
-      (set! (kahua-current-user-name) #f))
-  (set! (kahua-current-user) #f)
-  ;; if we're in the persistent page, stay on the same page.
-  ;; otherwise, redirect to the top.
-  (if (and (current-page) (ref (current-page) 'persistent-id))
-      (standard-page (current-page))
-      (redirect-to (get-page "/"))))
-
-(define-entry (login-form :rest return-page-path)
-  (define (show-form extra-contents logname pass)
-    (standard-page
-     (make <page>
-       :title "Login" :key "/"
-       :content
-       `((h2 "Login")
-         ,@extra-contents
-         (form/cont
-          (@@ (cont ,login-check (logname) (pass)))
-          (table
-           (@ (class "user-form"))
-           (tr (th "Username")
-               (td (input (@ (type "text") (name "logname")
-                             (value ,(or logname ""))))))
-           (tr (th "Password")
-               (td (input (@ (type "password") (name "pass")
-                             (value ,(or pass ""))))))
-           (tr (th)
-               (td (input (@ (type "submit") (name "submit")
-                             (value "Login")))))))
-         ))))
-  (define (show-form-bis extra-contents logname pass)
-    (standard-page
-     (make <page>
-       :title "Login" :key "/"
-       :content
-       `((h2 "Login")
-         ,@extra-contents
-         (form/cont
-          (@@ (cont ,login-check-bis (logname)))
-          (table
-           (@ (class "user-form"))
-           (tr (th "Nickname")
-               (td (input (@ (type "text") (name "logname")
-                             (value ,(or logname ""))))))
-           (tr (th)
-               (td (input (@ (type "submit") (name "submit")
-                             (value "Login")))))))
-         ))))
-  (define login-check
-    (entry-lambda (:keyword logname pass)
-      (if (kahua-check-user logname pass)
-        (begin (set! (kahua-current-user) logname)
-               (redirect-to (get-page (pagename-join return-page-path))))
-        (show-form
-         '((p (@ (class "warning"))
-              "Username or password does not match.  Try again."))
-         logname pass))))
-  (define login-check-bis
-    (entry-lambda (:keyword logname)
-      (cond ((kahua-find-user logname)
-             (show-form
-              '((p (@ (class "warning"))
-                   "You are registered user. Please enter password."))
-              logname #f))
-            ((string-null? logname)
-             (show-form-bis
-              '((p (@ (class "warning"))
-                   "Please enter your nickname"))
-              #f #f))
-            (else
-             (begin
-	       (parameterize ((current-db #f))
-		 (set! (kahua-current-user-name) logname))
-               (redirect-to (get-page (pagename-join return-page-path))))))))
-  (if non-member-edit-flag
-      (show-form-bis '() #f #f)
-      (show-form '() #f #f)))
+  (or (and-let* ((name (kahua-current-user-name)))
+	`((span (@ (class "login-link"))
+		"User '" (a/cont (@@ (cont ,user-admin ,name)) ,name) "' "
+		(a/cont (@@ (cont ,(make-logout-entry (current-page)))) "[logout]"))))
+      `((span (@ (class "login-link"))
+	      (a/cont (@@ (cont ,(make-login-entry (current-page)))) "[login]")))))
 
 ;; user info page
 ;;   admin role or developer role can access all user page.
