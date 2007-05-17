@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: login.kahua,v 1.7 2007/05/17 14:12:44 bizenn Exp $
+;; $Id: login.kahua,v 1.8 2007/05/17 14:21:12 bizenn Exp $
 
 (define non-member-edit-flag
   (and-let* ((args (kahua-app-args))
@@ -31,7 +31,7 @@
 			(else
 			 (parameterize ((current-db #f))
 			   (set! (kahua-current-user-name) logname))
-			 (redirect-to (get-page (pagename-join return-page-path)))))))
+			 (redirect-to page)))))
 	      (standard-page
 	       (make <page> :title "Login" :key "/"
 		     :content
