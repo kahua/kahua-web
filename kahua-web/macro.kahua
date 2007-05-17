@@ -5,9 +5,10 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.36 2007/05/16 08:43:45 bizenn Exp $
+;; $Id: macro.kahua,v 1.37 2007/05/17 05:56:55 bizenn Exp $
 
 (use gauche.collection)
+(use srfi-11)
 (use srfi-19)
 (use sendmail)
 (use util.list)
@@ -121,9 +122,18 @@
 ;; Inline image
 ;;
 (define-wiki-macro (img url . attrs)
-  (let1 img `((img (@ (src ,(imgpath (x->string url)))
-		      ,@(filter allowed-img-attr? attrs))))
-    (cond ((external-link-maker attrs) => (cut <> img))
+  (define (make-img url)
+    `((img (@ (src ,url) ,@(filter allowed-img-attr? attrs)))))
+  (let*-values (((path-info) (img-path-info (x->string url)))
+		((img form?)
+		 (cond ((string? path-info) (make-img path-info))
+		       (else				; list
+			(let1 fullpath (apply kahua-static-document-path "kahua-web" path-info)
+			  (if (or (file-exists? fullpath) (not (kahua-authorized?)))
+			      (values (make-img (apply kahua-static-document-url "kahua-web" path-info)) #f)
+			      (values (static-object-upload-form fullpath (current-page)) #t)))))))
+    (cond (form?                          img)
+	  ((external-link-maker attrs) => (cut <> img))
 	  ((wikiname-link-maker attrs) => (cut <> img))
 	  (else                           img))))
 
@@ -144,14 +154,11 @@
 	  `((span ,@elm
 		  (a/cont (@@ (cont ,edit ,@(pagename-split absname))) "?")))))))
 
-(define (imgpath path)
+(define (img-path-info path)
   (receive (scheme _ _ _ npath _ _) (uri-parse path)
     (if scheme
-	path				; Full URI
-	(let1 npath (if (char=? #\/ (string-ref npath 0))
-			(string-drop npath 1)
-			npath)
-	  (kahua-static-document-url "kahua-web" npath)))))
+	path				     ; Full URI(string)
+	(canonical-static-path-info path)))) ; Path Info (list)
 
 (define allowed-img-attrs 
   (append '(class id title)

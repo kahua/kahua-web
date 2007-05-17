@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.33 2007/05/14 01:35:42 bizenn Exp $
+# $Id: Makefile.in,v 1.34 2007/05/17 05:56:48 bizenn Exp $
 
 package	          = @PACKAGE_NAME@
 package_version   = @PACKAGE_VERSION@
@@ -39,6 +39,7 @@ SCRIPTS	= kahua-web-adduser kahua-web-lsuser
 
 SOURCEDIR   = $(package)
 SCRIPTFILES = $(SOURCEDIR)/kahua-web.kahua \
+	      $(SOURCEDIR)/upload.kahua \
               $(SOURCEDIR)/macro.kahua \
 	      $(SOURCEDIR)/login.kahua \
 	      $(SOURCEDIR)/search.kahua \

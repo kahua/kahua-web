@@ -1,6 +1,6 @@
 ;; -*- mode: scheme; coding: utf-8 -*-
 ;; test kahua-web script.
-;; $Id: test.scm.in,v 1.10 2007/05/14 08:51:17 bizenn Exp $
+;; $Id: test.scm.in,v 1.11 2007/05/17 05:57:00 bizenn Exp $
 (use srfi-2)
 (use srfi-11)
 (use gauche.test)
@@ -32,6 +32,7 @@
 (copy-file "##KAHUA_WORKING##/plugins/allow-module.scm"
            "_work/plugins/allow-module.scm")
 (copy-file "##KAHUA_WORKING##/plugins/sendmail.scm"  "_work/plugins/sendmail.scm")
+(copy-file "##KAHUA_WORKING##/plugins/fileio.scm" "_work/plugins/fileio.scm")
 
 
 (define *config* "./test.conf")

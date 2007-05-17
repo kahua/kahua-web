@@ -1,0 +1,39 @@
+;;-*- mode: kahua; coding: utf-8 -*-
+;; Object(image/flash/applet etc...) uploading
+;;
+;;  Copyright (c) 2007 Kahua Project, All rights reserved.
+;;  See COPYING for terms and conditions of using this software
+;;
+;; $Id: upload.kahua,v 1.1 2007/05/17 05:56:55 bizenn Exp $
+
+(use file.util)
+(use fileio)
+(use rfc.uri)
+(use util.list)
+
+(define (canonical-static-path-info path)
+  (define (simplify-path-info path-info)
+    (reverse!
+     (fold (lambda (e r)
+	     (cond ((string=? e "")  r)
+		   ((string=? e ".") r)
+		   ((string=? e "..")
+		    (if (null? r)
+			r
+			(cdr r)))
+		   (else (cons e r))))
+	   '()
+	   path-info)))
+  (simplify-path-info (string-split path #[/])))
+
+(define (static-object-upload-form fullpath page)
+  (define (make-upload-entry)
+    (entry-lambda (:keyword inlineobj)
+      (make-directory* (sys-dirname fullpath))
+      (save-uploaded-file inlineobj fullpath)
+      (redirect-to page)))
+  `((form/cont
+     (@@ (cont ,(make-upload-entry)))
+     (@ (class "inline-object-upload") (enctype "multipart/form-data"))
+     (input (@ (type "file") (name "inlineobj")))
+     (input (@ (type "submit") (value "upload"))))))

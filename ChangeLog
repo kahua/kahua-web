@@ -1,3 +1,13 @@
+2007-05-17  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/kahua-web.kahua, kahua-web/macro.kahua,
+	          kahua-web/kahua-web.css, test/test.scm.in
+	  If img macro's path doesn't exist, it's displayed as
+	  uploading form when login.
+
+	* New: kahua-web/upload.kahua
+	  Static contents(file) uploading facility.
+
 2007-05-16  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: kahua-web/macro.kahua
