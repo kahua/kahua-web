@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: history.kahua,v 1.5 2007/05/16 08:43:45 bizenn Exp $
+;; $Id: history.kahua,v 1.6 2007/05/18 05:32:48 bizenn Exp $
 
 (use util.lcs)
 
@@ -94,26 +94,22 @@
                              "Diff from epoch")
                 "]"))))
 
-  (if (and-let* ((name (kahua-current-user-name)))
-        (not (string-null? name)))
-      (standard-page
-       (make <page>
-         :title (format "Edit History of ~a" (base-pagename pagename))
-         :key   pagename
-         :content
-         (or (and-let* ((data (get-page pagename))
-                        (id (ref data 'persistent-id))
-                        (picked (wiliki-log-pick-from-file id (force (history-file))))
-                        ((not (null? picked))))
-               `(div 
-                 ,(history-table
-                   (map wiliki-log-parse-entry picked);; entrys
-                   )))
-             (no-history-info pagename))))
-    (standard-page
-     (make-error-page "Error: Not login"
-                     `(p (@ (class "warning"))
-                         "To view page history you have to login!")))))
+  (with-kahua-web-authorization
+   (lambda ()
+     (standard-page
+      (make <page>
+	:title (format "Edit History of ~a" (base-pagename pagename))
+	:key   pagename
+	:content
+	(or (and-let* ((data (get-page pagename))
+		       (id (ref data 'persistent-id))
+		       (picked (wiliki-log-pick-from-file id (force (history-file))))
+		       ((not (null? picked))))
+	      `(div 
+		,(history-table
+		  (map wiliki-log-parse-entry picked);; entrys
+		  )))
+	    (no-history-info pagename)))))))
 
 ;; "Edit History:Diff" page. -----------------------------------
 (define (cmd-diff pagename old-time new-time)

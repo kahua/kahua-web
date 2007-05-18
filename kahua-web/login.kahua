@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: login.kahua,v 1.8 2007/05/17 14:21:12 bizenn Exp $
+;; $Id: login.kahua,v 1.9 2007/05/18 05:32:48 bizenn Exp $
 
 (define non-member-edit-flag
   (and-let* ((args (kahua-app-args))
@@ -74,6 +74,38 @@
     (if non-member-edit-flag
 	show-anon-login-form
 	show-normal-login-form)))
+
+(define kahua-web-authorized?
+  (if non-member-edit-flag
+      (lambda roles
+	(if (null? roles)
+	    (and-let* ((name (kahua-current-user-name)))
+	      (and (not (string-null? name))
+		   name))
+	    (and (apply kahua-authorized? roles)
+		 (kahua-current-user-name))))
+      (lambda roles
+	(and (apply kahua-authorized? roles)
+	     (kahua-current-user-name)))))
+
+(define (kahua-web-current-path)
+  (string-join (cons (kahua-current-entry-name)
+		     (kahua-context-ref "x-kahua-path-info"))
+	       "/"))
+
+(define (with-kahua-web-authorization thunk . roles)
+  (if (apply kahua-web-authorized? roles)
+      (thunk)
+      (show-login-form `((p (@ (class "warning"))
+			    "Login required: "))
+		       (kahua-web-current-path))))
+
+(define (standard-page/auth page)
+  (if (kahua-web-authorized?)
+      (standard-page page)
+      (show-login-form `((p (@ (class "warning"))
+			    "Login required: "))
+		       (kahua-web-current-path))))
              
 ;; login account can only be issued by "admin" role.
 
@@ -86,13 +118,12 @@
 	(parameterize ((current-db #f)) (set! (kahua-current-user-name) #f)))
       (kahua-logout)
       (redirect-to page)))
-
   (or (and-let* ((name (kahua-current-user-name)))
 	`((span (@ (class "login-link"))
 		"User '" (a/cont (@@ (cont ,user-admin ,name)) ,name) "' "
-		(a/cont (@@ (cont ,(make-logout-entry (current-page)))) "[logout]"))))
+		(a/cont (@@ (cont ,(make-logout-entry (kahua-web-current-path)))) "[logout]"))))
       `((span (@ (class "login-link"))
-	      (a/cont (@@ (cont ,(make-login-entry (current-page)))) "[login]")))))
+	      (a/cont (@@ (cont ,(make-login-entry (kahua-web-current-path)))) "[login]")))))
 
 ;; user info page
 ;;   admin role or developer role can access all user page.

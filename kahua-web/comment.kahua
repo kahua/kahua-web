@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: comment.kahua,v 1.8 2007/05/16 08:43:45 bizenn Exp $
+;; $Id: comment.kahua,v 1.9 2007/05/18 05:32:48 bizenn Exp $
 
 (use srfi-1)
 (use gauche.collection)
@@ -48,9 +48,7 @@
                 `(p (@ (class "warning"))
                     "To modify visibility of a comment  you have to login!"))))
     (define (edit-set-commit set)
-      (if (let1 name (kahua-current-user-name)
-            (or (not name) (string-null? name)))
-          (standard-page epage)
+      (if (kahua-web-authorized?)
           (begin
             (for-each
              (lambda (c)
@@ -59,11 +57,10 @@
 			(val (if (equal? val "true") #t #f)))
 		   (set! (ref c 'visible) val))))
              (ref set 'comments))
-            (edit-set set))))
+            (edit-set set))
+	  (standard-page epage)))
     (define (edit-set set)
-      (if (let1 name (kahua-current-user-name)
-            (or (not name) (string-null? name)))
-          (standard-page epage)
+      (if (kahua-web-authorized?)
           (standard-page
            (make-sf-edit-page
             (format "Edit visibility of comment ~A" (ref set 'name))
@@ -82,21 +79,21 @@
 							   '((checked checked)) '())))))))
                                  (ref set 'comments)))
                    (input (@ (type "submit") (name "submit") (value "commit")))
-                   ))))))
+                   ))))
+	  (standard-page epage)))
     (define (edit-set-link set)
       `(a/cont (@@ (cont ,(lambda () (edit-set set))))
 	       ,(x->string (ref set 'name))))
-    (if (and-let* ((name (kahua-current-user-name)))
-          (not (string-null? name)))
-	(standard-page 
-	 (make-sf-edit-page 
-	  "List of Comments"
-	  (if sets
-	      `(ol
-		,@(map (lambda (set)
-			 `(li ,(edit-set-link set))) sets))
-	      '(div "There is no comment."))))
-        (standard-page epage))))
+    (with-kahua-web-authorization
+     (lambda ()
+       (standard-page 
+	(make-sf-edit-page 
+	 "List of Comments"
+	 (if sets
+	     `(ol
+	       ,@(map (lambda (set)
+			`(li ,(edit-set-link set))) sets))
+	     '(div "There is no comment."))))))))
 
 (define-entry (comment-list)
   (define (comment-list-form)
@@ -153,14 +150,5 @@
 	      commentId))
 	 (comment-list-form)
       )))
-  (or
-   (and-let* ((user (kahua-current-user)))
-     (cond
-      ((kahua-user-has-role? '(admin) user)
-       (standard-page
-	(make <page> :title "Comment List Error" :key "/"
-	      :content '((h3 "Permittion Error.")))))
-      (else (comment-list-form))))
-   (standard-page
-    (make <page> :title "Comment List Error" :key "/"
-	  :content '((h3 "You are not logged in."))))))
+
+  (with-kahua-web-authorization comment-list-form 'admin))

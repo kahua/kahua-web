@@ -1,3 +1,11 @@
+2007-05-18  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/login.kahua, kahua-web/kahua-web.kahua,
+	          kahua-web/history.kahua, kahua-web/comment.kahua
+	  New procedure kahua-web-authorized? and with-kahua-web-authorization.
+	  If entry that require login and not login, show login form,
+	  and return the entry after login succeeced.
+
 2007-05-17  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: kahua-web/kahua-web.kahua, kahua-web/macro.kahua,

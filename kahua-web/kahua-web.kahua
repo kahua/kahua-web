@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.65 2007/05/17 05:56:55 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.66 2007/05/18 05:32:48 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -194,13 +194,7 @@
                    "A page with name \"" ,name "\" already exists. "
                    "Use a different name.")))
 
-  (if (let1 name (kahua-current-user-name)
-        (or (not name) (string-null? name)))
-      (let1 epage
-            (make-error-page "Error: Not login"
-                             `(p (@ (class "warning"))
-                                 "To edit a page you have to login!"))
-            (standard-page epage))
+  (if (kahua-web-authorized?)
       (let ((data (cond ((ref page 'persistent-id) => get-page-data/check)
                         (else (get-new-page/check (ref page 'key)))))
             (new-content (ref page 'content)))
@@ -219,8 +213,11 @@
         (kahua-db-sync)
         (if (ref page 'persistent-id)
             (cont page)
-            (cont (page-data->page (get-page-data (ref page 'key)))))
-        )))
+            (cont (page-data->page (get-page-data (ref page 'key))))))
+      (let1 epage (make-error-page "Error: Not login"
+				   `(p (@ (class "warning"))
+				       "To edit a page you have to login!"))
+	(standard-page epage))))
 
 (define (front-page? page)
   (equal? (ref page 'key) "/"))
@@ -444,8 +441,7 @@
               ((ref page 'muser) => (cut format " by ~a" <>))))))
 
   (define (edit-menu page)
-    (if (and-let* ((name (kahua-current-user-name)))
-	  (not (string-null? name)))
+    (if (kahua-web-authorized?)
 	(let1 path (pagename-split (ref page 'key))
 	  `((div (@ (id "edit-menu"))
 		 (a/cont (@@ (cont ,edit ,@path)) "[Edit]")
@@ -532,16 +528,17 @@
 	          :key   (format "/Source/~a" page-path)
                   :content (get-source page-path)))))
 
-(define (redirect-to page)
-  (let* ((page (or page (get-page "/"))))
-    `((html ;; Needed to make a single SXML node. Will be unnecessary in future.
-       (extra-header (@ (name "Status") (value "302 Moved")))
-       (extra-header (@ (name "Location")
-                        (value ,(kahua-self-uri-full
-                                 #`"show,(pagename-join 
-                                          (map uri-encode-string
-                                               (pagename-split
-                                                 (ref page 'key))))"))))))))
+(define (redirect-to entry-name . args)
+  `((html (extra-header (@ (name "Status") (value "302 Found")))
+	  (extra-header (@ (name "Location")
+			   (value ,(apply kahua-self-uri-full entry-name args)))))))
+
+(define-method redirect-to ((page <page>))
+  (apply redirect-to "show" (map uri-encode-string
+				 (pagename-split (slot-ref page 'key)))))
+
+(define-method redirect-to ((page <boolean>))
+  (redirect-to (get-page "/")))
 
 (define (format-time t)
     (sys-strftime "%Y/%m/%d %H:%M:%S" (sys-localtime t)))
@@ -603,74 +600,63 @@
                      (page-set-push-unique! (page-set:news) page))
                    (redirect-to page))
                  comment)))
-  (let1 is-admin-page (equal? "$admin" (car (pagename-split (ref page 'key))))
-    (if (and-let* ((name (kahua-current-user-name)))
-                  (not (string-null? name)))
-        (let1 epage
-          (make <page>
-            :title #`"Editing ,(ref page 'title)" :key (ref page 'key)
-            :content
-            `(,@extra-contents
-              (div
-               (form/cont
-                (@@ (cont ,commit (donttouch) (content)))
-                (textarea (@ (name "content") (rows 30) (cols 80))
-                          ,(ref page 'content))
-                (br)
-                (div (@ (class "edit-inputs"))
-                     (input (@ (type "submit") (name "commit")
-                               (value "Commit")))
-                     " "
-                     (div "log message : "
-                          (input (@ (type "text")
-                                    (name "comment")
-                                    (size 30) (value ""))))
-                     " "
-                     ,(if is-admin-page
-                          `(input (@ (type "checkbox") (name "donttouch")
-                                     (value "on") (checked "checked")
-                                     (id "donttouch")))
-                          `(input (@ (type "checkbox") (name "donttouch")
-                                     (value "on") (id "donttouch"))))
-                     (label (@ (for "donttouch"))
-                            "Don't update 'Recent Changes'")
-                     " "
-                     (input (@ (type "checkbox") (name "addtonews")
-                               (value "on") (id "addtonews")))
-                     (label (@ (for "addtonews")) "Add to news item")
-                     (br)
-                     "Change Page Name : "
-                     (input (@ (type "entry") (name "changename") (width 20)
-                               (value ,(ref page 'key))))
-                     " "
-                     (input (@ (type "checkbox") (name "confirmchange")
-                               (value "on") (id "confirmchange")))
-                     (label (@ (for "confirmchange")) "I'm sure"))
-                (br)
-                (div (@ (class "edit-help"))
-                     ,@(use-page "/$admin/edit-help"))
-                
-                ))))
-          (standard-page epage))
-        (let1 epage
-          (make-error-page "Error: Not login"
-                           `(p (@ (class "warning"))
-                               "To edit a page you have to login!"))
-          (standard-page epage)))))
+  (with-kahua-web-authorization
+   (lambda ()
+     (let* ((is-admin-page (equal? "$admin" (car (pagename-split (ref page 'key)))))
+	    (epage (make <page>
+		     :title #`"Editing ,(ref page 'title)" :key (ref page 'key)
+		     :content
+		     `(,@extra-contents
+		       (div
+			(form/cont
+			 (@@ (cont ,commit (donttouch) (content)))
+			 (textarea (@ (name "content") (rows 30) (cols 80))
+				   ,(ref page 'content))
+			 (br)
+			 (div (@ (class "edit-inputs"))
+			      (input (@ (type "submit") (name "commit")
+					(value "Commit")))
+			      " "
+			      (div "log message : "
+				   (input (@ (type "text")
+					     (name "comment")
+					     (size 30) (value ""))))
+			      " "
+			      ,(if is-admin-page
+				   `(input (@ (type "checkbox") (name "donttouch")
+					      (value "on") (checked "checked")
+					      (id "donttouch")))
+				   `(input (@ (type "checkbox") (name "donttouch")
+					      (value "on") (id "donttouch"))))
+			      (label (@ (for "donttouch"))
+				     "Don't update 'Recent Changes'")
+			      " "
+			      (input (@ (type "checkbox") (name "addtonews")
+					(value "on") (id "addtonews")))
+			      (label (@ (for "addtonews")) "Add to news item")
+			      (br)
+			      "Change Page Name : "
+			      (input (@ (type "entry") (name "changename") (width 20)
+					(value ,(ref page 'key))))
+			      " "
+			      (input (@ (type "checkbox") (name "confirmchange")
+					(value "on") (id "confirmchange")))
+			      (label (@ (for "confirmchange")) "I'm sure"))
+			 (br)
+			 (div (@ (class "edit-help"))
+			      ,@(use-page "/$admin/edit-help"))
+			 
+			 ))))))
+       (standard-page epage)))))
 
 ;; display version
 (define-entry (version)
-  (if (and-let* ((name (kahua-current-user-name)))
-        (not (string-null? name)))
-      (let* ((content `(p "Kahua-Web Version: " ,*kahua-web-version*))
-             (vpage (make <page> :title "Kahua-Web version"
-                                 :key "/Version" :content content)))
-        (standard-page vpage))
-      (let1 epage
-            (make-error-page "Error: Not login"
-               `(p (@ (class "warning"))
-                   "To see kahua-web version, you have to login!"))
-        (standard-page epage))))
+  (with-kahua-web-authorization
+   (lambda ()
+     (let* ((content `(p "Kahua-Web Version: " ,*kahua-web-version*))
+	    (vpage (make <page> :title "Kahua-Web version"
+			 :key "/Version" :content content)))
+       (standard-page vpage)))))
 
 ;; canonicalize EOL to #\newline
 (define (canon-content content)
