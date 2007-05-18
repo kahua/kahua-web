@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.68 2007/05/18 07:34:07 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.69 2007/05/18 08:58:56 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -35,9 +35,9 @@
 (define kahua-web-charset (gauche-character-encoding))
 
 (load "kahua-web/version.kahua")
-(load "kahua-web/upload.kahua")
 (load "kahua-web/macro.kahua")
 (load "kahua-web/login.kahua")
+(load "kahua-web/upload.kahua")
 (load "kahua-web/search.kahua")
 (load "kahua-web/comment.kahua")
 (load "kahua-web/rss.kahua")
