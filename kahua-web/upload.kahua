@@ -4,14 +4,14 @@
 ;;  Copyright (c) 2007 Kahua Project, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: upload.kahua,v 1.2 2007/05/17 08:13:17 bizenn Exp $
+;; $Id: upload.kahua,v 1.3 2007/05/18 08:57:16 bizenn Exp $
 
 (use file.util)
 (use fileio)
 (use rfc.uri)
 (use util.list)
 
-(define kahua-web-static-uploadable? kahua-authorized?)
+(define kahua-web-static-uploadable? kahua-web-authorized?)
 
 (define (canonical-static-path-info path)
   (define (simplify-path-info path-info)
