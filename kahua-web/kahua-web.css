@@ -1,5 +1,5 @@
 /* style sheet for kahua-web */
-/* $Id: kahua-web.css,v 1.17 2007/05/18 06:46:33 bizenn Exp $ */
+/* $Id: kahua-web.css,v 1.18 2007/05/18 09:41:44 bizenn Exp $ */
 
 * {
   color: black;
@@ -39,22 +39,22 @@ div#title-pane {
   color: #ffffff;
   margin: 0pt;
   padding: 10pt 15pt 5pt 10pt;
-  background-color: #009966;
+  background-color: #49B52F;
 }
 div#naviation-pane {
   width: 100%;
 }
 div#side-pane {
-  float: left;
+  float: right;
   clear: none;
   width: 150px;
   height: 100%;
-  background-color: #ccffff;
+  background-color: #ffffcc;
   padding: 5px;
   font-size: 90%;
 }
 div#main-pane {
-  float: left;
+  float: right;
   clear: none;
   width: 470px;
   height: 100%;
@@ -63,7 +63,7 @@ div#main-pane {
 div#bottom-pane {
   width: 100%;
   border-width: 1px 0 0 0;
-  border-color: #729669;
+  border-color: #777777;
   border-style: solid;
 }
 div#bottom-pane p {
@@ -78,8 +78,9 @@ div#edit-menu {
   color: #777777;
 }
 
-div#page-footer { 
-  text-align: right;
+div#page-footer {
+  padding-top: 1em;
+  text-align: left;
   font-size: 80%;
   line-height: 0.9;
   color: #777777;
