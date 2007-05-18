@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.67 2007/05/18 06:46:33 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.68 2007/05/18 07:34:07 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -198,7 +198,6 @@
       (let ((data (cond ((ref page 'persistent-id) => get-page-data/check)
                         (else (get-new-page/check (ref page 'key)))))
             (new-content (ref page 'content)))
-        (run-hook save-page-hook)
         (when (ref page 'persistent-id)
           (write-log (ref page 'persistent-id)
                      (ref data 'content)
@@ -598,6 +597,7 @@
                      (page-set-push-unique! (page-set:recent-changes) page))
                    (when (equal? addtonews "on")
                      (page-set-push-unique! (page-set:news) page))
+		   (run-hook save-page-hook)
                    (redirect-to page))
                  comment)))
   (with-kahua-web-authorization

@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss.kahua,v 1.6 2007/05/16 08:43:45 bizenn Exp $
+;; $Id: rss.kahua,v 1.7 2007/05/18 07:34:07 bizenn Exp $
 
 (define (page-url page)
   (kahua-self-uri-full 
@@ -33,9 +33,9 @@
     ;; SXML
     `((rss (@ (version "2.0"))
            (channel
-            (title "Kahua-web")
+            (title ,*kahua-web-title*)
             (link  ,(string-append (kahua-self-uri-full "show")))
-            (description "Kahua-web TEST Site")
+            (description "Recent changes...")
             (lastBuildDate ,(pubdate-mtime (car entries)))
             ,@(map (lambda (entry)
                      `(item

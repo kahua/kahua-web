@@ -1,5 +1,8 @@
 2007-05-18  Tatsuya BIZENN  <bizenn@arthub.net>
 
+	* Fix: kahua-web/rss.kahua, kahua-web/kahua-web.kahua
+	  Fix a bug that writes static RSS document as once older change.
+
 	* Change: kahua-web/login.kahua, kahua-web/kahua-web.kahua,
 	          kahua-web/history.kahua, kahua-web/comment.kahua
 	  New procedure kahua-web-authorized? and with-kahua-web-authorization.
