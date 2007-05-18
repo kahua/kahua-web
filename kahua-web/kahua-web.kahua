@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.69 2007/05/18 08:58:56 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.70 2007/05/18 10:08:43 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -610,6 +610,7 @@
 		       (div
 			(form/cont
 			 (@@ (cont ,commit (donttouch) (content)))
+			 (@ (class "page-editor"))
 			 (textarea (@ (name "content") (rows 30) (cols 80))
 				   ,(ref page 'content))
 			 (br)

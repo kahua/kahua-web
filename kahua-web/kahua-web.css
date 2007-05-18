@@ -1,5 +1,5 @@
 /* style sheet for kahua-web */
-/* $Id: kahua-web.css,v 1.19 2007/05/18 09:58:41 bizenn Exp $ */
+/* $Id: kahua-web.css,v 1.20 2007/05/18 10:08:43 bizenn Exp $ */
 
 * {
   color: black;
@@ -166,6 +166,9 @@ form.search input {
 }
 form.search input[type="text"]{ padding: 1px; }
 form.inline-object-upload { display: inline; }
+form.page-editor textarea {
+  width: 465px;
+}
 
 .macro-error { background-color: #ee5555; }
 .simplecommentmacro { font-size: 80%; }
