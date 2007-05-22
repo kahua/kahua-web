@@ -5,51 +5,63 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss.kahua,v 1.7 2007/05/18 07:34:07 bizenn Exp $
+;; $Id: rss.kahua,v 1.8 2007/05/22 14:42:02 bizenn Exp $
+
+(use rfc.uri)
 
 (define (page-url page)
-  (kahua-self-uri-full 
-   #`"show,(pagename-join
-             (map uri-encode-string
-                  (pagename-split
-                     (ref (find-kahua-instance <page-data> page) 'name))))"))
+  (and-let* ((pd (find-kahua-instance <page-data> page)))
+    (page-data-url pd)))
 
-; <page-data>:id -> String
+(define (page-data-url page-data)
+  (apply kahua-self-uri-full
+	 "show" (map uri-encode-string
+		     (pagename-split (slot-ref page-data 'name)))))
+
 (define (page-title page)
-  (base-pagename  (ref (find-kahua-instance <page-data> page) 'name)))
+  (and-let* ((pd (find-kahua-instance <page-data> page)))
+    (page-data-title pd)))
+
+(define (page-data-title page-data)
+  (base-pagename (slot-ref page-data 'name)))
 
 (define (pubdate-mtime page)
-  (let1 secs (ref (find-kahua-instance <page-data> page) 'mtime)
-        (sys-strftime "%a, %d %b %Y %H:%M:%S %z" (sys-localtime secs))))
+  (and-let* ((pd (find-kahua-instance <page-data> page)))
+    (page-data-mtime pd)))
+
+(define (page-data-mtime page-data)
+  (time->local-time-string (slot-ref page-data 'mtime)))
+
+(define (time->local-time-string t)
+  (sys-strftime "%a, %d %b %Y %H:%M:%S %z" (sys-localtime t)))
 
 (define-entry (rss)
-  (let* (;;(full-url (kahua-self-uri-full))
-         ;; (List <page-data>:id)
-         (entries
-          (let1 recent-changes (find-kahua-instance <page-set> "recent-changes")
-            (if recent-changes
-                (take* (ref recent-changes 'pages) 15)
-              '()))))
-    ;; SXML
+  (let1 entries (or (and-let* ((rc (find-kahua-instance <page-set> "recent-changes")))
+		      (take* (slot-ref rc 'pages) 15))
+		    '())
     `((rss (@ (version "2.0"))
            (channel
             (title ,*kahua-web-title*)
-            (link  ,(string-append (kahua-self-uri-full "show")))
+            (link  ,(kahua-self-uri-full "show"))
             (description "Recent changes...")
-            (lastBuildDate ,(pubdate-mtime (car entries)))
-            ,@(map (lambda (entry)
-                     `(item
-                       (title ,(page-title entry))
-                       (link ,(page-url entry))
-                       (pubDate  ,(pubdate-mtime entry))))
-                   entries))))))
+            (lastBuildDate ,(time->local-time-string (sys-time)))
+	    ,@(if (pair? entries)
+		  `((pubDate ,(pubdate-mtime (car entries))))
+		  '())
+	    (docs "http://blogs.law.harvard.edu/tech/rss")
+	    (generator ,#`",(kahua-worker-type) ,|*kahua-web-version*|")
+            ,@(filter-map (lambda (e)
+			    (and-let* ((pd (find-kahua-instance <page-data> e)))
+			      `(item
+				(title ,(page-data-title pd))
+				(link ,(page-data-url pd))
+				(pubDate ,(page-data-mtime pd)))))
+			  entries))))))
 
 (define (write-rss)
-  (kahua-write-static-file #`",(kahua-worker-type)/rss.xml"
-   (rss)
-   '()))
+  (kahua-write-static-file
+   #`",(kahua-worker-type)/rss.xml" (rss) '()))
 
-(when (find (pa$ equal? "write-rss") (kahua-app-args))
+(when (find (pa$ string=? "write-rss") (kahua-app-args))
   (%kahua-web-rss-uri% (cut kahua-static-document-url #`",(kahua-worker-type)/rss.xml"))
-  ;; (kahua-add-hook! 'initial write-rss)
   (add-hook! save-page-hook write-rss))
