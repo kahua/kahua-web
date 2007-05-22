@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.39 2007/05/17 08:13:17 bizenn Exp $
+;; $Id: macro.kahua,v 1.40 2007/05/22 07:47:50 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-11)
@@ -158,11 +158,67 @@
 ;; Java Applet Embedding
 ;;
 (define-wiki-macro (applet code params . attrs)
-  `((applet (@ (code ,code) ,@attrs)
-	    ,@(make-param params))))
+  (define allowed-attrs
+    (append '(class id title)
+	    '(width height archive alt name align hspace vspace)))
+  (define (allowed-attr? attr)
+    (memq (car attr) allowed-attrs))
+  (define (make-applet code)
+    `((applet (@ (code ,code)
+		 ,@(codebase attrs)
+		 ,@(filter allowed-attr? attrs))
+	      ,@(make-params params))))
+  (define (codebase attrs)
+    (cond ((assq-ref attrs 'codebase)
+	   => (lambda (cb)
+		(if (null? cb)
+		    `((codebase ,(kahua-static-document-url (kahua-worker-type))))
+		    (let1 cb (car cb)
+		      (if (and (not (string-null? cb))
+			       (char=? #\/ (string-ref cb 0)))
+			  `((codebase ,cb))
+			  `((codebase ,(kahua-static-document-url (kahua-worker-type) cb))))))))
+	  (else `((codebase ,(kahua-static-document-url (kahua-worker-type)))))))
 
-(define (make-param params)
+  (make-applet code))
+
+(define (make-params params)
   (map (lambda (e) `(param (@ (name ,(car e)) (value ,(cadr e))))) params))
+
+;;---------------------------------------------------------
+;; Flash Movie Embedding
+;;
+(define-wiki-macro (flash code . attrs)
+  (define allowed-common-attrs
+    (append '(class id title) '(width height align base)))
+  (define allowed-object-params
+    '(devicefont play loop quality bgcolor scale salign menu wmode))
+  (define allowed-embed-attrs
+    '(devicefont play loop quality bgcolor scale salign menu wmode))
+  (define allowed-params
+    '(play loop quality bgcolor scale salign base menu))
+  (define (allowed? attr al)
+    (memq (car attr) al))
+  (define (code-path code)
+    (if (and (not (string-null? code))
+	     (char=? #\/ (string-ref code 0)))
+	code
+	(kahua-static-document-url (kahua-worker-type) code)))
+  (define (make-object code)
+    `((object
+       (@ (classid "clsid:d27cdb6e-ae6d-11cf-96b8-444553540000")
+	  (codebase "http://fpdownload.macromedia.com/pub/shockwave/cabs/flash/swflash.cab")
+	  (codetype "application/x-shockwave-flash")
+	  ,@(filter (cut allowed? <> allowed-common-attrs) attrs))
+       (param (@ (name "movie") (value ,code)))
+       ,@(make-params (filter (cut allowed? <> allowed-object-params) attrs))
+       (embed
+	(@ (src ,code)
+	   (pluginspage "http://www.macromedia.com/shockwave/download/index.cgi?P1_Prod_Version=ShockwaveFlash")
+	   (type "application/x-shockwave-flash")
+	   ,@(filter (cut allowed? <> allowed-common-attrs) attrs)
+	   ,@(filter (cut allowed? <> allowed-embed-attrs) attrs))))))
+  (make-object (code-path code)))
 
 ;;---------------------------------------------------------
 ;; generate PDF
