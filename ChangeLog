@@ -1,3 +1,9 @@
+2007-05-23  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/rss.kahua
+	  Now if "/$admin/home" updated without check of "Don't update 'Recent
+	  Changes', RSS include item for "/".
+
 2007-05-22  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: kahua-web/macro.kahua
