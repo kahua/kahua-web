@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.72 2007/05/22 15:54:37 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.73 2007/05/23 03:03:41 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -34,6 +34,8 @@
 (define (kahua-web-rss-uri)
   ((%kahua-web-rss-uri%)))
 (define kahua-web-charset (gauche-character-encoding))
+;; Set Account Number
+(define *google-analytics-tracking* (make-parameter #f))
 
 (load "kahua-web/version.kahua")
 (load "kahua-web/macro.kahua")
@@ -42,8 +44,8 @@
 (load "kahua-web/search.kahua")
 (load "kahua-web/comment.kahua")
 (load "kahua-web/rss.kahua")
-(load "kahua-web/local.kahua")
 (load "kahua-web/history.kahua")
+(load "kahua-web/local.kahua")
 
 (define-syntax define-if-not-bound
   (syntax-rules ()
@@ -475,6 +477,7 @@
      :navigation-pane-contents (page-navigation page)
      :side-pane-contents (use-page "/$admin/side-pane")
      :bottom-pane-contents (use-page "/$admin/bottom-pane")
+     :access-tracker (google-analytics-tracker/)
      :main-pane `((div (@ (id "main-pane"))
 		       ,@(if (persistent-page? page) (edit-menu page) '())
 		       ,@(wiliki:format-content page)
@@ -674,6 +677,16 @@
 (define (canon-content content)
   (string-join (call-with-input-string content port->string-list)
                "\n" 'suffix))
+
+;; Support for Google Analytics Tracking
+(define (google-analytics-tracker/)
+  (when/ (*google-analytics-tracking*)
+    (node-set/
+     (script/ (@/ (src "http://www.google-analytics.com/urchin.js")
+		  (type "text/javascript")))
+     (script/ (@/ (type "text/javascript"))
+	      "_uacct=" (*google-analytics-tracking*) ";\n"
+	      "urchinTracker();"))))
 
 ;;========================================================
 ;; initialization

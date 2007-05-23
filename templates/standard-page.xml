@@ -2,7 +2,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
-  <!-- $Id: standard-page.xml,v 1.5 2007/05/14 08:11:28 bizenn Exp $ -->
+  <!-- $Id: standard-page.xml,v 1.6 2007/05/23 03:03:41 bizenn Exp $ -->
   <head>
     <meta id='extra-header-elements' />
     <link id='rss-link' />
@@ -34,5 +34,6 @@
 	</div>
       </div>
     </div>
+    <div id='access-tracker' />
   </body>
 </html>

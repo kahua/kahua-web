@@ -1,5 +1,9 @@
 2007-05-23  Tatsuya BIZENN  <bizenn@arthub.net>
 
+	* Change: kahua-web/kahua-web.kahua
+	  Add *google-analytics-tracking* parameter.  If a google analytics
+	  account number is set to this,  insert tracking code into all pages.
+
 	* Change: kahua-web/rss.kahua
 	  Now if "/$admin/home" updated without check of "Don't update 'Recent
 	  Changes', RSS include item for "/".
