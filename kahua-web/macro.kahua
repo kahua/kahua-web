@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.41 2007/05/22 09:26:00 bizenn Exp $
+;; $Id: macro.kahua,v 1.42 2007/05/25 11:18:05 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-11)
@@ -257,7 +257,10 @@
 ;;
 (define-wiki-macro (include pagename)
   (let1 name (canon-pagename pagename)
-    (cond ((and name (get-page name)) => wiliki:format-content)
+    (cond ((and name (get-page name))
+	   => (lambda (page)
+		(parameterize ((current-page page))
+		  (wiliki:format-content page))))
           (else (unhandled-macro 'include (list pagename))))))
 
 ;;---------------------------------------------------------

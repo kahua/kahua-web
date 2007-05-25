@@ -1,3 +1,9 @@
+2007-05-25  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/macro.kahua
+	  Now "include" macro format the included page under the
+	  included original page context.
+
 2007-05-23  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: kahua-web/kahua-web.kahua
