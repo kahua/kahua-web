@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.42 2007/05/25 11:18:05 bizenn Exp $
+;; $Id: macro.kahua,v 1.43 2007/05/26 09:07:05 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-11)
@@ -15,6 +15,7 @@
 (use file.util)
 (use www.cgi)
 (use rfc.uri)
+(use gauche.parameter)
 
 (define *macro-alist* '())
 
@@ -255,11 +256,16 @@
 ;;---------------------------------------------------------
 ;; Include
 ;;
+(define-constant starting-page (make-parameter #f))
+(define (get-starting-page . maybe-page)
+  (or (starting-page)
+      (get-optional maybe-page (current-page))))
 (define-wiki-macro (include pagename)
   (let1 name (canon-pagename pagename)
     (cond ((and name (get-page name))
 	   => (lambda (page)
-		(parameterize ((current-page page))
+		(parameterize ((starting-page (get-starting-page))
+			       (current-page page))
 		  (wiliki:format-content page))))
           (else (unhandled-macro 'include (list pagename))))))
 
@@ -401,51 +407,50 @@
 ;; simple-comment-form
 ;;
 (define-wiki-macro (simple-comment-form comment-name . page-name)
-  (or (and-let* ((page (if (null? page-name)
-                           (current-page)
-                           (get-page (car page-name))))
-		 (key (ref page 'persistent-id))
-		 (title (ref page 'title))
-	         (key (string-append title "(" key ")" "-" (x->string comment-name))))
-        (define commit-comment
-	  (entry-lambda (:keyword author contents)
-            ;; commit
-            (if (not (or (string-null? (string-trim author)) 
-			 (string-null? (string-trim contents))))
-		(let* ((set (or (find-kahua-instance <simple-comment-set> key)
-				(make <simple-comment-set> :name key)))
-		       (comment (make <simple-comment>
-				  :author (string-trim-both author)
-				  :contents (string-trim-both contents))))
-		  (set! (ref set 'comments) 
-			(cons comment (ref set 'comments)))))
-	    ;; redirect to this page
-	    (redirect-to page)))
-	(define (comment-list)
-	  (let* ((comments (find-kahua-instance <simple-comment-set> key)))
-	    (if comments
-		`(div 
-		  ,@(filter-map (lambda (c)
-				  (and c
-				       (if (visible? c)
-					   `(div (@ (class "comment"))
-						 (div (@ (class "comment-header"))
-						      ,(ref c 'author)
-						      ": (" ,(sys-ctime (ref c 'date)) ")")
-						 (div (@ (class "comment-contents"))
-						      ,@(wiliki:format-content
-							 (string-append
-							  "{{{\n"
-							  (or (ref c 'contents) "")
-							  "\n}}}"))))
-					   '())))
-				(reverse (ref comments 'comments))))
-		"There is no comment.")))
-	;; form
+  (define (comment-key comment-name page)
+    (format "~a(~a)-~a" (slot-ref page 'title)
+	    (slot-ref page 'persistent-id) comment-name))
+
+  (define (commit-comment-entry page key)
+    (entry-lambda (:keyword author contents)
+      (let ((author (string-trim-both author))
+	    (contents (string-trim-both contents)))
+	;; Should be verified
+	(unless (or (string-null? author) (string-null? contents))
+	  (let ((set (or (find-kahua-instance <simple-comment-set> key)
+			 (make <simple-comment-set> :name key)))
+		(comment (make <simple-comment>
+			   :author author :contents contents)))
+	    (push! (ref set 'comments) comment))))
+      (redirect-to page)))
+
+  (define (comment-list key)
+    (or (and-let* ((comments (find-kahua-instance <simple-comment-set> key))
+		   (ls (filter-map (lambda (c)
+				     (and c (visible? c)
+					  `(div (@ (class "comment"))
+						(div (@ (class "comment-header"))
+						     ,(ref c 'author)
+						     ": (" ,(sys-ctime (ref c 'date)) ")")
+						(div (@ (class "comment-contents"))
+						     ,@(wiliki:format-content
+							(string-append
+							 "{{{\n"
+							 (or (ref c 'contents) "")
+							 "\n}}}"))))))
+				   (reverse (ref comments 'comments)))))
+	  (and (pair? ls) ls))
+	'((p "There is no comment."))))
+
+  ;; main
+  (or (and-let* ((page (or (and-let* ((page-name (get-optional page-name #f)))
+			     (get-page page-name))
+                           (current-page)))
+	         (key (comment-key comment-name page)))
 	`(div (@ (class "simplecommentmacro"))
 	      (div (@ (class "commentform"))
 		   (form/cont 
-		    (@@ (cont ,commit-comment))
+		    (@@ (cont ,(commit-comment-entry (get-starting-page page) key)))
 		    (div "Name: "
 			 (input (@ (type "text") 
 				   (name "author") (size "20") (maxlength "20"))))
@@ -455,7 +460,7 @@
 		    (div (input (@ (type "submit") (name "submit")
 				   (value "submit"))))))
 	      (div (@ (class "comments"))
-		   ,(comment-list))))
+		   ,@(comment-list key))))
       '()))
 
 ;;-----
