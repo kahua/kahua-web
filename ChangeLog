@@ -1,5 +1,8 @@
 2007-05-28  Tatsuya BIZENN  <bizenn@arthub.net>
 
+	* Fix: kahua-web/macro.kahua
+	  Notice mail had original page URL instead of display page URL.
+
 	* Add: kahua-web/comment.kahua, kahua-web/macro.kahua
 	  Simple comment SPAM checker.  It kicks comments that
 	  have HTML anchor tag, BBcode URL, and more than one URL.

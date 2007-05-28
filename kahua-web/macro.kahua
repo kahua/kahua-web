@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.45 2007/05/28 08:41:10 bizenn Exp $
+;; $Id: macro.kahua,v 1.46 2007/05/28 09:47:57 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-11)
@@ -428,7 +428,7 @@
 		(comment (make <simple-comment>
 			   :author author :contents contents)))
 	    (push! (ref set 'comments) comment)
-	    (when do-mail (do-mail comment)))))
+	    (when do-mail (do-mail page comment)))))
       (redirect-to page)))
 
   (define (comment-list key)
@@ -476,9 +476,9 @@
 		(div (@ (class "commentform"))
 		     (form/cont 
 		      (@@ (cont
-			   ,(commit-comment-entry (get-starting-page page) key
-						  (and mail-to (cut notice-mail mail-to mail-from
-								    page <>)))))
+			   ,(commit-comment-entry
+			     (get-starting-page page) key
+			     (and mail-to (cut notice-mail mail-to mail-from <> <>)))))
 		      (div "Name: "
 			   (input (@ (type "text") 
 				     (name "author") (size "20") (maxlength "20"))))
