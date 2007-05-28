@@ -1,3 +1,10 @@
+2007-05-28  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/macro.kahua
+	  Integrate simple-comment-form and simple-comment-form-bis.
+	  Now simple-comment-form support both syntax, and
+	  simple-comment-form-bis is only alias of simple-comment-form.
+
 2007-05-25  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: kahua-web/macro.kahua

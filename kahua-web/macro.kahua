@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.43 2007/05/26 09:07:05 bizenn Exp $
+;; $Id: macro.kahua,v 1.44 2007/05/28 03:53:49 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-11)
@@ -22,26 +22,32 @@
 (define-syntax define-wiki-macro 
   (syntax-rules ()
     ((_ (name . args) . body)
-     (set! *macro-alist*
-           (let ((handler (lambda args . body)))
-             (acons 'name
-                    (lambda (expr)
-                      (if (procedure-arity-includes? handler (length expr))
-                        (apply handler expr)
-                        (unhandled-macro 'name expr)))
-                    *macro-alist*))))
+     (push! *macro-alist*
+	    (let1 handler (lambda args . body)
+	      (cons 'name (lambda (expr)
+			    (if (procedure-arity-includes? handler (length expr))
+				(apply handler expr)
+				(unhandled-macro 'name expr)))))))
+    ((_ alias name)
+     (cond ((assq-ref *macro-alist* 'name)
+	    => (lambda (proc) (push! *macro-alist* (cons 'alias proc))))
+	   (else (push! *macro-alist*
+			(cons 'alias
+			      (cond ((assq-ref *macro-alist* 'name) => cdr)
+				    (else
+				     (lambda (expr)
+				       (cond ((assq-ref *macro-alist* 'name) => cdr)
+					     (else (unhandled-macro (car expr) (cdr expr))))))))))))
     ))
 
 (define (format-macro expr _)
   (define (safe-apply handler)
-    (with-error-handler
-        (lambda (e)
-          `((pre (@ (class "macro-error"))
-                 "Error in expanding macro: "
-                 (strong ,(write-to-string expr))
-                 "\n"
-                 ,(kahua-error-string e (kahua-current-user)))))
-      (cut handler (cdr expr))))
+    (guard (e (else `((pre (@ (class "macro-error"))
+			   "Error in expanding macro: "
+			   (strong ,(write-to-string expr))
+			   "\n"
+			   ,(kahua-error-string e (kahua-current-user))))))
+      (handler (cdr expr))))
   (cond ((assq-ref *macro-alist* (car expr)) => safe-apply)
         (else (unhandled-macro (car expr) (cdr expr)))))
 
@@ -406,12 +412,12 @@
 ;;-----------------------------------------------------------------
 ;; simple-comment-form
 ;;
-(define-wiki-macro (simple-comment-form comment-name . page-name)
+(define-wiki-macro (simple-comment-form comment-name . rargs)
   (define (comment-key comment-name page)
     (format "~a(~a)-~a" (slot-ref page 'title)
 	    (slot-ref page 'persistent-id) comment-name))
 
-  (define (commit-comment-entry page key)
+  (define (commit-comment-entry page key do-mail)
     (entry-lambda (:keyword author contents)
       (let ((author (string-trim-both author))
 	    (contents (string-trim-both contents)))
@@ -421,7 +427,8 @@
 			 (make <simple-comment-set> :name key)))
 		(comment (make <simple-comment>
 			   :author author :contents contents)))
-	    (push! (ref set 'comments) comment))))
+	    (push! (ref set 'comments) comment)
+	    (when do-mail (do-mail comment)))))
       (redirect-to page)))
 
   (define (comment-list key)
@@ -442,101 +449,50 @@
 	  (and (pair? ls) ls))
 	'((p "There is no comment."))))
 
+  (define (notice-mail mail-to mail-from page comment)
+    (sendmail mail-to (or mail-from *kahua-web-email*)
+	      "A comment is posted"
+	      (string-append
+	       (format "Author: ~a\n" (slot-ref comment 'author))
+	       (format "URL:    ~a\n"
+		       (apply kahua-self-uri-full
+			      "show" (map uri-encode-string
+					  (pagename-split (slot-ref page 'key)))))
+	       "Contents:\n" (slot-ref comment 'contents))))
+
   ;; main
-  (or (and-let* ((page (or (and-let* ((page-name (get-optional page-name #f)))
-			     (get-page page-name))
-                           (current-page)))
-	         (key (comment-key comment-name page)))
-	`(div (@ (class "simplecommentmacro"))
-	      (div (@ (class "commentform"))
-		   (form/cont 
-		    (@@ (cont ,(commit-comment-entry (get-starting-page page) key)))
-		    (div "Name: "
-			 (input (@ (type "text") 
-				   (name "author") (size "20") (maxlength "20"))))
-		    (div "Comment: "
-			 (textarea (@ (name "contents") 
-				      (cols "70") (rows "3"))))
-		    (div (input (@ (type "submit") (name "submit")
-				   (value "submit"))))))
-	      (div (@ (class "comments"))
-		   ,@(comment-list key))))
-      '()))
+  (let-keywords* (cond ((null? rargs) '())
+		       ((keyword? (car rargs)) rargs)
+		       (else (cons :page-name rargs)))
+      ((page-name #f)
+       (mail-to #f)
+       (mail-from #f))
+    (or (and-let* ((page (if page-name
+			     (get-page page-name)
+			     (current-page)))
+		   (key (comment-key comment-name page)))
+	  `(div (@ (class "simplecommentmacro"))
+		(div (@ (class "commentform"))
+		     (form/cont 
+		      (@@ (cont
+			   ,(commit-comment-entry (get-starting-page page) key
+						  (and mail-to (cut notice-mail mail-to mail-from
+								    page <>)))))
+		      (div "Name: "
+			   (input (@ (type "text") 
+				     (name "author") (size "20") (maxlength "20"))))
+		      (div "Comment: "
+			   (textarea (@ (name "contents") 
+					(cols "70") (rows "3"))))
+		      (div (input (@ (type "submit") (name "submit")
+				     (value "submit"))))))
+		(div (@ (class "comments"))
+		     ,@(comment-list key))))
+	'())
+    ))
 
-;;-----
-;(define *kahua-web-admin* "oss@oss.timedia.co.jp")
-
-(define-wiki-macro (simple-comment-form-bis comment-name . rest)
-  (let-keywords* rest ((page-name #f)
-                       (mail-to #f)
-                       (mail-from #f))
-    (or (and-let* ((page (if (not page-name)
-                             (current-page)
-                             (get-page page-name)))
-                   (key (ref page 'persistent-id))
-                   (title (ref page 'title))
-                   (key (string-append title "(" key ")" "-"
-                                       (x->string comment-name))))
-        (define commit-comment
-	  (entry-lambda (:keyword author contents)
-            ;; commit
-            (if (not (or (string-null? (string-trim author)) 
-			 (string-null? (string-trim contents))))
-		(let* ((set (or (find-kahua-instance <simple-comment-set> key)
-				(make <simple-comment-set> :name key)))
-		       (comment (make <simple-comment>
-				  :author (string-trim-both author)
-				  :contents (string-trim-both contents))))
-		  (set! (ref set 'comments) 
-			(cons comment (ref set 'comments)))
-                  (if mail-to
-                      (notice-mail mail-to mail-from comment))
-                  ))
-	    ;; redirect to this page
-	    (redirect-to page)))
-        (define (notice-mail mail-to mail-from comment)
-          (let* ((author (ref comment 'author))
-                 (contents (ref comment 'contents))
-                 (page-path (ref page 'key))
-                 (subject (string-append author " comments on " page-path)))
-            (sendmail mail-to
-                      (or mail-from *kahua-web-email*) subject contents)))
-	(define (comment-list)
-	  (let* ((comments (find-kahua-instance <simple-comment-set> key)))
-	    (if comments
-		`(div 
-		  ,@(map (lambda (c)
-			   (if (visible? c)
-			       `(div (@ (class "comment"))
-				     (div (@ (class "comment-header"))
-					  ,(ref c 'author)
-					  ": (" ,(sys-ctime (ref c 'date)) ")")
-				     (div (@ (class "comment-contents"))
-					  ,@(wiliki:format-content
-                                             (string-append
-                                              "{{{\n"
-                                              (or (ref c 'contents) "")
-                                              "\n}}}"))))
-			       '()))
-			 (reverse (ref comments 'comments))))
-		"There is no comment.")))
-	;; form
-	`(div (@ (class "simplecommentmacro"))
-	      (div (@ (class "commentform"))
-		   (form/cont 
-		    (@@ (cont ,commit-comment))
-		    (div "Name: "
-			 (input (@ (type "text") 
-				   (name "author") (size "20") (maxlength "20"))))
-		    (div "Comment: "
-			 (textarea (@ (name "contents") 
-				      (cols "70") (rows "3"))))
-		    (div (input (@ (type "submit") (name "submit")
-				   (value "submit"))))))
-	      (div (@ (class "comments"))
-		   ,(comment-list))))
-      '()))
-  )
+;; for backward compatibility
+(define-wiki-macro simple-comment-form-bis simple-comment-form)
 
 ;; rss-date
 (define-wiki-macro (rss-date uri . count&format)
