@@ -1,5 +1,5 @@
 /* style sheet for kahua-web */
-/* $Id: kahua-web.css,v 1.22 2007/05/22 05:17:19 bizenn Exp $ */
+/* $Id: kahua-web.css,v 1.23 2007/05/28 22:07:44 bizenn Exp $ */
 
 * {
   color: black;
@@ -80,7 +80,7 @@ div#edit-menu {
 
 div#page-footer {
   padding-top: 1em;
-  text-align: left;
+  text-align: right;
   font-size: 80%;
   line-height: 0.9;
   color: #777777;
