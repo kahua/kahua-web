@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: comment.kahua,v 1.9 2007/05/18 05:32:48 bizenn Exp $
+;; $Id: comment.kahua,v 1.10 2007/05/28 08:41:10 bizenn Exp $
 
 (use srfi-1)
 (use gauche.collection)
@@ -40,6 +40,24 @@
   (make <page> :title ttl 
 	       :content body 
                :key "/EditSimpleFormComment"))
+
+(define-constant *uri-regexp*
+  #/[[:alnum:]]+:\/\/(?:[^\/?#\s]*)?\/[^?#\s]*(?:\?[^#\s]*)?(?:#\S*)?/)
+(define (invalid-comment? author contents ipaddr)
+  (or (not author) (string-null? author)
+      (not contents) (string-null? contents)
+      (let each-line ((lines (string-split contents #[\n\r]))
+		      (uri-allow 1))
+	(cond ((< uri-allow 0) #t)
+	      ((null? lines)   #f)
+	      (else
+	       (rxmatch-case (car lines)
+		 (#/<a\ / (#f) #t)
+		 (#/\[url=/ (#f) #t)
+		 (test *uri-regexp*
+		       => (lambda (m)
+			    (each-line (cons (m 'after) (cdr lines)) (- uri-allow 1))))
+		 (else (each-line (cdr lines) uri-allow))))))))
 
 (define-entry (modify-visibility-of-comment)
   (let ((sets (make-kahua-collection <simple-comment-set>))

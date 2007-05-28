@@ -1,5 +1,10 @@
 2007-05-28  Tatsuya BIZENN  <bizenn@arthub.net>
 
+	* Add: kahua-web/comment.kahua, kahua-web/macro.kahua
+	  Simple comment SPAM checker.  It kicks comments that
+	  have HTML anchor tag, BBcode URL, and more than one URL.
+	  Now it only go back the page without any warning message.
+
 	* Change: kahua-web/macro.kahua
 	  Integrate simple-comment-form and simple-comment-form-bis.
 	  Now simple-comment-form support both syntax, and

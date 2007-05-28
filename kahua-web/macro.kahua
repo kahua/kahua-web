@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.44 2007/05/28 03:53:49 bizenn Exp $
+;; $Id: macro.kahua,v 1.45 2007/05/28 08:41:10 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-11)
@@ -422,7 +422,7 @@
       (let ((author (string-trim-both author))
 	    (contents (string-trim-both contents)))
 	;; Should be verified
-	(unless (or (string-null? author) (string-null? contents))
+	(unless (invalid-comment? author contents (kahua-context-ref "x-kahua-remote-addr"))
 	  (let ((set (or (find-kahua-instance <simple-comment-set> key)
 			 (make <simple-comment-set> :name key)))
 		(comment (make <simple-comment>
@@ -453,12 +453,13 @@
     (sendmail mail-to (or mail-from *kahua-web-email*)
 	      "A comment is posted"
 	      (string-append
-	       (format "Author: ~a\n" (slot-ref comment 'author))
-	       (format "URL:    ~a\n"
+	       (format "Author:  ~a\n" (slot-ref comment 'author))
+	       (format "IP Addr: ~a\n" (kahua-context-ref "x-kahua-remote-addr"))
+	       (format "URL:     ~a\n"
 		       (apply kahua-self-uri-full
 			      "show" (map uri-encode-string
 					  (pagename-split (slot-ref page 'key)))))
-	       "Contents:\n" (slot-ref comment 'contents))))
+	       "Contents:\n" (slot-ref comment 'contents) "\n")))
 
   ;; main
   (let-keywords* (cond ((null? rargs) '())
