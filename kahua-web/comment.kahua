@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: comment.kahua,v 1.12 2007/05/29 12:30:07 bizenn Exp $
+;; $Id: comment.kahua,v 1.13 2007/05/29 22:27:53 bizenn Exp $
 
 (use srfi-1)
 (use gauche.collection)
@@ -55,8 +55,8 @@
 		 (cond ((> (string-count l #\+) 5) #t)
 		       (else
 			(rxmatch-case l
-			  (#/<a\ / (#f) #t)
-			  (#/\[url=/ (#f) #t)
+			  (#/<a\ / () #t)
+			  (#/\[url=/ () #t)
 			  (test *uri-regexp*
 				=> (lambda (m)
 				     (each-line (cons (m 'after) (cdr lines)) (- uri-allow 1))))
