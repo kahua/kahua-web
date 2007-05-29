@@ -1,7 +1,7 @@
 dnl
 dnl Configuring kahua-web
 dnl  process this file with "autoconf" to generate 'configure'.
-dnl $Id: configure.ac,v 1.24 2007/05/29 03:28:53 bizenn Exp $
+dnl $Id: configure.ac,v 1.25 2007/05/29 12:14:52 bizenn Exp $
 AC_PREREQ(2.59)
 AC_INIT(kahua-web, 0.3_pre10, info@kahua.org)
 
@@ -22,10 +22,10 @@ dnl Check for other program
 AC_PROG_INSTALL
 
 if test X$GOSH = X; then 
-  AC_MSG_ERROR([Cannot find Gauche installed.  Please install Gauche-0.8.10 or later, and make sure to set PATH properly.])
+  AC_MSG_ERROR([Cannot find Gauche installed.  Please install Gauche-0.8.9 or later, and make sure to set PATH properly.])
 fi
 if test X$KAHUA_INSTALL = X; then 
-  AC_MSG_ERROR([Cannot find Kahua installed.  Please install Kahua-1.1 or later, and make sure to set PATH properly.])
+  AC_MSG_ERROR([Cannot find Kahua installed.  Please install Kahua-1.0.4 or later, and make sure to set PATH properly.])
 fi
 
 KAHUACONFIG_OPTION=' -c $(sysconfdir)/kahua.conf'

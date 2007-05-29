@@ -1,29 +1,36 @@
-$Id: README,v 1.7 2007/05/12 03:19:56 bizenn Exp $
+$Id: README,v 1.8 2007/05/29 12:14:52 bizenn Exp $
 
-kahua-web : Kahua-based WiLiKi-like simple CMS
+kahua-web : Kahua-based WiLiKi-like simple Web site builder.
 
 [Requirements]
 
 Gauche-0.8.10 or later
 WiLiKi-0.6_pre2 or later
-Kahua-1.0.3 or later
+Kahua-1.0.4 or later
 
 [Installation]
 
-  % autoconf
+  % ./DIST gen # (required only source gotten from CVS repository)
   % ./configure [any options if you need]
 
 You have to give some options to specify the same install directories 
 as Kahua installed. For example if you gave --prefix=$HOME to 
 configure script of Kahua when you installed it, you have to give the 
-same option to kahua-web's configure script.
+same option to kahua-web's configure script:
 
   % ./configure --prefix=$HOME
+
+And if you'd like to install into a site bundle,  you should give
+--with-site-bundle=/path/to/bundle option to configure script:
+
+  % ./configure --prefix=/usr/local/kahua \
+    		--with-site-bundle=$HOME/work/site
 
 And then
 
   % make
-  % make check
+  % make -s check
+  % make init # (required at only first installation)
   % make install
 
 Then, edit app-servers to add "kahua-web" entry.
@@ -34,6 +41,11 @@ If you want to allow non registered user to edit page,
 give 'non-member-edit as a argument.
 
   (kahua-web :argument (non-member-edit) :run-by-default 2)
+
+Or if you'd like to feed RSS static document,  you should
+give 'write-rss as a argument.
+
+  (kahua-web :argument (write-rss) :run-by-default 2)
 
 [Information]
 
