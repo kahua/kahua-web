@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.74 2007/05/23 03:07:16 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.75 2007/05/29 03:28:12 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -53,7 +53,7 @@
      (define var (if (global-variable-bound? (current-module) 'var) var expr)))))
 
 (define-if-not-bound *kahua-web-title*
-  "kahua")
+  "kahua-web")
 
 (define-if-not-bound *kahua-web-email*
   "kahua-web@example.org")
@@ -223,14 +223,6 @@
 
 (define (front-page? page)
   (equal? (ref page 'key) "/"))
-
-;; NB: front page is a virtual page.  contents is created by
-;; "/$admin/home"
-(add-virtual-page!
- "/"
- (lambda (name)
-   (make <page>
-     :title "Kahua home" :key "/" :content (use-page "/$admin/home"))))
 
 ;;========================================================
 ;; Page set
@@ -591,10 +583,10 @@
   (define commit
     (entry-lambda (:keyword content donttouch addtonews
                             changename confirmchange comment)
-      (set! (ref page 'content) (canon-content content))
+      (slot-set! page 'content (canon-content content))
       (and-let* (((equal? confirmchange "on"))
                  (newname (canon-pagename changename)))
-        (set! (ref page 'key) newname))
+        (slot-set! page 'key newname))
       (save-page page
                  (lambda (page)
                    (unless (equal? donttouch "on")
@@ -606,7 +598,7 @@
                  comment)))
   (with-kahua-web-authorization
    (lambda ()
-     (let* ((is-admin-page (equal? "$admin" (car (pagename-split (ref page 'key)))))
+     (let* ((admin-page? (#/^\/\$admin(?:\/.+)?$/ (slot-ref page 'key)))
 	    (epage (make <page>
 		     :title #`"Editing ,(ref page 'title)" :key (ref page 'key)
 		     :content
@@ -627,12 +619,9 @@
 					     (name "comment")
 					     (size 30) (value ""))))
 			      " "
-			      ,(if is-admin-page
-				   `(input (@ (type "checkbox") (name "donttouch")
-					      (value "on") (checked "checked")
-					      (id "donttouch")))
-				   `(input (@ (type "checkbox") (name "donttouch")
-					      (value "on") (id "donttouch"))))
+			      (input (@ (type "checkbox") (name "donttouch")
+					(value "on") (id "donttouch")
+					,@(if admin-page? '((checked "checked")) '())))
 			      (label (@ (for "donttouch"))
 				     "Don't update 'Recent Changes'")
 			      " "

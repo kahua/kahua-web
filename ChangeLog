@@ -1,3 +1,12 @@
+2007-05-29  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/kahua-web.kahua, kahua-web/rss.kahua
+	  Change name of top page main-pane contents from "/$admin/home"
+	  to "/".  So the page named "/" is not a virtual page.
+	  If you'd like to upgrade from a prior version, please rename
+	  "/$admin/home" to "/" by edit entry.  This is a simple, but
+	  big change.
+
 2007-05-28  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Fix: kahua-web/macro.kahua

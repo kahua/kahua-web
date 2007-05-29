@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss.kahua,v 1.9 2007/05/22 15:19:37 bizenn Exp $
+;; $Id: rss.kahua,v 1.10 2007/05/29 03:28:12 bizenn Exp $
 
 (use rfc.uri)
 
@@ -23,12 +23,11 @@
 			 (pagename-split pagename))))
 	     '())))
 
-(define (page-title page)
-  (and-let* ((pd (find-kahua-instance <page-data> page)))
-    (page-data-title pd)))
-
 (define (page-data-title page-data)
-  (base-pagename (slot-ref page-data 'name)))
+  (let1 pn (base-pagename (slot-ref page-data 'name))
+    (if (equal? pn "/")
+	(string-append *kahua-web-title* ": Top Page")
+	pn)))
 
 (define (pubdate-mtime page)
   (and-let* ((pd (find-kahua-instance <page-data> page)))
