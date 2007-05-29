@@ -1,5 +1,9 @@
 2007-05-29  Tatsuya BIZENN  <bizenn@arthub.net>
 
+	* Change: kahua-web/comment.kahua
+	  If a comment has more than 5 #\+ character, it's regarded as
+	  a comment SPAM.
+
 	* Change: kahua-web/kahua-web.kahua, kahua-web/rss.kahua
 	  Change name of top page main-pane contents from "/$admin/home"
 	  to "/".  So the page named "/" is not a virtual page.
