@@ -4,7 +4,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web-user.scm,v 1.1 2007/05/31 11:03:50 bizenn Exp $
+;; $Id: kahua-web-user.scm,v 1.2 2007/05/31 11:24:09 bizenn Exp $
 
 (use kahua.user)
 (use kahua.persistence)
@@ -57,10 +57,14 @@
   0)
 
 (define (kahua-web-adduser . args)
+  (define (parse-roles roles)
+    (if roles
+	(map string->symbol (string-split roles #[ ,]))
+	'()))
   (let-args args ((roles "r=s") . args)
     (let-optionals* args ((user (usage)) (pass (get-password user)))
       (when user
-	(if (kahua-add-user user pass :role-alist (map string->symbol (string-split roles #[ ,])))
+	(if (kahua-add-user user pass :role-alist (parse-roles roles))
 	    (format (current-error-port) "\nCreate user: ~a\n" user)
 	    (format (current-error-port) "\nUser already exists: ~a\n" user))))))
 

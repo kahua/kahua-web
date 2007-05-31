@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.36 2007/05/31 11:03:38 bizenn Exp $
+# $Id: Makefile.in,v 1.37 2007/05/31 11:24:09 bizenn Exp $
 
 package	          = @PACKAGE_NAME@
 package_version   = @PACKAGE_VERSION@
@@ -102,12 +102,13 @@ install:
 	done
 
 init:
-	$(GOSH) -I$(libdir) ./init.scm $(KAHUACONFIG)
+	@$(GOSH) -I$(libdir) $(SCRIPTS).scm $(KAHUACONFIG) \
+		add -r admin admin
 
 install-scripts:
 	for f in $(SCRIPTS); do \
-	  $(INSTALL) -m 555 $$f $(bindir)/$$f; \
-	  $(INSTALL) -m 555 $$f.scm $(libdir)/$$f.scm; \
+	  $(INSTALL) -m 555 $$f $(bindir)/`basename $$f`; \
+	  $(INSTALL) -m 555 $$f.scm $(libdir)/`basename $$f.scm`; \
 	done
 
 uninstall:
