@@ -1,5 +1,10 @@
 2007-05-31  Tatsuya BIZENN  <bizenn@arthub.net>
 
+	* Add: scripts/kahua-web-user.scm
+	  New command-line user management tool.
+
+	* Remove: init.scm, kahua-web-adduser.scm, kahua-web-lsuser.scm
+
 	* Change: Makefile.in
 	  If kahua-web would be installed into a site bundle,
 	  copy standard Kahua's plugins into the site plugin dir.
