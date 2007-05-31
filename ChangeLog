@@ -1,3 +1,9 @@
+2007-05-31  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: Makefile.in
+	  If kahua-web would be installed into a site bundle,
+	  copy standard Kahua's plugins into the site plugin dir.
+
 2007-05-29  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: kahua-web/comment.kahua

@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.34 2007/05/17 05:56:48 bizenn Exp $
+# $Id: Makefile.in,v 1.35 2007/05/31 06:51:36 bizenn Exp $
 
 package	          = @PACKAGE_NAME@
 package_version   = @PACKAGE_VERSION@
@@ -30,6 +30,7 @@ DESTDIR  =
 GOSH = @GOSH@
 INSTALL = @INSTALL@
 KAHUA_INSTALL = @KAHUA_INSTALL@
+KAHUA_CONFIG  = $(bindir)/kahua-config
 KAHUA_WORKING = $(localstatedir)
 KAHUA_LIB     = $(libdir)
 KAHUACONFIG = @KAHUACONFIG_OPTION@
@@ -53,6 +54,7 @@ LOCALSTATICFILES = $(SOURCEDIR)/$(package)-local.css
 
 PLUGINDIR   = plugins
 PLUGINFILES = wiliki.scm history.scm rss-reader.scm kahua-web-modules.scm
+KAHUA_PLUGINFILES= allow-module.scm fileio.scm sendmail.scm
 
 TEMPLATEDIR = templates
 XMLFILES    = standard-page.xml
@@ -93,6 +95,10 @@ install:
 	done
 	for f in $(XMLFILES); do \
 	  $(KAHUA_INSTALL) $(KAHUACONFIG) -t template -r $(package)/$$f $(TEMPLATEDIR)/$$f;\
+	done
+	for f in $(KAHUA_PLUGINFILES); do \
+	  $(KAHUA_INSTALL) $(KAHUACONFIG) -t plugin --no-overwrite \
+		-r $$f `$(KAHUA_CONFIG) plugin-directory`/$$f;\
 	done
 
 init:
