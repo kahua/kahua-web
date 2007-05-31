@@ -1,7 +1,8 @@
 2007-06-01  Tatsuya BIZENN  <bizenn@arthub.net>
 
-	* Remove: scripts/kahua-web-user.scm
-	  Import this into Kahua itself as "kahua-user" command-line tool.
+	* Remove: scripts/kahua-web-user.scm, mkscript
+	  Import this into Kahua itself as "kahua-user" command-line tool,
+	  and mkscript is not used any more.
 
 2007-05-31  Tatsuya BIZENN  <bizenn@arthub.net>
 
