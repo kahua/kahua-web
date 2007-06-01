@@ -1,5 +1,5 @@
 /* style sheet for kahua-web */
-/* $Id: kahua-web.css,v 1.23 2007/05/28 22:07:44 bizenn Exp $ */
+/* $Id: kahua-web.css,v 1.24 2007/06/01 17:30:55 bizenn Exp $ */
 
 * {
   color: black;
@@ -176,4 +176,26 @@ form.page-editor textarea {
 table.version-info th {
   font-weight: bold;
   text-align: left;
+}
+
+table.user-list {
+  border-collapse: collapse;
+  border-style: solid;
+  border-width: 1px;
+  border-color: #999999;
+}
+
+table.user-list th {
+  border-style: solid;
+  border-width: 1px;
+  border-color: #999999;
+  background-color: #cccccc;
+  padding: 2px;
+}
+
+table.user-list td {
+  border-style: solid;
+  border-width: 1px;
+  border-color: #999999;
+  padding: 2px;
 }
