@@ -5,7 +5,9 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: login.kahua,v 1.9 2007/05/18 05:32:48 bizenn Exp $
+;; $Id: login.kahua,v 1.10 2007/06/01 15:05:12 bizenn Exp $
+
+(use srfi-1)
 
 (define non-member-edit-flag
   (and-let* ((args (kahua-app-args))
@@ -128,52 +130,136 @@
 ;; user info page
 ;;   admin role or developer role can access all user page.
 ;;   other users can only access his/her own page
-(define-entry (user-admin logname)
-  (let1 user (find-kahua-instance <kahua-user> logname)
-    (define (user-page extra-message)
-      (standard-page
-       (make <page>
-         :title #`"User ',logname'" :key "/"
-         :content
-         `((h2 "User '",logname"'")
-           (p "User " ,logname " has role(s): "
-              ,(string-join (map x->string (ref user 'role-alist)) ", "))
-           (h3 "Change password:")
-           (form/cont
-            (@@ (cont ,change-pass (oldpass) (newpass1) (newpass2)))
-            ,@extra-message
-            (table
-             (@ (class "user-form"))
-             (tr (th "Old password")
-                 (td (input (@ (type "password") (name "oldpass")))))
-             (tr (th "New password")
-                 (td (input (@ (type "password") (name "newpass1")))))
-             (tr (th "Retype new password")
-                 (td (input (@ (type "password") (name "newpass2")))))
-             (tr (th)
-                 (td (input (@ (type "submit") (name "submit")
-                               (value "Change")))))))
-           ))))
-    (define change-pass
-      (entry-lambda (:keyword oldpass newpass1 newpass2)
-        (cond ((not (equal? newpass1 newpass2))
-               (user-page '((p (@ (class "warning"))
-                               "New passwords don't match."))))
-              ((not (kahua-user-password-change user oldpass newpass1))
-               (user-page '((p (@ (class "warning"))
-                               "Wrong password."))))
-              (else
-               (kahua-db-sync)
-               (user-page '((p "Password changed.")))))))
+(define-constant *developer-role* 'developer)
+(define-constant *administrator-role* 'admin)
+(define-constant *allowed-roles* `(,*administrator-role* ,*developer-role*))
 
-    (if (or (kahua-user-has-role? (kahua-current-user) '(admin developer))
-            (and-let* ((u (kahua-current-user)))
-              (equal? logname (ref u 'login-name))))
-      (user-page '())
-      (standard-page
-       (make <page>
-         :title #`"User ,logname" :key "/"
-         :content
-         `((p (@ (class "warning"))
-              "You don't have a priviledge to browse this page.")))))
-    ))
+(define-entry (user-admin logname)
+  (cond ((not logname)
+	 (if (kahua-authorized? *administrator-role*)
+	     (user-list-page '())
+	     (dont-have-priviledge-page "")))
+	((kahua-find-user logname)
+	 => (lambda (u)
+	      (cond ((eq? u (kahua-current-user)) (self-page u '()))
+		    ((kahua-authorized? *administrator-role*) (user-page u '() '()))
+		    (else (dont-have-priviledge-page logname)))))
+	(else (standard-page
+	       (make <page>
+		 :title #`"Unknown user: ,|logname|" :key "/"
+		 :content `((p (@ (class "warning"))
+			       "Unknown user: " ,logname)))))))
+
+(define (self-page user extra-message)
+  (define (change-pass-entry)
+    (entry-lambda (:keyword oldpass newpass1 newpass2)
+      (cond ((not (equal? newpass1 newpass2))
+	     (self-page user '((p (@ (class "warning"))
+				  (strong "New passwords don't match.")))))
+	    ((not (kahua-user-password-change user oldpass newpass1))
+	     (self-page user '((p (@ (class "warning"))
+				  (strong "Wrong password.")))))
+	    (else (self-page user '((p (strong "Password changed!!"))))))))
+  (let1 logname (slot-ref user 'login-name)
+    (standard-page
+     (make <page>
+       :title #`"User: ',logname'" :key "/"
+       :content
+       `(,@(if (kahua-authorized? 'admin)
+	       `((div (@ (id "edit-menu"))
+		      (a/cont (@@ (cont ,user-admin)) "[User List]")))
+	       '())
+	 (h2 "User: " ,logname)
+	 (p "Role(s): " ,(string-join (map x->string (ref user 'role-alist)) ", "))
+	 (h3 "Change password:")
+	 (form/cont
+	  (@@ (cont ,(change-pass-entry)))
+	  ,@extra-message
+	  (table
+	   (@ (class "user-form"))
+	   (tr (th "Old password:") (td ,(make-password-box "oldpass")))
+	   (tr (th "New password:") (td ,(make-password-box "newpass1")))
+	   (tr (th "Again new password:") (td ,(make-password-box "newpass2")))
+	   (tr (th) (td ,(make-submit "Change"))))))
+       ))))
+
+(define (user-page user chpw-message chrls-message)
+  (define (reset-pass-entry)
+    (entry-lambda (:keyword newpass1 newpass2)
+      (cond ((not (equal? newpass1 newpass2))
+	     (user-page user `((p (@ (class "warning"))
+				  (strong "New passwords don't match."))) '()))
+	    ((kahua-user-password-change-force user newpass1)
+	     (user-page user '((p (strong "Password changed!!"))) '()))
+	    (else
+	     (user-page user `((p (@ (class "warning"))
+				  (strong "Cannot change password."))) '())))))
+  (define (set-roles-entry)
+    (entry-lambda (:mvkeyword roles)
+      (slot-set! user 'role-alist
+		 (lset-intersection eq? (map string->symbol roles) *allowed-roles*))
+      (user-page user '() '((p (strong "Role(s) set"))))))
+  (let ((logname (slot-ref user 'login-name))
+	(uroles  (slot-ref user 'role-alist)))
+    (standard-page
+     (make <page>
+       :title #`"User: ,|logname|" :key "/"
+       :content
+       `((div (@ (id "edit-menu"))
+	      (a/cont (@@ (cont ,user-admin)) "[User List]"))
+	 (h2 "User: " ,logname)
+	 (div (@ (id "roles-change"))
+	      ,@chrls-message
+	      (form/cont (@@ (cont ,(set-roles-entry)))
+			 (p "Role(s): "
+			    ,@(map (lambda (r)
+				     (let1 rstr (symbol->string r)
+				       (make-checkbox "roles" rstr rstr (memq r uroles))))
+				   *allowed-roles*)
+			    ,(make-submit "Change"))))
+	 (h3 "Change password:")
+	 (div (@ (id "password-change"))
+	      ,@chpw-message
+	      (form/cont (@@ (cont ,(reset-pass-entry)))
+			 (table
+			  (@ (class "user-form"))
+			  (tr (th "New password:") (td ,(make-password-box "newpass1")))
+			  (tr (th "Again new password:") (td ,(make-password-box "newpass2")))
+			  (tr (th) (td ,(make-submit "Change")))))))
+       ))))
+
+(define (user-list-page extra-message)
+  (standard-page
+   (make <page>
+     :title #`"Registered Users" :key "/"
+     :content
+     `((h2 "Registered Users")
+       (table (@ (class "user-list"))
+	      (thead
+	       (tr (th "Login name") (th "Roles")))
+	      (tbody
+	       ,@(map (lambda (u)
+			`(tr (td (a/cont (@@ (cont ,user-admin ,(slot-ref u 'login-name)))
+					 ,(slot-ref u 'login-name)))
+			     (td ,(string-join (map symbol->string (slot-ref u 'role-alist))
+					       ", "))))
+		      (make-kahua-collection (kahua-current-user-class)))))))))
+
+(define (dont-have-priviledge-page login-name)
+  (standard-page
+   (make <page>
+     :title #`"User: ,|login-name|" :key "/"
+     :content
+     `((p (@ (class "warning"))
+	  "You don't have a priviledge to browse this page.")))))
+
+(define (make-password-box name)
+  `(input (@ (type "password") (name ,name))))
+
+(define (make-checkbox name value label checked?)
+  `(label (input (@ (type "checkbox") (name ,name) (value ,value)
+		    ,@(if checked? '((checked "checked")) '())))
+	  ,label))
+
+(define (make-submit value)
+  `(input (@ (type "submit") (value ,value))))
