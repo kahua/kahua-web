@@ -5,9 +5,10 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: login.kahua,v 1.10 2007/06/01 15:05:12 bizenn Exp $
+;; $Id: login.kahua,v 1.11 2007/06/03 14:32:08 bizenn Exp $
 
 (use srfi-1)
+(use gauche.collection)
 
 (define non-member-edit-flag
   (and-let* ((args (kahua-app-args))
@@ -229,6 +230,10 @@
        ))))
 
 (define (user-list-page extra-message)
+  (define (change-activity-entry u inactive?)
+    (lambda ()
+      (slot-set! u 'inactive inactive?)
+      (redirect/cont (cont user-admin))))
   (standard-page
    (make <page>
      :title #`"Registered Users" :key "/"
@@ -236,14 +241,24 @@
      `((h2 "Registered Users")
        (table (@ (class "user-list"))
 	      (thead
-	       (tr (th "Login name") (th "Roles")))
+	       (tr (th "Login name") (th "Roles")
+		   (th (@ (colspan 2)) "Activity")))
 	      (tbody
 	       ,@(map (lambda (u)
-			`(tr (td (a/cont (@@ (cont ,user-admin ,(slot-ref u 'login-name)))
-					 ,(slot-ref u 'login-name)))
-			     (td ,(string-join (map symbol->string (slot-ref u 'role-alist))
-					       ", "))))
-		      (make-kahua-collection (kahua-current-user-class)))))))))
+			(let ((login-name (name-of u))
+			      (inactive? (inactive? u)))
+			  `(tr (td (a/cont (@@ (cont ,user-admin ,login-name))
+					   ,login-name))
+			       (td ,(string-join (map symbol->string (roles-of u)) ", "))
+			       (td ,(if inactive? "NO" "YES"))
+			       (td ,(if (eq? u (kahua-current-user))
+					(if inactive? "[Activate]" "[Deactivate]")
+					`(a/cont (@@ (cont ,(change-activity-entry
+							     u (not inactive?))))
+						 ,(if inactive? "[Activate]" "[Deactivate]"))))
+			       )))
+		      (sort (coerce-to <list> (make-kahua-collection (kahua-current-user-class)))
+			    (lambda (a b) (string<? (name-of a) (name-of b)))))))))))
 
 (define (dont-have-priviledge-page login-name)
   (standard-page

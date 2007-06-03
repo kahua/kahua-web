@@ -1,3 +1,18 @@
+2007-06-03  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/comment.kahua, kahua-web/macro.kahua
+	  Now, if you login as admin user, simple-comment-form show comments
+	  with "Delete" checkbox, and you can delete(make invisible)
+	  any comments.
+
+2007-06-02  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/login.kahua, kahua-web/kahua-web.css
+	  Now user-admin entry without user's login name (as path element)
+	  is user management screen.  You can (if you have the admin role)
+	  add or remote roles from other users, activate or deactivate
+	  other users, and change also password of other users.
+
 2007-06-01  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Remove: scripts/kahua-web-user.scm, mkscript

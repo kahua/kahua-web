@@ -5,15 +5,15 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: comment.kahua,v 1.13 2007/05/29 22:27:53 bizenn Exp $
+;; $Id: comment.kahua,v 1.14 2007/06/03 14:32:08 bizenn Exp $
 
 (use srfi-1)
 (use gauche.collection)
 
 (define-class <simple-comment-set> (<kahua-persistent-base>)
   ((name     :allocation   :persistent 
-	     :init-keyword :name
-	     :init-form #f)
+	     :init-keyword :name :init-form #f
+	     :index :unique)
    (comments :allocation :persistent
 	     :init-form '())
    (comment-count :allocation :persistent
@@ -114,7 +114,8 @@
 	     `(ol
 	       ,@(map (lambda (set)
 			`(li ,(edit-set-link set))) sets))
-	     '(div "There is no comment."))))))))
+	     '(div (p "There is no comment."))))))
+     'admin)))
 
 (define-entry (comment-list)
   (define (comment-list-form)

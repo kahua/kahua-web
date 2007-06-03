@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.46 2007/05/28 09:47:57 bizenn Exp $
+;; $Id: macro.kahua,v 1.47 2007/06/03 14:32:08 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-11)
@@ -431,22 +431,41 @@
 	    (when do-mail (do-mail page comment)))))
       (redirect-to page)))
 
-  (define (comment-list key)
-    (or (and-let* ((comments (find-kahua-instance <simple-comment-set> key))
+  (define (delete-comments-entry page)
+    (entry-lambda (:mvkeyword delete-comments)
+      (for-each (lambda (id)
+		  (and-let* ((c (kahua-instance <simple-comment> (x->integer id))))
+		    (slot-set! c 'visible #f)))
+		delete-comments)
+      (redirect-to page)))
+
+  (define (comment-list page key)
+    (define make-comment-header
+      (if (kahua-authorized? 'admin)
+	  (lambda (c)
+	    `(div (@ (class "comment-header"))
+		 ,(slot-ref c 'author) ": (" ,(sys-ctime (slot-ref c 'date)) ")"
+		 (& "nbsp") (& "nbsp")
+		 ,(make-checkbox "delete-comments" (kahua-persistent-id c) "Delete" #f)))
+	  (lambda (c)
+	    `(div (@ (class "comment-header"))
+		 ,(slot-ref c 'author) ": (" ,(sys-ctime (slot-ref c 'date)) ")"))))
+    (define (make-comment-body c)
+      `(div (@ (class "comment-contents"))
+	    ,@(wiliki:format-content
+	       (string-append "{{{\n" (or (slot-ref c 'contents) "") "\n}}}"))))
+    (or (and-let* ((comments (find-kahua-instance <simple-comment-set> 'name key))
 		   (ls (filter-map (lambda (c)
 				     (and c (visible? c)
 					  `(div (@ (class "comment"))
-						(div (@ (class "comment-header"))
-						     ,(ref c 'author)
-						     ": (" ,(sys-ctime (ref c 'date)) ")")
-						(div (@ (class "comment-contents"))
-						     ,@(wiliki:format-content
-							(string-append
-							 "{{{\n"
-							 (or (ref c 'contents) "")
-							 "\n}}}"))))))
-				   (reverse (ref comments 'comments)))))
-	  (and (pair? ls) ls))
+						,(make-comment-header c)
+						,(make-comment-body c))))
+				   (reverse (slot-ref comments 'comments))))
+		   ((pair? ls)))
+	  (if (kahua-authorized? 'admin)
+	      `((form/cont (@@ (cont ,(delete-comments-entry page)))
+			   ,@ls ,(make-submit "Delete checked comment(s)")))
+	      ls))
 	'((p "There is no comment."))))
 
   (define (notice-mail mail-to mail-from page comment)
@@ -471,13 +490,14 @@
     (or (and-let* ((page (if page-name
 			     (get-page page-name)
 			     (current-page)))
-		   (key (comment-key comment-name page)))
+		   (key (comment-key comment-name page))
+		   (starting-page (get-starting-page page)))
 	  `(div (@ (class "simplecommentmacro"))
 		(div (@ (class "commentform"))
 		     (form/cont 
 		      (@@ (cont
 			   ,(commit-comment-entry
-			     (get-starting-page page) key
+			     starting-page key
 			     (and mail-to (cut notice-mail mail-to mail-from <> <>)))))
 		      (div "Name: "
 			   (input (@ (type "text") 
@@ -485,10 +505,9 @@
 		      (div "Comment: "
 			   (textarea (@ (name "contents") 
 					(cols "70") (rows "3"))))
-		      (div (input (@ (type "submit") (name "submit")
-				     (value "submit"))))))
+		      (div ,(make-submit "Submit a comment"))))
 		(div (@ (class "comments"))
-		     ,@(comment-list key))))
+		     ,@(comment-list starting-page key))))
 	'())
     ))
 
