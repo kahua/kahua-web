@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: login.kahua,v 1.14 2007/06/04 10:30:26 bizenn Exp $
+;; $Id: login.kahua,v 1.15 2007/06/04 12:46:02 bizenn Exp $
 
 (use srfi-1)
 (use gauche.collection)
@@ -315,6 +315,9 @@
 	 (let1 rstr (symbol->string r)
 	   (make-checkbox name rstr rstr (memq r roles))))
        *allowed-roles*))
+
+(define (make-filebox name)
+  `(input (@ (type "file") (name ,name))))
 
 (define (make-warning . texts)
   `(p (@ (class "warning"))
