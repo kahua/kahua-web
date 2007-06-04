@@ -1,4 +1,4 @@
-$Id: README,v 1.8 2007/05/29 12:14:52 bizenn Exp $
+$Id: README,v 1.9 2007/06/04 04:01:01 bizenn Exp $
 
 kahua-web : Kahua-based WiLiKi-like simple Web site builder.
 
@@ -7,6 +7,10 @@ kahua-web : Kahua-based WiLiKi-like simple Web site builder.
 Gauche-0.8.10 or later
 WiLiKi-0.6_pre2 or later
 Kahua-1.0.4 or later
+
+* Kahua-web work on WiLiKi 0.5.3(latest release version), but
+  the version of WiLiKi has several bugs.  So we recommend use
+  CVS HEAD of WiLiKi.
 
 [Installation]
 
