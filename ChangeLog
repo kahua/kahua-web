@@ -1,3 +1,9 @@
+2007-06-04  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/upload.kahua
+	  Only enable upload image files when only proper user login (not
+	  anonymous login).
+
 2007-06-03  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: kahua-web/comment.kahua, kahua-web/macro.kahua
