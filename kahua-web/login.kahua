@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: login.kahua,v 1.11 2007/06/03 14:32:08 bizenn Exp $
+;; $Id: login.kahua,v 1.12 2007/06/04 02:48:13 bizenn Exp $
 
 (use srfi-1)
 (use gauche.collection)
@@ -212,11 +212,7 @@
 	 (div (@ (id "roles-change"))
 	      ,@chrls-message
 	      (form/cont (@@ (cont ,(set-roles-entry)))
-			 (p "Role(s): "
-			    ,@(map (lambda (r)
-				     (let1 rstr (symbol->string r)
-				       (make-checkbox "roles" rstr rstr (memq r uroles))))
-				   *allowed-roles*)
+			 (p "Role(s): " ,@(make-roles-checklist "roles" uroles)
 			    ,(make-submit "Change"))))
 	 (h3 "Change password:")
 	 (div (@ (id "password-change"))
@@ -239,6 +235,7 @@
      :title #`"Registered Users" :key "/"
      :content
      `((h2 "Registered Users")
+       (p (a/cont (@@ (cont ,(lambda () (new-user-form '())))) "[New user]"))
        (table (@ (class "user-list"))
 	      (thead
 	       (tr (th "Login name") (th "Roles")
@@ -260,6 +257,39 @@
 		      (sort (coerce-to <list> (make-kahua-collection (kahua-current-user-class)))
 			    (lambda (a b) (string<? (name-of a) (name-of b)))))))))))
 
+(define (new-user-form . extra-messages)
+  (define (add-user-entry)
+    (entry-lambda (:keyword login-name password1 password2 :mvkeyword roles)
+      (cond ((or (not login-name) (> 3 (string-length login-name)))
+	     (new-user-form (make-warning "login-name's length must be 3 or longer.")))
+	    ((kahua-find-user login-name)
+	     (new-user-form (make-warning "User '" login-name "' already exists.")))
+	    ((or (not password1) (> 4 (string-length password1)))
+	     (new-user-form (make-warning "Password must be longer than 3.")))
+	    ((not (equal? password1 password2))
+	     (new-user-form (make-warning "Passwords don't match.")))
+	    (else
+	     (kahua-add-user login-name password1 :role-alist
+			     (lset-intersection eq? (map string->symbol roles) *allowed-roles*))
+	     (redirect/cont (cont user-admin))))))
+  (standard-page
+   (make <page>
+     :title "New user" :key "/"
+     :content
+     `((div (@ (id "edit-menu"))
+	    (a/cont (@@ (cont ,user-admin)) "[User List]"))
+       (h2 "New user")
+       (div
+	,@extra-messages
+	(form/cont
+	 (@@ (cont ,(add-user-entry)))
+	 (table (@ (class "user-form"))
+		(tr (th "Login name:") (td ,(make-textbox "login-name")))
+		(tr (th "Role(s):")    (td ,@(make-roles-checklist "roles" '())))
+		(tr (th "Password:")   (td ,(make-password-box "password1")))
+		(tr (th "Again password:") (td ,(make-password-box "password2")))
+		(tr (th) (td ,(make-submit "Add user"))))))))))
+
 (define (dont-have-priviledge-page login-name)
   (standard-page
    (make <page>
@@ -267,6 +297,9 @@
      :content
      `((p (@ (class "warning"))
 	  "You don't have a priviledge to browse this page.")))))
+
+(define (make-textbox name)
+  `(input (@ (type "text") (name ,name))))
 
 (define (make-password-box name)
   `(input (@ (type "password") (name ,name))))
@@ -278,3 +311,13 @@
 
 (define (make-submit value)
   `(input (@ (type "submit") (value ,value))))
+
+(define (make-roles-checklist name roles)
+  (map (lambda (r)
+	 (let1 rstr (symbol->string r)
+	   (make-checkbox name rstr rstr (memq r roles))))
+       *allowed-roles*))
+
+(define (make-warning . texts)
+  `(p (@ (class "warning"))
+      (strong ,@texts)))
