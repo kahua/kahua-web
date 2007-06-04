@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: login.kahua,v 1.12 2007/06/04 02:48:13 bizenn Exp $
+;; $Id: login.kahua,v 1.13 2007/06/04 09:54:50 bizenn Exp $
 
 (use srfi-1)
 (use gauche.collection)
@@ -43,10 +43,8 @@
 			(@@ (cont ,(make-login-check-entry)))
 			(table
 			 (@ (class "user-form"))
-			 (tr (th "Nickname")
-			     (td (input (@ (type "text") (name "logname")))))
-			 (tr (th)
-			     (td (input (@ (type "submit") (value "Login"))))))))))))
+			 (tr (th "Nickname") (td ,(make-textbox "logname")))
+			 (tr (th) (td ,(make-submit "Login"))))))))))
 	   ;; Only normal login
 	   (show-normal-login-form
 	    (lambda (extra-contents page)
@@ -68,12 +66,9 @@
 		    (@@ (cont ,(make-login-check-entry)))
 		    (table
 		     (@ (class "user-form"))
-		     (tr (th "Username")
-			 (td (input (@ (type "text") (name "logname")))))
-		     (tr (th "Password")
-			 (td (input (@ (type "password") (name "pass")))))
-		     (tr (th)
-			 (td (input (@ (type "submit") (value "Login")))))))))))))
+		     (tr (th "Username") (td ,(make-textbox "logname")))
+		     (tr (th "Password") (td ,(make-password-box "pass")))
+		     (tr (th) (td ,(make-submit "Login")))))))))))
     (if non-member-edit-flag
 	show-anon-login-form
 	show-normal-login-form)))
@@ -298,8 +293,11 @@
      `((p (@ (class "warning"))
 	  "You don't have a priviledge to browse this page.")))))
 
-(define (make-textbox name)
-  `(input (@ (type "text") (name ,name))))
+(define (make-textbox name . attrs)
+  `(input (@ (type "text") (name ,name) ,@attrs)))
+
+(define (make-textarea name value . attrs)
+  `(textarea (@ (name ,name) ,@attrs) ,(if value value "")))
 
 (define (make-password-box name)
   `(input (@ (type "password") (name ,name))))
