@@ -1,10 +1,10 @@
-$Id: README,v 1.9 2007/06/04 04:01:01 bizenn Exp $
+$Id: README,v 1.10 2007/06/04 06:24:23 bizenn Exp $
 
 kahua-web : Kahua-based WiLiKi-like simple Web site builder.
 
 [Requirements]
 
-Gauche-0.8.10 or later
+Gauche-0.8.9 or later
 WiLiKi-0.6_pre2 or later
 Kahua-1.0.4 or later
 
