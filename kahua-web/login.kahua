@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: login.kahua,v 1.13 2007/06/04 09:54:50 bizenn Exp $
+;; $Id: login.kahua,v 1.14 2007/06/04 10:30:26 bizenn Exp $
 
 (use srfi-1)
 (use gauche.collection)
@@ -302,9 +302,9 @@
 (define (make-password-box name)
   `(input (@ (type "password") (name ,name))))
 
-(define (make-checkbox name value label checked?)
+(define (make-checkbox name value label checked? . attrs)
   `(label (input (@ (type "checkbox") (name ,name) (value ,value)
-		    ,@(if checked? '((checked "checked")) '())))
+		    ,@(if checked? '((checked "checked")) '()) ,@attrs))
 	  ,label))
 
 (define (make-submit value)

@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.77 2007/06/04 09:54:50 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.78 2007/06/04 10:30:26 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -605,37 +605,26 @@
 		     `(,@extra-contents
 		       (div
 			(form/cont
-			 (@@ (cont ,commit (donttouch) (content)))
-			 (@ (class "page-editor"))
-			 (textarea (@ (name "content") (rows 30) (cols 80))
-				   ,(ref page 'content))
+			 (@@ (cont ,commit)) (@ (class "page-editor"))
+			 ,(make-textarea "content" (slot-ref page 'content)
+					 '(rows 30) '(cols 80))
 			 (br)
 			 (div (@ (class "edit-inputs"))
-			      (input (@ (type "submit") (name "commit")
-					(value "Commit")))
+			      ,(make-submit "Commit")
 			      " "
-			      (div "log message : "
-				   (input (@ (type "text")
-					     (name "comment")
-					     (size 30) (value ""))))
+			      (div "log message : " ,(make-textbox "comment" '(size 30)))
 			      " "
-			      (input (@ (type "checkbox") (name "donttouch")
-					(value "on") (id "donttouch")
-					,@(if admin-page? '((checked "checked")) '())))
-			      (label (@ (for "donttouch"))
-				     "Don't update 'Recent Changes'")
+			      ,(make-checkbox "donttouch" "on" "Don't update 'Recent Changes'"
+					      admin-page?)
 			      " "
-			      (input (@ (type "checkbox") (name "addtonews")
-					(value "on") (id "addtonews")))
-			      (label (@ (for "addtonews")) "Add to news item")
+			      ,(make-checkbox "addtonews" "on" "Add to news item" #f)
 			      (br)
-			      "Change Page Name : "
-			      (input (@ (type "entry") (name "changename") (width 20)
-					(value ,(ref page 'key))))
+			      (label "Change Page Name : "
+				     ,(make-textbox "changename" `(value ,(slot-ref page 'key))
+						    '(size 20)))
 			      " "
-			      (input (@ (type "checkbox") (name "confirmchange")
-					(value "on") (id "confirmchange")))
-			      (label (@ (for "confirmchange")) "I'm sure"))
+			      ,(make-checkbox "confirmchange" "on" "I'm sure" #f
+					      '(id "confirmchange")))
 			 (br)
 			 (div (@ (class "edit-help"))
 			      ,@(use-page "/$admin/edit-help"))
