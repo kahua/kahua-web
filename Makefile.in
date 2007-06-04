@@ -1,5 +1,5 @@
 # Makefile for kahua-web
-# $Id: Makefile.in,v 1.38 2007/05/31 15:29:47 bizenn Exp $
+# $Id: Makefile.in,v 1.39 2007/06/04 04:07:33 bizenn Exp $
 
 package	          = @PACKAGE_NAME@
 package_version   = @PACKAGE_VERSION@
@@ -93,7 +93,7 @@ install:
 	done
 	for f in $(KAHUA_PLUGINFILES); do \
 	  $(KAHUA_INSTALL) $(KAHUACONFIG) -t plugin --no-overwrite \
-		-r $$f `$(KAHUA_CONFIG) plugin-directory`/$$f;\
+		-r $$f `$(KAHUA_CONFIG) $(KAHUACONFIG) plugin-directory`/$$f;\
 	done
 
 init:
