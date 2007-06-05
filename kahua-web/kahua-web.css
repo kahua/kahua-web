@@ -1,12 +1,12 @@
 /* style sheet for kahua-web */
-/* $Id: kahua-web.css,v 1.24 2007/06/01 17:30:55 bizenn Exp $ */
+/* $Id: kahua-web.css,v 1.25 2007/06/05 13:58:47 bizenn Exp $ */
 
 * {
   color: black;
   background-color: transparent;
   padding: 0;
   margin: 0;
-  font-size: medium;
+  font-size: 100%;
   font-weight: normal;
   font-family: verdana, arial, helvetica, sans-serif;
 }
@@ -28,17 +28,22 @@ em {
 }
 
 div#body-container {
-  width: 640px;
+  width: 720px;
   margin: 0 auto;
 }
+div#head-container {
+  width: 100%;
+}
 div#main-container {
+  width: 100%;
   float: none;
 }
 div#title-pane {
+  width: 700px;
   text-align: left;
   color: #ffffff;
-  margin: 0pt;
-  padding: 10pt 15pt 5pt 10pt;
+  margin: 0;
+  padding: 10px 0 10px 20px;
   background-color: #49B52F;
 }
 div#naviation-pane {
@@ -47,18 +52,18 @@ div#naviation-pane {
 div#side-pane {
   float: left;
   clear: none;
-  width: 150px;
+  width: 180px;
   height: 100%;
   background-color: #ccffff;
-  padding: 0 5px;
-  font-size: 90%;
+  padding: 5px;
+  font-size: 80%;
 }
 div#main-pane {
   float: left;
   clear: none;
-  width: 470px;
+  width:  525px;
   height: 100%;
-  padding: 5px;
+  padding: 5px 0 5px 5px;
 }
 div#bottom-pane {
   width: 100%;
@@ -145,6 +150,7 @@ pre {
   border-style: solid;
   padding: 0.5em;
   font-family: monospace;
+  overflow: auto;
 }
 
 p.warning {
@@ -168,9 +174,7 @@ form.page-editor textarea {
 }
 
 .macro-error { background-color: #ee5555; }
-.simplecommentmacro { font-size: 80%; }
-.commentform { font-size: 80%; }
-.comments { font-size: 80%; }
+div.commentform textarea { width: 100%; }
 .highlight { background-color: yellow; }
 
 table.version-info th {
