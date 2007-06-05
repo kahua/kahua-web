@@ -1,5 +1,5 @@
 /* style sheet for kahua-web */
-/* $Id: kahua-web.css,v 1.25 2007/06/05 13:58:47 bizenn Exp $ */
+/* $Id: kahua-web.css,v 1.26 2007/06/05 15:41:00 bizenn Exp $ */
 
 * {
   color: black;
@@ -202,4 +202,12 @@ table.user-list td {
   border-width: 1px;
   border-color: #999999;
   padding: 2px;
+}
+
+blockquote {
+  border: 2px dotted #808000;
+  background-color: #f5f5dc;
+  width: 90%;
+  padding: .5em;
+  margin: .5em auto;
 }
