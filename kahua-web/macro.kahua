@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.48 2007/06/04 09:54:50 bizenn Exp $
+;; $Id: macro.kahua,v 1.49 2007/06/05 16:22:09 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-11)
@@ -492,18 +492,18 @@
 			     (current-page)))
 		   (key (comment-key comment-name page))
 		   (starting-page (get-starting-page page)))
-	  `(div (@ (class "simplecommentmacro"))
-		(div (@ (class "commentform"))
-		     (form/cont 
-		      (@@ (cont
-			   ,(commit-comment-entry
-			     starting-page key
-			     (and mail-to (cut notice-mail mail-to mail-from <> <>)))))
-		      (div "Name: " ,(make-textbox "author" '(size 20) '(maxlength 20)))
-		      (div "Comment: " ,(make-textarea "contents" #f '(cols 70) '(rows 3)))
-		      (div ,(make-submit "Submit a comment"))))
-		(div (@ (class "comments"))
-		     ,@(comment-list starting-page key))))
+	  `((div (@ (class "simplecommentmacro"))
+		 (div (@ (class "commentform"))
+		      (form/cont 
+		       (@@ (cont
+			    ,(commit-comment-entry
+			      starting-page key
+			      (and mail-to (cut notice-mail mail-to mail-from <> <>)))))
+		       (div "Name: " ,(make-textbox "author" '(size 20) '(maxlength 20)))
+		       (div "Comment: " ,(make-textarea "contents" #f '(cols 70) '(rows 3)))
+		       (div ,(make-submit "Submit a comment"))))
+		 (div (@ (class "comments"))
+		      ,@(comment-list starting-page key)))))
 	'())
     ))
 
