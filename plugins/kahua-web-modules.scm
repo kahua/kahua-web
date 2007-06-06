@@ -3,3 +3,4 @@
 (allow-module util.list)
 (allow-module www.cgi)
 (allow-module gauche.threads)
+(allow-module srfi-11)

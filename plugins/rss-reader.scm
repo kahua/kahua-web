@@ -3,8 +3,9 @@
 ;;  Copyright (c) 2005-2007 Kahua Project, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss-reader.scm,v 1.3 2007/05/16 08:43:45 bizenn Exp $
+;; $Id: rss-reader.scm,v 1.4 2007/06/06 05:45:12 bizenn Exp $
 
+(use srfi-11)
 (use rfc.uri)
 (use rfc.http)
 (use rfc.822)
@@ -12,6 +13,7 @@
 (use sxml.sxpath)
 (use util.match)
 (use util.list)
+(use gauche.charconv)
 
 (define-plugin "rss-reader"
   (version "0.1")
@@ -20,15 +22,33 @@
 	  )
   (depend #f))
 
-(define (rss->sxml uri)
-  (receive (schema user-info hostname port path query fragment)
-      (uri-parse uri)
+(define (rss->sxml uri . maybe-tmpbase)
+  (define (open-rss-input-file-encoding fname)
+    (let* ((in (open-input-file fname))
+	   (encoding (match (ssax:read-markup-token in)
+		       ('(PI . xml)
+			(let1 attrs (call-with-input-string
+					(ssax:read-pi-body-as-string in)
+				      (cut ssax:read-attributes <> '()))
+			  (assq-ref attrs 'encoding 'utf-8)))
+		       (else                        'utf-8))))
+      (port-seek in 0)
+      (wrap-with-input-conversion in encoding)))
+  (let*-values (((schema user-info hostname port path query fragment) (uri-parse uri))
+		((sink fname) (sys-mkstemp (get-optional maybe-tmpbase "/tmp/rss-"))))
     (receive (status header body)
-	(http-get hostname path)
-      (call-with-input-string body
-	(lambda (in)
-	  (let ((sxml-data (ssax:xml->sxml in '())))
-	    (values status header sxml-data)))))))
+	(unwind-protect
+	 (http-get hostname path
+		   :sink sink
+		   :flusher (lambda (sink _)
+			      (flush sink)
+			      (open-rss-input-file-encoding fname)))
+	 (begin
+	   (close-output-port sink)
+	   (sys-remove fname)))
+      (unwind-protect
+       (values status header (ssax:xml->sxml body '()))
+       (close-input-port body)))))
 
 (define (rss-include uri . count&format)
   (let-optionals* count&format
