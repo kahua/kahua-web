@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.49 2007/06/05 16:22:09 bizenn Exp $
+;; $Id: macro.kahua,v 1.50 2007/06/07 02:48:53 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-11)
@@ -511,40 +511,47 @@
 (define-wiki-macro simple-comment-form-bis simple-comment-form)
 
 ;; rss-date
-(define-wiki-macro (rss-date uri . count&format)
-  (let-optionals* count&format ((count #f)
-				(format (lambda (item)
-					  (let ((date  (list-ref item 0 #f)))
-					    (string-append "(" (date->string date "~Y-~m-~d") ")")))))
-    (rss-include uri count format)))
-
+(define-wiki-macro (rss-date uri . maybe-count)
+  (define (rss-format item)
+    (let-optionals* item ((date #f)
+			  (title #f)	; ignore
+			  (link #f))
+      `(span "(" (a (@ (href ,link)) ,(date->string date "~Y-~m-~d")) ")")))
+  (rss-include uri :tmpbase (kahua-tmpbase)
+		   :count (get-optional maybe-count #f)
+		   :formatter rss-format))
 
 ;; rss-title
-(define-wiki-macro (rss-title uri . count&format)
-  (let-optionals* count&format ((count #f)
-				(format (lambda (item)
-					  (let ((date  (list-ref item 0 #f))
-						(title (list-ref item 1 #f))
-						(link  (list-ref item 2 #f)))
-					    `(div  (a (@ (href ,link)) ,(date->string date "~Y-~m-~d") " " ,title))))))
-    (rss-include uri count format)))
+(define-wiki-macro (rss-title uri . maybe-count)
+  (define (rss-format item)
+    (let-optionals* item
+	((date #f)
+	 (title #f)
+	 (link #f))
+      `(div  (a (@ (href ,link)) ,(date->string date "~Y-~m-~d") " " ,title))))
+  (rss-include uri :tmpbase (kahua-tmpbase)
+		   :count (get-optional maybe-count #f)
+		   :formatter rss-format))
 
 ;; rss-include
-(define-wiki-macro (rss-include uri . count&format)
-  (let-optionals* count&format ((count #f)
-				(format (lambda (item)
-					  (let ((date     (list-ref item 0 #f))
-						(title    (list-ref item 1 #f))
-						(link     (list-ref item 2 #f))
-						(content  (list-ref item 3 #f))
-						(author   (list-ref item 4 #f))
-						(comments (list-ref item 5 #f)))
-					    `(div  (h3 (a (@ (href ,link)) ,(date->string date "~Y-~m-~d") " " ,title))
-						   ,content
-						   (hr)
-						   (div "by" (& "nbsp") ,author (& "nbsp") "|" (& "nbsp") (a (@ (href ,comments)) "Comments"))
-						   (hr))))))
-    (rss-include uri count format)))
+(define-wiki-macro (rss-include uri . maybe-count)
+  (define (rss-format item)
+    (let-optionals* item
+	((date #f)
+	 (title #f)
+	 (link #f)
+	 (content #f)
+	 (author #f)
+	 (comments #f))
+      `(div  (h3 (a (@ (href ,link)) ,(date->string date "~Y-~m-~d") " " ,title))
+	     ,content
+	     (hr)
+	     (div "by" (& "nbsp") ,author (& "nbsp") "|" (& "nbsp")
+		  (a (@ (href ,comments)) "Comments"))
+	     (hr))))
+  (rss-include uri :tmpbase (kahua-tmpbase)
+		   :count (get-optional maybe-count #f)
+		   :formatter rss-format))
 
 ;; lingr badge
 (define-wiki-macro (lingr-badge uri)
