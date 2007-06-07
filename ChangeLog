@@ -1,3 +1,13 @@
+2007-06-07  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Fix: kahua-web/kahua-web.css
+	  Adjust layout to support IE6, and add some styles.
+
+	* Fix: plugins/rss-reader.scm, kahua-web/macro.scm
+	  Rewrite rss-include facility so that fixed bugs error occured
+	  when read RSS document which encoding is different from Gauche's
+	  internal character encoding.  And now doesn't make extra list.
+
 2007-06-05  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* 0.3 released.
