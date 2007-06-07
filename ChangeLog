@@ -7,6 +7,9 @@
 	  Rewrite rss-include facility so that fixed bugs error occured
 	  when read RSS document which encoding is different from Gauche's
 	  internal character encoding.  And now doesn't make extra list.
+	  Note that Gauche 0.8.10 and current CVS HEAD version has a problem
+	  that http-get/http-post ignore :sink and :flusher keyword arguments.
+	  So we avoid the proper implementation and ready transitional one.
 
 2007-06-05  Tatsuya BIZENN  <bizenn@arthub.net>
 
