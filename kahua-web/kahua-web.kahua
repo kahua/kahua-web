@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.79 2007/06/04 12:58:04 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.80 2007/06/08 02:18:59 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -92,7 +92,8 @@
 ;; will be marked as "hidden".
 
 (define-class <page-data> (<kahua-persistent-base>)
-  ((name       :allocation :persistent :init-keyword :name)
+  ((name       :allocation :persistent :init-keyword :name
+	       :index :unique)
    (content    :allocation :persistent :init-keyword :content
                :init-value "")
    (ctime      :allocation :persistent :init-keyword :ctime
@@ -109,13 +110,15 @@
 
 ;; [<page-data>]
 (define (all-page-data)
-  (filter (lambda (x) (not (ref x 'hidden)))
-          (make-kahua-collection <page-data>)))
+  (coerce-to <list> (make-kahua-collection
+		     <page-data>
+		     :predicate (lambda (x) (not (slot-ref x 'hidden))))))
 
 ;; pagename -> Maybe <page-data>
 ;; pagename must be canonicalized.
 (define (get-page-data pagename)
-  (find (lambda (p) (equal? (ref p 'name) pagename)) (all-page-data)))
+  (and-let* ((o (find-kahua-instance <page-data> 'name pagename)))
+    (and (not (slot-ref o 'hidden)) o)))
 
 (define (page-data-exists? pagename)
   (not (not (get-page-data pagename)))) ;; for now
@@ -403,9 +406,9 @@
 ;; +---------------------------------------------------+
 ;; |title-pane    Page Title                           |
 ;; +---------------------------------------------------+
-;; |side-pane |   contents...                          |
-;; |          |                                        |
-;; |          |                                        |
+;; |side-pane |   edit-menu (only when login)          |
+;; |          |----------------------------------------|
+;; |          |   contents...                          |
 ;; |          |                                        |
 ;; :          :                                        :
 ;; |          |                                        |

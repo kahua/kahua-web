@@ -1,3 +1,10 @@
+2007-06-08  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/kahua-web.kahua
+	  Redefine slot "name" of <page-data> as unique index slot.
+	  So procedure "get-page-data" use find-kahua-instance
+	  instead of make-kahua-collection.
+
 2007-06-07  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Fix: kahua-web/kahua-web.css
