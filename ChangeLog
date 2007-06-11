@@ -1,3 +1,9 @@
+2007-06-11  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/macro.kahua, kahua-web/upload.kahua
+	  Add function that update aleady uploaded file or delete it.
+	  It's available only when user login properly.
+
 2007-06-08  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: kahua-web/kahua-web.kahua

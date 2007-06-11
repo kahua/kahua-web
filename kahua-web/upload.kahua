@@ -4,7 +4,7 @@
 ;;  Copyright (c) 2007 Kahua Project, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: upload.kahua,v 1.6 2007/06/09 02:39:10 bizenn Exp $
+;; $Id: upload.kahua,v 1.7 2007/06/11 05:36:26 bizenn Exp $
 
 (use file.util)
 (use fileio)
@@ -31,14 +31,37 @@
 (define (static-object-upload-form fullpath page)
   (define (make-upload-entry)
     (entry-lambda (:keyword inlineobj)
-      (make-directory* (sys-dirname fullpath))
-      (save-uploaded-file inlineobj fullpath)
+      (when inlineobj
+	(make-directory* (sys-dirname fullpath))
+	(save-uploaded-file inlineobj fullpath))
       (redirect-to page)))
   `((form/cont
      (@@ (cont ,(make-upload-entry)))
      (@ (class "inline-object-upload") (enctype "multipart/form-data"))
      ,(make-filebox "inlineobj")
      ,(make-submit "upload"))))
+
+(define (make-static-object-update-link url fullpath page)
+  (define (make-update-entry)
+    (entry-lambda (:keyword inlineobj deleteobj)
+      (cond ((equal? deleteobj "yes") (sys-remove fullpath))
+	    (inlineobj (save-uploaded-file inlineobj fullpath)))
+      (redirect-to page)))
+  (define (static-object-update-page)
+    (standard-page
+     (make <page>
+       :title #`"Update form: ,|url|" :key "/"
+       :content
+       `((h2 "Update form: " url)
+	 (form/cont (@@ (cont ,(make-update-entry)))
+		    (@ (class "inline-object-update") (enctype "multipart/form-data"))
+		    ,(make-filebox "inlineobj")
+		    ,(make-checkbox "deleteobj" "yes" "Delete it" #f)
+		    ,(make-submit "update"))))))
+  (lambda (elm)
+    `((span (@ (class "inline-object-update-link"))
+	    ,@elm
+	    (a/cont (@@ (cont ,static-object-update-page)) "!")))))
 
 (define (uploadable-inline-static-object elem-maker validator url)
   (define (->path-info path)
@@ -50,13 +73,20 @@
   (let1 path-info  (->path-info (x->string url))
     (cond
      ;; Full URI(external link).
-     ((string? path-info) (values (elem-maker path-info) #f))
+     ((string? path-info) (values (elem-maker path-info) #f identity))
      ;; Relative Path(internal link).
      (else
       (unless (validator url)
 	(error "Invalid Image URL: " url))
       (let1 fullpath (apply kahua-static-document-path "kahua-web" path-info)
-	(if (or (file-exists? fullpath)
-		(not (kahua-web-static-uploadable?)))
-	    (values (elem-maker (apply kahua-static-document-url "kahua-web" path-info)) #f)
-	    (values (static-object-upload-form fullpath (get-starting-page)) #t)))))))
+	(if (file-exists? fullpath)
+	    (if (kahua-web-static-uploadable?)
+		(values (elem-maker (apply kahua-static-document-url "kahua-web" path-info))
+			#f (make-static-object-update-link url fullpath (get-starting-page)))
+		(values (elem-maker (apply kahua-static-document-url "kahua-web" path-info))
+			#f identity))
+	    (if (kahua-web-static-uploadable?)
+		(values (static-object-upload-form fullpath (get-starting-page))
+			#t identity)
+		(values (elem-maker (apply kahua-static-document-url "kahua-web" path-info))
+			#f identity))))))))
