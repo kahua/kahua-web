@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: comment.kahua,v 1.14 2007/06/03 14:32:08 bizenn Exp $
+;; $Id: comment.kahua,v 1.15 2007/06/11 06:07:09 bizenn Exp $
 
 (use srfi-1)
 (use gauche.collection)
@@ -128,16 +128,16 @@
       (standard-page
        (make <page> :title "Comment List" :key "/"
 	     :content
-	     `((h2 "コメント一覧")
+	     `((h2 "All Comments")
 	       (form/cont
 		(@ (name "commentForm"))
 		(@@ (cont ,check-comment-list))
 		(table (@ (width "100%"))
 		       (tr
 			(td)
-			(td (input (@ (type "submit")(name "delete-button")(value "削除")))))
+			(td (input (@ (type "submit")(name "delete-button")(value "delete")))))
 		       (tr
-			(td (input (@ (type "checkbox")(name "onOff")(title "全て選択")
+			(td (input (@ (type "checkbox")(name "onOff")(title "Check all")
 				      (onClick "var chkd = document.commentForm.onOff.checked; for (var i=0; i<document.commentForm.commentId.length; i++) { document.commentForm.commentId[i].checked=chkd; }"))))
 			(th "Date")(th "Author")(th "Contents"))
 		       ,@(map
@@ -158,7 +158,7 @@
 				)))
 			  comments)
 		       (tr (td)
-			   (td (input (@ (type "submit")(name "delete-button")(value "削除"))))))))))))
+			   (td (input (@ (type "submit")(name "delete-button")(value "delete"))))))))))))
   (define check-comment-list
      (entry-lambda (:mvkeyword commentId :keyword delete-button)
        (begin

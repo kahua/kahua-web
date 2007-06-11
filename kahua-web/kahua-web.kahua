@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.80 2007/06/08 02:18:59 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.81 2007/06/11 06:07:09 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -563,7 +563,7 @@
 ;; assumes pagename is canonicalized
 (define (make-nonexistent-page pagename)
   (make-error-page "Error: nonexistent page"
-                   `(p "ページ" ,pagename "は存在しません")))
+                   `(p "Page \"" ,pagename "\" does not exist.")))
 
 (define (make-error-page title body)
   (make <page> :title title :key "/Error" :content body))
