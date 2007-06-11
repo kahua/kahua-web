@@ -1,5 +1,9 @@
 2007-06-11  Tatsuya BIZENN  <bizenn@arthub.net>
 
+	* Fix: kahua-web/kahua-web.kahua
+	  format-wikiname handle a link to the top page "/" with
+	  alter link-name such as "[[///foo]]" properly.
+
 	* Change: kahua-web/macro.kahua, kahua-web/upload.kahua
 	  Add function that update aleady uploaded file or delete it.
 	  It's available only when user login properly.
