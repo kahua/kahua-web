@@ -1,4 +1,4 @@
-$Id: README,v 1.10 2007/06/04 06:24:23 bizenn Exp $
+$Id: README,v 1.11 2007/06/11 01:28:29 bizenn Exp $
 
 kahua-web : Kahua-based WiLiKi-like simple Web site builder.
 
@@ -52,6 +52,9 @@ give 'write-rss as a argument.
   (kahua-web :argument (write-rss) :run-by-default 2)
 
 [Information]
+
+Kahua-web is a open-source software licensed under the modified BSD license.
+See the file "COPYING" in detail.
 
 You can find some Kahua-web's information at the Kahua.org site.
 Sorry, it is now not updated.  Please participate and post your questions
