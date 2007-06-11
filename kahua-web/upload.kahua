@@ -4,7 +4,7 @@
 ;;  Copyright (c) 2007 Kahua Project, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: upload.kahua,v 1.7 2007/06/11 05:36:26 bizenn Exp $
+;; $Id: upload.kahua,v 1.8 2007/06/11 05:45:37 bizenn Exp $
 
 (use file.util)
 (use fileio)
@@ -52,7 +52,7 @@
      (make <page>
        :title #`"Update form: ,|url|" :key "/"
        :content
-       `((h2 "Update form: " url)
+       `((h2 "Update form: " ,url)
 	 (form/cont (@@ (cont ,(make-update-entry)))
 		    (@ (class "inline-object-update") (enctype "multipart/form-data"))
 		    ,(make-filebox "inlineobj")
