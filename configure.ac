@@ -1,9 +1,9 @@
 dnl
 dnl Configuring kahua-web
 dnl  process this file with "autoconf" to generate 'configure'.
-dnl $Id: configure.ac,v 1.29 2007/06/11 05:49:11 bizenn Exp $
+dnl $Id: configure.ac,v 1.30 2007/06/11 14:46:39 bizenn Exp $
 AC_PREREQ(2.59)
-AC_INIT(kahua-web, 0.3.1_pre1, info@kahua.org)
+AC_INIT(kahua-web, 0.3.1_pre2, info@kahua.org)
 
 AC_SUBST(PACKAGE_NAME)
 AC_SUBST(PACKAGE_VERSION)
