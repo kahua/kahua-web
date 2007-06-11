@@ -4,7 +4,7 @@
 ;;  Copyright (c) 2007 Kahua Project, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: upload.kahua,v 1.8 2007/06/11 05:45:37 bizenn Exp $
+;; $Id: upload.kahua,v 1.9 2007/06/11 14:06:23 bizenn Exp $
 
 (use file.util)
 (use fileio)
@@ -70,7 +70,7 @@
 	  path
 	  (canonical-static-path-info path))))
 
-  (let1 path-info  (->path-info (x->string url))
+  (let1 path-info  (->path-info url)
     (cond
      ;; Full URI(external link).
      ((string? path-info) (values (elem-maker path-info) #f identity))
