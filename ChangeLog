@@ -1,5 +1,7 @@
 2007-06-12  Tatsuya BIZENN  <bizenn@arthub.net>
 
+	* 0.3.1 released.
+
 	* Change: kahua-web/kahua-web.kahua, kahua-web/macro.kahua,
 	          kahua-web/kahua-web.css
 	  Change the presentation of page-set macro, and when login as
