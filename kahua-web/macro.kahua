@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.52 2007/06/11 14:06:23 bizenn Exp $
+;; $Id: macro.kahua,v 1.53 2007/06/12 04:59:40 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-11)
@@ -283,15 +283,23 @@
 ;; Page-set list
 ;;
 (define-wiki-macro (page-set setname . opts)
+  (define (make-page-link name)
+    (if (equal? name "/")
+	`((a/cont (@@ (cont ,show)) ,*kahua-web-title* ": Top Page"))
+	(format-wikiname name)))
   (or (and-let* ((set   (get-page-set (x->string setname)))
                  (num-items (x->integer (get-optional opts 0)))
                  (page-data
                   (filter-map get-page-data-from-id
                               (if (zero? num-items)
-                                (ref set 'pages)
-                                (take* (ref set 'pages) num-items)))))
-        `((ul ,@(map (lambda (data)
-                       `(li ,@(format-wikiname (ref data 'name))))
+				  (ref set 'pages)
+				  (take* (slot-ref set 'pages) num-items)))))
+        `((ul (@ (class "page-set"))
+	      ,@(map (lambda (data)
+                       `(li (span (@ (class "page-data-link"))
+				  ,@(make-page-link (slot-ref data 'name)))
+			    (span (@ (class "page-update-time"))
+				  " (" ,(standard-fmt-time (slot-ref data 'mtime)) ")")))
                      page-data))))
       (unhandled-macro 'page-set (cons setname opts))))
 

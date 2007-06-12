@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.83 2007/06/12 03:55:55 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.84 2007/06/12 04:59:40 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -232,7 +232,7 @@
 
 (define-class <page-set> (<kahua-persistent-base>)
   ((name       :init-keyword :name :init-value #f
-               :allocation :persistent)
+               :allocation :persistent :index :unique)
    (max-pages  :init-keyword :max-pages :init-value #f
                :allocation :persistent)
    (pages      :init-keyword :pages :init-value '()
@@ -264,7 +264,7 @@
 ;; the named one doesn't exist.
 (define (get-page-set page-set-name . opts)
   (let-optionals* opts ((create? #f) (maxpages #f))
-    (or (find-kahua-instance <page-set> page-set-name)
+    (or (find-kahua-instance <page-set> 'name page-set-name)
         (and create?
              (make <page-set>
                :name page-set-name
@@ -431,20 +431,20 @@
   (kahua:make-xml-template
    (kahua-template-path "kahua-web" "standard-page.xml")))
 
+(define (standard-fmt-time t)
+  (sys-strftime "%Y-%m-%d %H:%M:%S(%z)" (sys-localtime t)))
+
 (define (standard-page page)
 
-  (define (fmt-time t)
-    (sys-strftime "%Y/%m/%d %H:%M:%S" (sys-localtime t)))
-  
   (define (footer page)
     `((div (@ (id "page-footer"))
            ,@(cond-list
               ((ref page 'ctime)
-               => (lambda (t) (format "Created: ~a" (fmt-time t))))
+               => (lambda (t) (format "Created: ~a" (standard-fmt-time t))))
               ((ref page 'cuser) => (cut format " by ~a" <>))
               (#t '(br))
               ((ref page 'mtime)
-               => (lambda (t) (format "Modified: ~a" (fmt-time t))))
+               => (lambda (t) (format "Modified: ~a" (standard-fmt-time t))))
               ((ref page 'muser) => (cut format " by ~a" <>))))))
 
   (define (edit-menu page)
