@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.82 2007/06/11 14:37:50 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.83 2007/06/12 03:55:55 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -244,12 +244,20 @@
 
 ;; assume pagename is canonicalized
 (define-method page-set-push-unique! ((self <page-set>) (page <page>))
-  (let1 lis (cons (ref page 'persistent-id)
-                  (remove (cut equal? (ref page 'persistent-id) <>)
-                          (ref self 'pages)))
-    (set! (ref self 'pages)
-          (cond ((ref self 'max-pages) => (cut take* lis <>))
-                (else lis)))))
+  (let ((pid (slot-ref page 'persistent-id))
+	(terminate? (if (slot-ref self 'max-pages)
+			(lambda (_ s) (null? s))
+			(lambda (c s) (or (<= c 1) (null? s))))))
+    (slot-set! self 'pages
+	       (let loop ((ls (list pid))
+			  (count (slot-ref self 'max-pages))
+			  (src (slot-ref self 'pages)))
+		 (if (terminate? count src)
+		     (reverse! ls)
+		     (let1 p (car src)
+		       (if (equal? pid p)
+			   (loop ls count (cdr src))
+			   (loop (cons p ls) (- count 1) (cdr src)))))))))
 
 ;; (String, Bool=#f, MaxPages=#f) -> <page-set>
 ;; second arg specifies whether it should create a new page set if
