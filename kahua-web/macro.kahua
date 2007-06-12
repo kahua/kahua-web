@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.53 2007/06/12 04:59:40 bizenn Exp $
+;; $Id: macro.kahua,v 1.54 2007/06/12 07:34:41 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-11)
@@ -287,6 +287,9 @@
     (if (equal? name "/")
 	`((a/cont (@@ (cont ,show)) ,*kahua-web-title* ": Top Page"))
 	(format-wikiname name)))
+  (define (delete-pages! page-set pages)
+    (slot-set! page-set 'pages
+	       (remove (cut member <> pages) (slot-ref page-set 'pages))))
   (or (and-let* ((set   (get-page-set (x->string setname)))
                  (num-items (x->integer (get-optional opts 0)))
                  (page-data
@@ -294,13 +297,30 @@
                               (if (zero? num-items)
 				  (ref set 'pages)
 				  (take* (slot-ref set 'pages) num-items)))))
-        `((ul (@ (class "page-set"))
-	      ,@(map (lambda (data)
-                       `(li (span (@ (class "page-data-link"))
-				  ,@(make-page-link (slot-ref data 'name)))
-			    (span (@ (class "page-update-time"))
-				  " (" ,(standard-fmt-time (slot-ref data 'mtime)) ")")))
-                     page-data))))
+	(receive (make-form make-check)
+	    (if (kahua-authorized? 'admin)
+		(values (lambda (e)
+			  (let1 page (get-starting-page)
+			    `((form/cont
+			       (@@ (cont ,(entry-lambda (:mvkeyword delete-page)
+					    (unless (null? delete-page)
+					      (delete-pages! set delete-page)
+					      (run-hook save-page-hook))
+					    (redirect-to page))))
+			       ,@e
+			       ,(make-submit "delete")))))
+			(lambda (pid)
+			  (list (make-checkbox "delete-page" pid "delete?" #f))))
+		(values identity (lambda _ '())))
+	  (make-form
+	   `((ul (@ (class "page-set"))
+		 ,@(map (lambda (data)
+			  `(li (span (@ (class "page-data-link"))
+				     ,@(make-page-link (slot-ref data 'name)))
+			       (span (@ (class "page-update-time"))
+				     " (" ,(standard-fmt-time (slot-ref data 'mtime)) ")")
+			       ,@(make-check (key-of data))))
+			page-data))))))
       (unhandled-macro 'page-set (cons setname opts))))
 
 ;;---------------------------------------------------------
