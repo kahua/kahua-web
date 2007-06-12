@@ -1,6 +1,7 @@
 2007-06-12  Tatsuya BIZENN  <bizenn@arthub.net>
 
-	* Change: kahua-web/kahua-web.kahua, kahua-web/macro.kahua
+	* Change: kahua-web/kahua-web.kahua, kahua-web/macro.kahua,
+	          kahua-web/kahua-web.css
 	  Change the presentation of page-set macro, and when login as
 	  admin user you can delete pages from page-set.
 
