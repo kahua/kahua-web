@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.55 2007/06/15 07:57:38 bizenn Exp $
+;; $Id: macro.kahua,v 1.56 2007/06/15 10:00:00 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-11)
@@ -211,10 +211,16 @@
   (define (allowed? attr al)
     (memq (car attr) al))
   (define (code-path code)
-    (if (and (not (string-null? code))
-	     (char=? #\/ (string-ref code 0)))
-	code
-	(kahua-static-document-url (kahua-worker-type) code)))
+    (receive (scheme _ host _ path _ _) (uri-parse code)
+      (cond ((and scheme host
+		  (or (string=? scheme "http")
+		      (string=? scheme "https")))
+	     code)
+	    ((and (not (string-null? path))
+		  (char=? #\/ (string-ref path 0)))
+	     code)
+	    (else (kahua-static-document-url (kahua-worker-type) code)))))
+
   (define (make-object code)
     `((object
        (@ (classid "clsid:d27cdb6e-ae6d-11cf-96b8-444553540000")
