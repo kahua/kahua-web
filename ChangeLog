@@ -1,3 +1,10 @@
+2007-06-15  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/macro.kahua
+	  rss-include macro presentation is changed to fit CSS.
+	  A element "item" enclose div w/ class "rss-include-entry",
+	  and class rss-entry-body and rss-entry-footer.
+
 2007-06-12  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* 0.3.1 released.
