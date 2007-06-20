@@ -3,12 +3,11 @@
 ;;  Copyright (c) 2005-2007 Kahua Project, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss-reader.scm,v 1.7 2007/06/20 03:26:13 bizenn Exp $
+;; $Id: rss-reader.scm,v 1.8 2007/06/20 04:50:24 bizenn Exp $
 
 (use srfi-11)
 (use rfc.uri)
 (use rfc.http)
-(use rfc.822)
 (use sxml.ssax)
 (use sxml.sxpath)
 (use util.match)
@@ -18,9 +17,7 @@
 
 (define-plugin "rss-reader"
   (version "0.1")
-  (export rss->sxml
-	  rss-include
-	  )
+  (export rss->sxml)
   (depend #f))
 
 ;; Because http-get/http-post of Gauche 0.8.10 cannot handle :sink and :flusher
@@ -74,38 +71,3 @@
 	(let1 in (wrap-with-input-conversion in encoding)
 	  (values status header (ssax:xml->sxml in '())))))))
 
-(define (rss-include uri . kargs)
-  (define (default-formatter item)
-    (let ((date (car item))
-	  (title (cadr item))
-	  (link (caddr item)))
-      `(div  (a (@ (href ,link)) ,(date->string date "~Y-~m-~d") " " ,title))))
-
-  (let-keywords* kargs ((tmpbase #f)
-			(count   #f)
-			(formatter default-formatter))
-    (define finish?
-      (if count
-	  (lambda (items cnt) (or (null? items) (>= 0 cnt)))
-	  (lambda (items cnt) (null? items))))
-    (define dec
-      (if count
-	  (cut - <> 1)
-	  identity))
-    (receive (st hd sx) (rss->sxml uri tmpbase)
-      (let loop ((items ((sxpath '(rss channel item)) sx))
-		 (count count)
-		 (accum '()))
-	(if (finish? items count)
-	    (reverse! accum)
-	    (loop (cdr items) (dec count)
-		  (cons (let1 els (cdar items)
-			  (formatter
-			   (list (rfc822-date->date (assq-ref-car els 'pubDate))
-				 (assq-ref-car els 'title)
-				 (assq-ref-car els 'link)
-				 (assq-ref-car els 'description)
-				 (assq-ref-car els 'author)
-				 (assq-ref-car els 'comments))))
-			accum)))))
-    ))

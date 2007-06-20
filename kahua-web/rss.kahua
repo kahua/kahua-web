@@ -5,9 +5,18 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss.kahua,v 1.11 2007/06/01 05:18:28 bizenn Exp $
+;; $Id: rss.kahua,v 1.12 2007/06/20 04:50:24 bizenn Exp $
 
 (use rfc.uri)
+(use rfc.822)
+(use rss-reader)
+(use sxml.ssax)
+(use sxml.sxpath)
+(use util.match)
+
+;;
+;; Generate kahua-web RSS.
+;;
 
 (define (page-url page)
   (and-let* ((pd (find-kahua-instance <page-data> page)))
@@ -66,3 +75,65 @@
 (when (find (pa$ string=? "write-rss") (kahua-app-args))
   (%kahua-web-rss-uri% (cut kahua-static-document-url #`",(kahua-worker-type)/rss.xml"))
   (add-hook! save-page-hook write-rss))
+
+;;
+;; Handling external RSS (rss-include)
+;;
+
+(define-constant *rss-fetch-interval* 3600)
+
+(define-class <kahua-web:rss-cache> (<kahua-persistent-base>)
+  ((uri :init-keyword :uri :allocation :persistent :index :unique)
+   (content :init-keyword :content :allocation :persistent)
+   (last-update :init-keyword :last-update :allocation :persistent)))
+
+(define (rss-include uri . kargs)
+  (define (default-formatter item)
+    (let ((date (car item))
+	  (title (cadr item))
+	  (link (caddr item)))
+      `(div  (a (@ (href ,link)) ,(date->string date "~Y-~m-~d") " " ,title))))
+
+  (define (fetch-rss uri tmpbase)
+    (cond ((find-kahua-instance <kahua-web:rss-cache> 'uri uri)
+	   => (lambda (rss)
+		(let1 t (sys-time)
+		  (if (> (- t (slot-ref rss 'last-update)) *rss-fetch-interval*)
+		      (receive (_ _ sx) (rss->sxml uri tmpbase)
+			(slot-set! rss 'content sx)
+			sx)
+		      (slot-ref rss 'content)))))
+	  (else
+	   (receive (_ _ sx) (rss->sxml uri tmpbase)
+	     (make <kahua-web:rss-cache>
+	       :uri uri :content sx :last-update (sys-time))
+	     sx))))
+
+  (let-keywords* kargs ((tmpbase #f)
+			(count   #f)
+			(formatter default-formatter))
+    (define finish?
+      (if count
+	  (lambda (items cnt) (or (null? items) (>= 0 cnt)))
+	  (lambda (items cnt) (null? items))))
+    (define dec
+      (if count
+	  (cut - <> 1)
+	  identity))
+    (let1 sx (fetch-rss uri tmpbase)
+      (let loop ((items ((sxpath '(rss channel item)) sx))
+		 (count count)
+		 (accum '()))
+	(if (finish? items count)
+	    (reverse! accum)
+	    (loop (cdr items) (dec count)
+		  (cons (let1 els (cdar items)
+			  (formatter
+			   (list (rfc822-date->date (assq-ref-car els 'pubDate))
+				 (assq-ref-car els 'title)
+				 (assq-ref-car els 'link)
+				 (assq-ref-car els 'description)
+				 (assq-ref-car els 'author)
+				 (assq-ref-car els 'comments))))
+			accum)))))
+    ))

@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.56 2007/06/15 10:00:00 bizenn Exp $
+;; $Id: macro.kahua,v 1.57 2007/06/20 04:50:23 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-11)
@@ -586,8 +586,13 @@
 		 (h3 (a (@ (href ,link)) ,(date->string date "~Y-~m-~d") " " ,title))
 		 ,content)
 	    (div (@ (class "rss-entry-footer"))
-		 (hr) "by" (& "nbsp") ,author (& "nbsp") "|" (& "nbsp")
-		 (a (@ (href ,comments)) "Comments"))
+		 ,@(if author
+		       `((hr) "by" (& "nbsp") ,author)
+		       '())
+		 ,@(if comments
+		       `((& "nbsp") "|" (& "nbsp")
+			 (a (@ (href ,comments)) "Comments"))
+		       '()))
 	    (hr))))
   (rss-include uri :tmpbase (kahua-tmpbase)
 		   :count (get-optional maybe-count #f)

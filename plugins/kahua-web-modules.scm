@@ -4,3 +4,7 @@
 (allow-module www.cgi)
 (allow-module gauche.threads)
 (allow-module srfi-11)
+(allow-module rfc.822)
+(allow-module sxml.ssax)
+(allow-module sxml.sxpath)
+(allow-module util.match)
