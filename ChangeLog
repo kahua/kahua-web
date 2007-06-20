@@ -1,3 +1,11 @@
+2007-06-20  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/rss.kahua, kahua-web/macro.kahua,
+	          plugins/rss-reader.scm, plugins/kahua-web-modules.scm
+	  Add <kahua-web:rss-cache> to cache fetched RSS documents on
+	  local disk.  So function "rss-include" move to Kahua application
+	  code.  Now fetching interval is 3600 seconds (fixed).
+
 2007-06-15  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: kahua-web/macro.kahua
