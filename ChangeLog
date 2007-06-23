@@ -1,3 +1,11 @@
+2007-06-23  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Fix: kahua-web/rss.kahua, plugins/rss-reader.scm
+	  Fix that function "rss-include" didn't update last-update slot
+	  of RSS cache.
+	  Restore rss->sxml to the proper implementation.  So kahua-web
+	  requires Gauche CVS HEAD (or next release(0.8.11?)).
+
 2007-06-20  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: kahua-web/rss.kahua, kahua-web/macro.kahua,
