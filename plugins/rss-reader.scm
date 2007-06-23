@@ -3,7 +3,7 @@
 ;;  Copyright (c) 2005-2007 Kahua Project, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss-reader.scm,v 1.9 2007/06/23 09:48:17 bizenn Exp $
+;; $Id: rss-reader.scm,v 1.10 2007/06/23 22:45:16 bizenn Exp $
 
 (use srfi-11)
 (use rfc.uri)
@@ -13,6 +13,7 @@
 (use util.match)
 (use util.list)
 (use gauche.charconv)
+(use gauche.version)
 (use kahua.util)
 
 (define-plugin "rss-reader"
@@ -20,9 +21,57 @@
   (export rss->sxml)
   (depend #f))
 
-;; Because http-get/http-post of Gauche 0.8.10 cannot handle :sink and :flusher
-;; arguments, so we ommit the code below until this problem is fixed.
-;;
+;; Because http-get/http-post of Gauche 0.8.10 or prior cannot handle :sink and :flusher
+;; arguments, so we patch to original rfc.http module.
+(define-macro (define-transitional-patch)
+  (if (version<=? (gauche-version) "0.8.10")
+      '(with-module rfc.http
+	 (define (request-response request server request-uri options)
+	   (define (%send-request request server host request-uri has-content? options)
+	     (with-server
+	      server
+	      (lambda (in out)
+		(send-request out request host request-uri options)
+		(receive (code headers) (receive-header in)
+		  (values code
+			  headers
+			  (and has-content?
+			       (let-keywords options
+				   ((sink    (open-output-string))
+				    (flusher (lambda (sink _) (get-output-string sink)))
+				    . #f)
+				 (receive-body in headers sink flusher))))))))
+
+	   (let-keywords options
+	       ((host    (server->host server))
+		(no-redirect #f)
+		. restopts)
+	     (let1 has-content? (not (eq? request 'HEAD))
+	       (if no-redirect
+		   (%send-request request server host request-uri has-content? restopts)
+		   (let loop ((history (list (values-ref (canonical-uri request-uri host) 0)))
+			      (server server)
+			      (host host)
+			      (request-uri request-uri))
+		     (receive (code headers body)
+			 (%send-request request server host request-uri has-content? restopts)
+		       (cond ((and (string-prefix? "3" code)
+				   (assoc "location" headers))
+			      => (lambda (loc)
+				   (receive (uri server path*)
+				       (canonical-uri (cadr loc) server)
+				     (when (or (member uri history)
+					       (> (length history) 20))
+				       (errorf <http-error> "redirection is looping via ~a" uri))
+				     (loop (cons uri history)
+					   server
+					   (server->host server)
+					   path*))))
+			     (else
+			      (values code headers body))))))))))
+      '(begin)))			; Do nothing
+(define-transitional-patch)
+
 (define (rss->sxml uri tmpbase)
   (define (open-rss-input-file-encoding fname)
     (let* ((in (open-input-file fname))
@@ -50,24 +99,3 @@
       (unwind-protect
        (values status header (ssax:xml->sxml body '()))
        (close-input-port body)))))
-
-;; This is very transitional implementation.
-;; (define (rss->sxml uri _)
-;;   (define (rss-encoding str)
-;;     (call-with-input-string str
-;;       (lambda (in)
-;; 	(match (ssax:read-markup-token in)
-;; 	  ('(PI . xml)
-;; 	   (let1 attrs (call-with-input-string
-;; 			   (ssax:read-pi-body-as-string in)
-;; 			 (cut ssax:read-attributes <> '()))
-;; 	     (assq-ref attrs 'encoding 'utf-8)))
-;; 	  (else                        'utf-8)))))
-;;   (let*-values (((schema user-info hostname port path query fragment) (uri-parse uri))
-;; 		((status header body) (http-get hostname path))
-;; 		((encoding) (rss-encoding body)))
-;;     (call-with-input-string body
-;;       (lambda (in)
-;; 	(let1 in (wrap-with-input-conversion in encoding)
-;; 	  (values status header (ssax:xml->sxml in '())))))))
-
