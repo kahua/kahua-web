@@ -3,7 +3,7 @@
 ;;  Copyright (c) 2005-2007 Kahua Project, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss-reader.scm,v 1.10 2007/06/23 22:45:16 bizenn Exp $
+;; $Id: rss-reader.scm,v 1.11 2007/06/24 03:26:20 bizenn Exp $
 
 (use srfi-11)
 (use rfc.uri)
@@ -26,6 +26,7 @@
 (define-macro (define-transitional-patch)
   (if (version<=? (gauche-version) "0.8.10")
       '(with-module rfc.http
+	 ;; This definition is taken from Gauche's lib/rfc/http.scm 1.12.
 	 (define (request-response request server request-uri options)
 	   (define (%send-request request server host request-uri has-content? options)
 	     (with-server
