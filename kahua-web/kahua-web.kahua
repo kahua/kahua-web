@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.86 2007/07/03 13:13:26 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.87 2007/07/03 13:30:30 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -216,7 +216,6 @@
           (set! (ref data 'cuser) (kahua-current-user-name)))
         (set! (ref data 'mtime) (sys-time))
         (set! (ref data 'muser) (kahua-current-user-name))
-        (kahua-db-sync)
         (if (ref page 'persistent-id)
             (cont page)
             (cont (page-data->page (get-page-data (ref page 'key))))))
