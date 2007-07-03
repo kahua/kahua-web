@@ -1,3 +1,10 @@
+2007-07-03  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/kahua-web.kahua
+	  If "/$admin/title-pane" doesn't exist or has any content,
+	  title-pane display it.  This is so ugly but for backward
+	  compatibility.
+
 2007-06-24  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Fix: plugins/rss-reader.scm

@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.84 2007/06/12 04:59:40 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.85 2007/07/03 03:14:04 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -476,9 +476,12 @@
 		(link/ (@/ (rel "stylesheet") (type "text/css")
 			   (href (kahua-static-document-url "kahua-web" "kahua-web-local.css")))))
      :title-pane-contents
-     (h1/ (if (front-page? page)
-	      *kahua-web-title*
-	      (slot-ref page 'title)))
+     (let1 t (use-page "/$admin/title-pane")
+       (if (null? t)
+	   (h1/ (if (front-page? page)
+		    *kahua-web-title*
+		    (slot-ref page 'title)))
+	   t))
      :navigation-pane-contents (page-navigation page)
      :side-pane-contents (use-page "/$admin/side-pane")
      :bottom-pane-contents (use-page "/$admin/bottom-pane")
