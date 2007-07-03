@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss.kahua,v 1.13 2007/06/23 09:48:17 bizenn Exp $
+;; $Id: rss.kahua,v 1.14 2007/07/03 12:24:28 bizenn Exp $
 
 (use rfc.uri)
 (use rfc.822)
@@ -82,10 +82,13 @@
 
 (define-constant *rss-fetch-interval* 3600)
 
+(define rss2.0-item-selector (sxpath '(rss channel item)))
+
 (define-class <kahua-web:rss-cache> (<kahua-persistent-base>)
   ((uri :init-keyword :uri :allocation :persistent :index :unique)
    (content :init-keyword :content :allocation :persistent)
-   (last-update :init-keyword :last-update :allocation :persistent)))
+   (last-update :init-keyword :last-update :allocation :persistent)
+   (mix? :init-keyword :mix? :init-value #f :allocation :persistent :index :any)))
 
 (define (rss-include uri . kargs)
   (define (default-formatter item)
@@ -94,24 +97,26 @@
 	  (link (caddr item)))
       `(div  (a (@ (href ,link)) ,(date->string date "~Y-~m-~d") " " ,title))))
 
-  (define (fetch-rss uri tmpbase)
-    (cond ((find-kahua-instance <kahua-web:rss-cache> 'uri uri)
-	   => (lambda (rss)
-		(let1 t (sys-time)
-		  (if (> (- t (slot-ref rss 'last-update)) *rss-fetch-interval*)
-		      (receive (_ _ sx) (rss->sxml uri tmpbase)
-			(slot-set! rss 'content sx)
-			(slot-set! rss 'last-update t)
-			sx)
-		      (slot-ref rss 'content)))))
-	  (else
-	   (receive (_ _ sx) (rss->sxml uri tmpbase)
-	     (make <kahua-web:rss-cache>
-	       :uri uri :content sx :last-update (sys-time))
-	     sx))))
+  (define (fetch-rss uri tmpbase mix?)
+    (let1 rss (cond ((find-kahua-instance <kahua-web:rss-cache> 'uri uri)
+		     => (lambda (rss)
+			  (let1 t (sys-time)
+			    (when (> (- t (slot-ref rss 'last-update)) *rss-fetch-interval*)
+			      (receive (_ _ sx) (rss->sxml uri tmpbase)
+				(slot-set! rss 'content sx)
+				(slot-set! rss 'last-update t))))
+			  rss))
+		    (else
+		     (receive (_ _ sx) (rss->sxml uri tmpbase)
+		       (make <kahua-web:rss-cache>
+			 :uri uri :content sx :last-update (sys-time)))))
+      (unless (eq? mix? (slot-ref rss 'mix?))
+	(slot-set! rss 'mix? mix?))
+      (slot-ref rss 'content)))
 
   (let-keywords* kargs ((tmpbase #f)
 			(count   #f)
+			(mix?    #f)
 			(formatter default-formatter))
     (define finish?
       (if count
@@ -121,8 +126,8 @@
       (if count
 	  (cut - <> 1)
 	  identity))
-    (let1 sx (fetch-rss uri tmpbase)
-      (let loop ((items ((sxpath '(rss channel item)) sx))
+    (let1 sx (fetch-rss uri tmpbase mix?)
+      (let loop ((items (rss2.0-item-selector sx))
 		 (count count)
 		 (accum '()))
 	(if (finish? items count)

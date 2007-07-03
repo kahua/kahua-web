@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.57 2007/06/20 04:50:23 bizenn Exp $
+;; $Id: macro.kahua,v 1.58 2007/07/03 12:24:28 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-11)
@@ -572,7 +572,7 @@
 		   :formatter rss-format))
 
 ;; rss-include
-(define-wiki-macro (rss-include uri . maybe-count)
+(define-wiki-macro (rss-include uri . kargs)
   (define (rss-format item)
     (let-optionals* item
 	((date #f)
@@ -594,9 +594,14 @@
 			 (a (@ (href ,comments)) "Comments"))
 		       '()))
 	    (hr))))
-  (rss-include uri :tmpbase (kahua-tmpbase)
-		   :count (get-optional maybe-count #f)
-		   :formatter rss-format))
+  (let-keywords* (if (and (pair? kargs) (not (keyword? (car kargs))))
+		     (cons :count kargs)
+		     kargs)
+      ((count #f)
+       (mix?  #f))
+    (rss-include uri :tmpbase (kahua-tmpbase)
+		     :count count :mix? mix?
+		     :formatter rss-format)))
 
 ;; lingr badge
 (define-wiki-macro (lingr-badge uri)
