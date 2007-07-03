@@ -8,3 +8,4 @@
 (allow-module sxml.ssax)
 (allow-module sxml.sxpath)
 (allow-module util.match)
+(allow-module text.tree)

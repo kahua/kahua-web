@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss.kahua,v 1.14 2007/07/03 12:24:28 bizenn Exp $
+;; $Id: rss.kahua,v 1.15 2007/07/03 13:13:26 bizenn Exp $
 
 (use rfc.uri)
 (use rfc.822)
@@ -13,6 +13,8 @@
 (use sxml.ssax)
 (use sxml.sxpath)
 (use util.match)
+(use text.tree)
+(use wiliki.format)
 
 ;;
 ;; Generate kahua-web RSS.
@@ -35,6 +37,10 @@
 	(string-append *kahua-web-title* ": Top Page")
 	pn)))
 
+(define (page-data-content page-data)
+  (let1 c `((div ,@(wiliki:format-content (slot-ref page-data 'content))))
+    (tree->string (interp-html c '()))))
+
 (define (pubdate-mtime page)
   (and-let* ((pd (find-kahua-instance <page-data> page)))
     (page-data-mtime pd)))
@@ -46,9 +52,14 @@
   (sys-strftime "%a, %d %b %Y %H:%M:%S %z" (sys-localtime t)))
 
 (define-entry (rss)
-  (let1 entries (or (and-let* ((rc (find-kahua-instance <page-set> "recent-changes")))
-		      (take* (slot-ref rc 'pages) 15))
-		    '())
+  (let ((entries (or (and-let* ((rc (find-kahua-instance <page-set> "recent-changes")))
+		       (take* (slot-ref rc 'pages) 15))
+		     '()))
+	(page-data-content* (if (*rss-with-full-description*)
+				(lambda (pd)
+				  `((description ,(page-data-content pd))))
+				(lambda _ '()))))
+			      
     `((rss (@ (version "2.0"))
            (channel
             (title ,*kahua-web-title*)
@@ -65,7 +76,8 @@
 			      `(item
 				(title ,(page-data-title pd))
 				(link ,(page-data-url pd))
-				(pubDate ,(page-data-mtime pd)))))
+				(pubDate ,(page-data-mtime pd))
+				,@(page-data-content* pd))))
 			  entries))))))
 
 (define (write-rss)

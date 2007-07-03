@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: kahua-web.kahua,v 1.85 2007/07/03 03:14:04 bizenn Exp $
+;; $Id: kahua-web.kahua,v 1.86 2007/07/03 13:13:26 bizenn Exp $
 
 (use srfi-1)
 (use srfi-2)
@@ -36,6 +36,8 @@
 (define kahua-web-charset (gauche-character-encoding))
 ;; Set Account Number
 (define *google-analytics-tracking* (make-parameter #f))
+;; RSS has full description or no description
+(define *rss-with-full-description* (make-parameter #f))
 
 (load "kahua-web/version.kahua")
 (load "kahua-web/macro.kahua")

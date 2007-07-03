@@ -1,5 +1,11 @@
 2007-07-03  Tatsuya BIZENN  <bizenn@arthub.net>
 
+	* Change: kahua-web/kahua-web.kahua, kahua-web/rss.kahua,
+	          kahua-web/kahua-web-modules.scm
+	  Add support full-content description to RSS feeding.
+	  It's enabled by parameter "*rss-with-full-description*"
+	  parameter set as #t in local.kahua.
+
 	* Change: kahua-web/kahua-web.kahua
 	  If "/$admin/title-pane" doesn't exist or has any content,
 	  title-pane display it.  This is so ugly but for backward
