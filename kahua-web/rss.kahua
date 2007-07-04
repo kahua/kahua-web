@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss.kahua,v 1.16 2007/07/04 03:53:25 bizenn Exp $
+;; $Id: rss.kahua,v 1.17 2007/07/04 05:19:51 bizenn Exp $
 
 (use rfc.uri)
 (use rfc.822)
@@ -153,7 +153,8 @@
 				      (slot-set! pd 'mtime (sys-time))
 				      (page-set-push-unique! (page-set:recent-changes) p)
 				      (when (find (pa$ string=? "write-rss") (kahua-app-args))
-					(write-rss)))))
+					(write-rss))))
+				  #f)
 				(lambda _ (values)))))
       (let loop ((items items)
 		 (count count)
