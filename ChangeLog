@@ -1,3 +1,9 @@
+2007-07-04  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/rss.kahua
+	  If a RSS document rss-include'd is updated, add the rss-includ'ing
+	  page to "recent-changes" page-set and update RSS document.
+
 2007-07-03  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: kahua-web/kahua-web.kahua, kahua-web/rss.kahua,
