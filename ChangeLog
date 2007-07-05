@@ -1,6 +1,9 @@
 2007-07-05  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: kahua-web/rss.kahua
+	  Invoke write-rss under a log-off state.
+
+	* Change: kahua-web/rss.kahua
 	  Enable to specify external URL as RSS link of the site.
 	  You specify this with *external-rss-uri* parameter in local.kahua
 
