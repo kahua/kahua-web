@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss.kahua,v 1.17 2007/07/04 05:19:51 bizenn Exp $
+;; $Id: rss.kahua,v 1.18 2007/07/05 06:27:51 bizenn Exp $
 
 (use rfc.uri)
 (use rfc.822)
@@ -84,9 +84,16 @@
   (cut kahua-write-static-file
        #`",(kahua-worker-type)/rss.xml" (rss) '()))
 
+(define *use-static-rss* (make-parameter #f))
+(define *external-rss-uri* (make-parameter #f))
+
 (when (find (pa$ string=? "write-rss") (kahua-app-args))
   (%kahua-web-rss-uri% (cut kahua-static-document-url #`",(kahua-worker-type)/rss.xml"))
-  (add-hook! save-page-hook write-rss))
+  (add-hook! save-page-hook write-rss)
+  (*use-static-rss* #t))
+
+(when (*external-rss-uri*)
+  (%kahua-web-rss-uri% (*external-rss-uri*)))
 
 ;;
 ;; Handling external RSS (rss-include)
@@ -99,8 +106,7 @@
 (define-class <kahua-web:rss-cache> (<kahua-persistent-base>)
   ((uri :init-keyword :uri :allocation :persistent :index :unique)
    (content :init-keyword :content :allocation :persistent)
-   (last-update :init-keyword :last-update :allocation :persistent)
-   (mix? :init-keyword :mix? :init-value #f :allocation :persistent :index :any)))
+   (last-update :init-keyword :last-update :allocation :persistent)))
 
 (define (rss-include uri . kargs)
   (define (default-formatter item)
@@ -109,7 +115,7 @@
 	  (link (caddr item)))
       `(div  (a (@ (href ,link)) ,(date->string date "~Y-~m-~d") " " ,title))))
 
-  (define (fetch-rss uri tmpbase mix?)
+  (define (fetch-rss uri tmpbase)
     (let1 rss (cond ((find-kahua-instance <kahua-web:rss-cache> 'uri uri)
 		     => (lambda (rss)
 			  (let1 t (sys-time)
@@ -122,8 +128,6 @@
 		     (receive (_ _ sx) (rss->sxml uri tmpbase)
 		       (make <kahua-web:rss-cache>
 			 :uri uri :content sx :last-update (sys-time)))))
-      (unless (eq? mix? (slot-ref rss 'mix?))
-	(slot-set! rss 'mix? mix?))
       (slot-ref rss 'content)))
 
   (define (page->page-data page)
@@ -132,7 +136,7 @@
 
   (let-keywords* kargs ((tmpbase #f)
 			(count   #f)
-			(mix?    #f)
+			(rss-update? #f)
 			(formatter default-formatter))
     (define finish?
       (if count
@@ -142,19 +146,18 @@
       (if count
 	  (cut - <> 1)
 	  identity))
-    (let* ((sx (fetch-rss uri tmpbase mix?))
+    (let* ((sx (fetch-rss uri tmpbase))
 	   (items (rss2.0-item-selector sx))
-	   (rss-update-proc (or (and-let* ((p (current-page))
-					   ((not (#/^\/\$admin(?:\/.+)?$/ (slot-ref p 'key))))
+	   (rss-update-proc (or (and-let* ((rss-update?)
+					   (p (current-page))
 					   (pd (page->page-data p))
 					   (mtime (slot-ref pd 'mtime)))
 				  (lambda (pubdate)
 				    (when (> (time->seconds (date->time-utc pubdate)) mtime)
 				      (slot-set! pd 'mtime (sys-time))
 				      (page-set-push-unique! (page-set:recent-changes) p)
-				      (when (find (pa$ string=? "write-rss") (kahua-app-args))
-					(write-rss))))
-				  #f)
+				      (when (*use-static-rss*)
+					(write-rss)))))
 				(lambda _ (values)))))
       (let loop ((items items)
 		 (count count)
