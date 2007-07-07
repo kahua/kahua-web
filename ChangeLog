@@ -1,3 +1,9 @@
+2007-07-08  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Fix: kahua-web/macro.kahua, plugins/plugins/kahua-web-modules.scm
+	  Fix the problem that rss-include couldn't handle properly escaped
+	  HTML description.  This is a very rough and hurried work.
+
 2007-07-05  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: kahua-web/rss.kahua

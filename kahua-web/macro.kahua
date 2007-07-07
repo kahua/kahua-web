@@ -5,7 +5,7 @@
 ;;  Copyright (c) 2004-2007 Time Intermedia Corporation, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: macro.kahua,v 1.59 2007/07/05 06:27:51 bizenn Exp $
+;; $Id: macro.kahua,v 1.60 2007/07/07 21:04:27 bizenn Exp $
 
 (use gauche.collection)
 (use srfi-11)
@@ -16,6 +16,8 @@
 (use www.cgi)
 (use rfc.uri)
 (use gauche.parameter)
+(use sxml.ssax)
+(use sxml.tools)
 
 (define *macro-alist* '())
 
@@ -578,6 +580,15 @@
 
 ;; rss-include
 (define-wiki-macro (rss-include uri . kargs)
+  (define (proc-content content)
+    (cond ((string? content)
+	   (guard (e (else (list content)))
+	     (sxml:content (call-with-input-string content (cut ssax:xml->sxml <> '())))))
+	  ((list? content)
+	   (if (and (pair? content) (symbol? (car content)))
+	       (list content)
+	       content))
+	  (else (error "descript must be string or list but got: " content))))
   (define (rss-format item)
     (let-optionals* item
 	((date #f)
@@ -589,7 +600,7 @@
       `(div (@ (class "rss-include-entry"))
 	    (div (@ (class "rss-entry-body"))
 		 (h3 (a (@ (href ,link)) ,(date->string date "~Y-~m-~d") " " ,title))
-		 ,content)
+		 ,@(proc-content content))
 	    (div (@ (class "rss-entry-footer"))
 		 ,@(if author
 		       `((hr) "by" (& "nbsp") ,author)

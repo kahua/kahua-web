@@ -7,5 +7,6 @@
 (allow-module rfc.822)
 (allow-module sxml.ssax)
 (allow-module sxml.sxpath)
+(allow-module sxml.tools)
 (allow-module util.match)
 (allow-module text.tree)
