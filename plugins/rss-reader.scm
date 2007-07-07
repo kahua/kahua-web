@@ -3,7 +3,7 @@
 ;;  Copyright (c) 2005-2007 Kahua Project, All rights reserved.
 ;;  See COPYING for terms and conditions of using this software
 ;;
-;; $Id: rss-reader.scm,v 1.12 2007/07/04 05:19:51 bizenn Exp $
+;; $Id: rss-reader.scm,v 1.13 2007/07/07 22:51:19 bizenn Exp $
 
 (use srfi-11)
 (use rfc.uri)
@@ -23,7 +23,7 @@
 
 
 (define rss->sxml
-  (if (version>=? (gauche-version) "0.8.10")
+  (if (version>? (gauche-version) "0.8.10")
       ;; Use temporary file.
       (lambda (uri tmpbase)
 	(define (open-rss-input-file-encoding fname)
