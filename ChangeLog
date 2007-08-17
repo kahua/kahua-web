@@ -1,5 +1,8 @@
 2007-08-17  Tatsuya BIZENN  <bizenn@arthub.net>
 
+	* Change: kahua-web/kahua-web.kahua, kahua-web/rss.kahua
+	  Feed "Log Message" as RSS description if "Log Message" exists.
+
 	* Change: kahua-web/kahua-web.kahua
 	  Each page-data can have its own title-pane, side-pane or
 	  bottom-pane.

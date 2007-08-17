@@ -114,6 +114,8 @@
 	       :init-value #f)
    (bottom-pane :allocation :persistent :init-keyword :bottom-pane
 		:init-value #f)
+   (comment    :allocation :persistent :init-keyword :comment
+	       :init-value #f)
    ))
 
 ;; [<page-data>]
@@ -227,6 +229,11 @@
 	(slot-set! data 'title-pane (slot-ref page 'title-pane))
 	(slot-set! data 'side-pane (slot-ref page 'side-pane))
 	(slot-set! data 'bottom-pane (slot-ref page 'bottom-pane))
+	(slot-set! data 'comment
+		   (and-let* ((comment)
+			      (c (string-trim-both comment))
+			      ((not (string-null? c))))
+		     c))
         (unless (slot-ref page 'persistent-id)
           (slot-set! data 'cuser (kahua-current-user-name)))
         (slot-set! data 'mtime (sys-time))

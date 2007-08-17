@@ -56,10 +56,11 @@
 		       (take* (slot-ref rc 'pages) 15))
 		     '()))
 	(page-data-content* (if (*rss-with-full-description*)
+				(lambda (pd) `((description ,(page-data-content pd))))
 				(lambda (pd)
-				  `((description ,(page-data-content pd))))
-				(lambda _ '()))))
-			      
+				  (cond ((slot-ref pd 'comment)
+					 => (lambda (c) `((description ,c))))
+					(else '()))))))
     `((rss (@ (version "2.0"))
            (channel
             (title ,*kahua-web-title*)
