@@ -108,6 +108,12 @@
                :init-value #f)
    (hidden     :allocation :persistent :init-keyword :hidden
                :init-value #f)
+   (title-pane :allocation :persistent :init-keyword :title-pane
+	       :init-value #f)
+   (side-pane  :allocation :persistent :init-keyword :side-pane
+	       :init-value #f)
+   (bottom-pane :allocation :persistent :init-keyword :bottom-pane
+		:init-value #f)
    ))
 
 ;; [<page-data>]
@@ -141,7 +147,10 @@
 ;; containts <page-data>'s id.
 (define-class <page> (<wiliki-page>)
   ((persistent-id :init-keyword :persistent-id :init-value #f)
-   (virtual-pages :allocation :class :init-value '())))
+   (virtual-pages :allocation :class :init-value '())
+   (title-pane :init-keyword :title-pane :init-value #f)
+   (side-pane :init-keyword :side-pane :init-value #f)
+   (bottom-pane :init-keyword :bottom-pane :init-value #f)))
 
 (define (persistent-page? page)
   (and (is-a? page <page>) (ref page 'persistent-id)))
@@ -164,10 +173,13 @@
 (define (page-data->page data)
   (make <page>
     :title (base-pagename (ref data 'name))
-    :key   (ref data 'name)  :persistent-id (key-of data)
-    :content (ref data 'content)
-    :ctime (ref data 'ctime) :cuser (ref data 'cuser)
-    :mtime (ref data 'mtime) :muser (ref data 'muser)))
+    :key   (slot-ref data 'name)  :persistent-id (key-of data)
+    :content (slot-ref data 'content)
+    :ctime (slot-ref data 'ctime) :cuser (slot-ref data 'cuser)
+    :mtime (slot-ref data 'mtime) :muser (slot-ref data 'muser)
+    :title-pane (slot-ref data 'title-pane)
+    :side-pane (slot-ref data 'side-pane)
+    :bottom-pane (slot-ref data 'bottom-pane)))
 
 ;; pagename -> Maybe <page>
 ;; pagename must be canonicalized.
@@ -181,20 +193,20 @@
 (define (save-page page cont comment)
   (define (get-page-data/check id)
     (let* ((data (get-page-data-from-id id))
-           (newname (ref page 'key))
-           (oldname (ref data 'name)))
+           (newname (slot-ref page 'key))
+           (oldname (slot-ref data 'name)))
       (unless (equal? oldname newname)
         ;; page name is changed.  make sure it doesn't conflict.
         (let1 other (get-page-data newname)
           (when (and other (not (equal? (kahua-persistent-id data) (kahua-persistent-id other))))
-            (set! (ref page 'key) oldname)
+            (slot-set! page 'key oldname)
             (kahua-web-error (duplicated-page-name newname))))
-        (set! (ref data 'name) newname))
+        (slot-set! data 'name newname))
       data))
   (define (get-new-page/check name)
     (let1 other (get-page-data name)
       (when other (kahua-web-error (duplicated-page-name name)))
-      (make <page-data> :name (ref page 'key))))
+      (make <page-data> :name (slot-ref page 'key))))
   (define (duplicated-page-name name)
     (edit-page page
                `(p (@ (class "warning"))
@@ -202,23 +214,26 @@
                    "Use a different name.")))
 
   (if (kahua-web-authorized?)
-      (let ((data (cond ((ref page 'persistent-id) => get-page-data/check)
-                        (else (get-new-page/check (ref page 'key)))))
-            (new-content (ref page 'content)))
-        (when (ref page 'persistent-id)
-          (write-log (ref page 'persistent-id)
-                     (ref data 'content)
+      (let ((data (cond ((slot-ref page 'persistent-id) => get-page-data/check)
+                        (else (get-new-page/check (slot-ref page 'key)))))
+            (new-content (slot-ref page 'content)))
+        (when (slot-ref page 'persistent-id)
+          (write-log (slot-ref page 'persistent-id)
+                     (slot-ref data 'content)
                      new-content
                      (or comment "")
                      (kahua-current-user-name)))
-        (set! (ref data 'content) new-content)
-        (unless (ref page 'persistent-id)
-          (set! (ref data 'cuser) (kahua-current-user-name)))
-        (set! (ref data 'mtime) (sys-time))
-        (set! (ref data 'muser) (kahua-current-user-name))
-        (if (ref page 'persistent-id)
+        (slot-set! data 'content new-content)
+	(slot-set! data 'title-pane (slot-ref page 'title-pane))
+	(slot-set! data 'side-pane (slot-ref page 'side-pane))
+	(slot-set! data 'bottom-pane (slot-ref page 'bottom-pane))
+        (unless (slot-ref page 'persistent-id)
+          (slot-set! data 'cuser (kahua-current-user-name)))
+        (slot-set! data 'mtime (sys-time))
+        (slot-set! data 'muser (kahua-current-user-name))
+        (if (slot-ref page 'persistent-id)
             (cont page)
-            (cont (page-data->page (get-page-data (ref page 'key))))))
+            (cont (page-data->page (get-page-data (slot-ref page 'key))))))
       (let1 epage (make-error-page "Error: Not login"
 				   `(p (@ (class "warning"))
 				       "To edit a page you have to login!"))
@@ -477,15 +492,15 @@
 		(link/ (@/ (rel "stylesheet") (type "text/css")
 			   (href (kahua-static-document-url "kahua-web" "kahua-web-local.css")))))
      :title-pane-contents
-     (let1 t (use-page "/$admin/title-pane")
+     (let1 t (use-page (or (slot-ref page 'title-pane) "/$admin/title-pane"))
        (if (null? t)
 	   (h1/ (if (front-page? page)
 		    *kahua-web-title*
 		    (slot-ref page 'title)))
 	   t))
      :navigation-pane-contents (page-navigation page)
-     :side-pane-contents (use-page "/$admin/side-pane")
-     :bottom-pane-contents (use-page "/$admin/bottom-pane")
+     :side-pane-contents (use-page (or (slot-ref page 'side-pane) "/$admin/side-pane"))
+     :bottom-pane-contents (use-page (or (slot-ref page 'bottom-pane) "/$admin/bottom-pane"))
      :access-tracker (google-analytics-tracker/)
      :main-pane `((div (@ (id "main-pane"))
 		       ,@(if (persistent-page? page) (edit-menu page) '())
@@ -599,8 +614,16 @@
 (define (edit-page page . extra-contents)
   (define commit
     (entry-lambda (:keyword content donttouch addtonews
-                            changename confirmchange comment)
+                            changename confirmchange comment
+			    title-pane side-pane bottom-pane)
+      (define (string* str)
+	(and str
+	     (not (string-null? (string-trim-both str)))
+	     str))
       (slot-set! page 'content (canon-content content))
+      (slot-set! page 'title-pane (string* title-pane))
+      (slot-set! page 'side-pane (string* side-pane))
+      (slot-set! page 'bottom-pane (string* bottom-pane))
       (and-let* (((equal? confirmchange "on"))
                  (newname (canon-pagename changename)))
         (slot-set! page 'key newname))
@@ -621,27 +644,39 @@
 		     :content
 		     `(,@extra-contents
 		       (div
+			(@ (class "edit-inputs"))
 			(form/cont
 			 (@@ (cont ,commit)) (@ (class "page-editor"))
 			 ,(make-textarea "content" (slot-ref page 'content)
 					 '(rows 30) '(cols 80))
 			 (br)
-			 (div (@ (class "edit-inputs"))
-			      ,(make-submit "Commit")
-			      " "
-			      (div "log message : " ,(make-textbox "comment" '(size 30)))
-			      " "
-			      ,(make-checkbox "donttouch" "on" "Don't update 'Recent Changes'"
-					      admin-page?)
-			      " "
-			      ,(make-checkbox "addtonews" "on" "Add to news item" #f)
-			      (br)
-			      (label "Change Page Name : "
-				     ,(make-textbox "changename" `(value ,(slot-ref page 'key))
-						    '(size 20)))
-			      " "
-			      ,(make-checkbox "confirmchange" "on" "I'm sure" #f
-					      '(id "confirmchange")))
+			 (div "Log Message: " ,(make-textbox "comment" '(size 60)))
+			 ,(make-submit "Commit")
+			 (br)
+			 (div
+			  (label "Title Pane: "
+				 ,(make-textbox "title-pane"
+						`(value ,(slot-ref page 'title-pane))
+						'(size 50)))(br)
+			  (label "Side Pane: "
+				 ,(make-textbox "side-pane"
+						`(value ,(slot-ref page 'side-pane))
+						'(size 50)))(br)
+			  (label "Bottom Pane: "
+				 ,(make-textbox "bottom-pane"
+						`(value ,(slot-ref page 'bottom-pane))
+						'(size 50)))(br)
+			  ,(make-checkbox "donttouch" "on" "Don't update 'Recent Changes'"
+					  admin-page?)
+			  " "
+			  ,(make-checkbox "addtonews" "on" "Add to news item" #f)
+			  (br)
+			  (label "Change Page Name : "
+				 ,(make-textbox "changename" `(value ,(slot-ref page 'key))
+						'(size 20)))
+			  " "
+			  ,(make-checkbox "confirmchange" "on" "I'm sure" #f
+					  '(id "confirmchange")))
 			 (br)
 			 (div (@ (class "edit-help"))
 			      ,@(use-page "/$admin/edit-help"))

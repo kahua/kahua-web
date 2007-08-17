@@ -1,3 +1,9 @@
+2007-08-17  Tatsuya BIZENN  <bizenn@arthub.net>
+
+	* Change: kahua-web/kahua-web.kahua
+	  Each page-data can have its own title-pane, side-pane or
+	  bottom-pane.
+
 2007-07-29  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Change: DIST
