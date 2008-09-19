@@ -716,7 +716,7 @@
                "\n" 'suffix))
 
 ;; Support for Google Analytics Tracking
-(define (google-analytics-tracker/)
+(define (google-analytics-tracker-urchin/)
   (when/ (*google-analytics-tracking*)
     (node-set/
      (script/ (@/ (src "http://www.google-analytics.com/urchin.js")
@@ -724,6 +724,18 @@
      (script/ (@/ (type "text/javascript"))
 	      #`"_uacct=\",(*google-analytics-tracking*)\";\n"
 	      "urchinTracker();"))))
+
+(define (google-analytics-tracker-ga/)
+  (when/ (*google-analytics-tracking*)
+    (let1 scheme+host (if (kahua-meta-ref "HTTPS") "https://ssl." "http://www.")
+      (node-set/
+       (script/ (@/ (type "text/javascript")
+		    (src #`",|scheme+host|google-analytics.com/ga.js")))
+       (script/ (@/ (type "text/javascript"))
+		#`"var pageTracker = _gat._getTracker(\",(*google-analytics-tracking*)\");\n"
+		"pageTracker._trackPageview();\n")))))
+
+(define google-analytics-tracker/ google-analytics-tracker-ga/)
 
 ;;========================================================
 ;; initialization
