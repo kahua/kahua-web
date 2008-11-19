@@ -19,32 +19,29 @@
 (define GOSH "##GOSH##")
 (define (deb msg) (format "[Debug: ~a]" msg))
 
-(sys-system "rm -rf _tmp _work")
-(make-directory* "_tmp" #o755)
-(make-directory* "_work" #o755)
-(make-directory* "_work/plugins" #o755)
-(make-directory* "_work/templates/kahua-web" #o755)
-(copy-file "../plugins/wiliki.scm"  "_work/plugins/wiliki.scm")
-(copy-file "../plugins/history.scm"  "_work/plugins/history.scm")
-(copy-file "../plugins/rss-reader.scm"  "_work/plugins/rss-reader.scm")
-(copy-file "../plugins/kahua-web-modules.scm"  "_work/plugins/kahua-web-modules.scm")
-(copy-file "../templates/standard-page.xml" "_work/templates/kahua-web/standard-page.xml")
-(copy-file "##KAHUA_WORKING##/plugins/allow-module.scm"
-           "_work/plugins/allow-module.scm")
-(copy-file "##KAHUA_WORKING##/plugins/sendmail.scm"  "_work/plugins/sendmail.scm")
-(copy-file "##KAHUA_WORKING##/plugins/fileio.scm" "_work/plugins/fileio.scm")
+(define *site* "_site")
 
+(sys-system #`"rm -rf ,|*site*|")
+(kahua-site-create *site*)
 
-(define *config* "./test.conf")
+(copy-file "../plugins/wiliki.scm" #`",|*site*|/plugins/wiliki.scm")
+(copy-file "../plugins/history.scm" #`",|*site*|/plugins/history.scm")
+(copy-file "../plugins/rss-reader.scm" #`",|*site*|/plugins/rss-reader.scm")
+(copy-file "../plugins/kahua-web-modules.scm" #`",|*site*|/plugins/kahua-web-modules.scm")
+(make-directory* #`",|*site*|/templates/kahua-web" #o755)
+(copy-file "../templates/standard-page.xml" #`",|*site*|/templates/kahua-web/standard-page.xml")
+(copy-file "##KAHUA_WORKING##/plugins/allow-module.scm" #`",|*site*|/plugins/allow-module.scm")
+(copy-file "##KAHUA_WORKING##/plugins/sendmail.scm" #`",|*site*|/plugins/sendmail.scm")
+(copy-file "##KAHUA_WORKING##/plugins/fileio.scm"#`",|*site*|/plugins/fileio.scm")
 
-(kahua-init *config*)
+(kahua-common-init *site* #f)
 
 ;;------------------------------------------------------------
 ;; Run wiki-iki
 (test-section "kahua-server kahua-web.kahua")
 
 (with-worker
- (w `(,GOSH "-I.." "-I##KAHUA_LIB##" "kahua-server.scm" "-c" ,*config*
+ (w `(,GOSH "-I.." "-I##KAHUA_LIB##" "kahua-server.scm" "-S" ,*site*
             "../kahua-web/kahua-web.kahua"))
  (test* "run kahua-web.kahua" #t (worker-running? w))
  )
