@@ -1,3 +1,7 @@
+2008-11-19  ENDO Yasuyuki  <yasuyuki@javaopen.org>
+
+	* test/test.scm.in (*site*): use site-bundle with test.
+
 2008-09-19  Tatsuya BIZENN  <bizenn@arthub.net>
 
 	* Add&Change: kahua-web/kahua-web.kahua
