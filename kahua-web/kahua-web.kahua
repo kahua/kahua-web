@@ -691,6 +691,51 @@
 			 ))))))
        (standard-page epage)))))
 
+;; opml
+
+(define-entry (opml :rest prefix)
+  (define (name-of data) (ref data 'name))
+  (define (content-of data) (ref data 'content))
+  (define (render forest)
+    `(,@(map (lambda (tree)
+	       `(item (@ (text ,(name-of (car tree)))
+			 (content ,(sxml:string->xml (content-of (car tree)))))
+		      ,@(if (null? (cddr tree)) '()
+			    (render (cddr tree)))))
+	     (sort forest (lambda (a b) (string<? (name-of (car a)) (name-of (car b)))))))
+    )
+
+  (define (find-parent me forest)
+    (find (lambda (x)
+            (and (not (eq? me x))
+                 (string-prefix? #`",(name-of (car x))/" (name-of (car me)))
+                 (not (string-scan (string-drop (name-of (car me))
+                                                (+ (string-length (name-of (car x))) 1))
+                                   #\/))))
+          forest))
+  
+  (let1 page-data  ;; ((name root? . children) ...)
+      (filter-map (lambda (data)
+                    (and (string-prefix? (pagename-join prefix) (name-of data))
+                         (list data #t)))
+                  (filter (lambda (x) (and (string? (name-of x))
+					   (string-prefix? (pagename-join prefix) (name-of x))))
+			  (all-page-data)))
+  `((xml
+     (opml (@ (version "1.0"))
+	   (head)
+	   (body
+    ,@(let loop ((pages page-data))
+      (cond
+       ((null? pages) (render (filter (cut cadr <>) page-data)))
+       ((find-parent (car pages) page-data)
+        => (lambda (parent)
+             (set! (cadr (car pages)) #f)
+             (push! (cddr parent) (car pages))
+             (loop (cdr pages))))
+       (else (loop (cdr pages)))))
+    ))))))
+
 ;; display version
 (define-entry (version)
   (with-kahua-web-authorization
@@ -743,4 +788,4 @@
    
 (initialize-main-proc show)
 
-(kahua-error-proc error-proc)
+;;(kahua-error-proc error-proc)
