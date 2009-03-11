@@ -8,5 +8,6 @@
 (allow-module sxml.ssax)
 (allow-module sxml.sxpath)
 (allow-module sxml.tools)
+(allow-module sxml.serializer)
 (allow-module util.match)
 (allow-module text.tree)
