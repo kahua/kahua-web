@@ -1,3 +1,11 @@
+2009-03-11  ENDO Yasuyuki  <yasuyuki@javaopen.org>
+
+	* kahua-web/kahua-web.kahua (use sxml.serializer): add.
+	(page->opml): add
+	(opml): use send-downloaded-file.
+
+	* plugins/kahua-web-modules.scm (sxml.serializer): add.
+
 2009-02-19  ENDO Yasuyuki  <yasuyuki@javaopen.org>
 
 	* kahua-web/kahua-web.kahua (opml): add. 
