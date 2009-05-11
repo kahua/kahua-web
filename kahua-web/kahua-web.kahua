@@ -198,7 +198,7 @@ window.onload = function () {
 	    // footnote
 	    var footnoteBody = document.createElement('div');
 	    footnoteBody.setAttribute('id', foot);
-	    footnoteBody.setAttribute('class', 'articleFooter');
+	    footnoteBody.setAttribute('class', 'footnote');
             var sup = document.createElement('sup');
             footnoteBody.appendChild(sup);
 	    var upLink = document.createElement('a');
@@ -503,7 +503,6 @@ window.onload = function () {
 
   (define (footer page)
     `((div (@ (id "page-footer"))
-	   (span (@ (id "footnote")))
            ,@(cond-list
               ((ref page 'ctime)
                => (lambda (t) (format "Created: ~a" (standard-fmt-time t))))
@@ -555,6 +554,7 @@ window.onload = function () {
      :main-pane `((div (@ (id "main-pane"))
 		       ,@(if (persistent-page? page) (edit-menu page) '())
 		       ,@(wiliki:format-content page)
+		       (span (@ (id "footnote")))
 		       ,@(if (persistent-page? page) (footer page) '())))
      )))
 
