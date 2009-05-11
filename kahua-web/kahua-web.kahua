@@ -173,11 +173,51 @@
 ;; the "toplevel" page to be shown.
 (define current-page (make-parameter #f))
 
+;; javascript
+(define replace-footnotes-js "
+window.onload = function () {
+    var anks = document.getElementsByTagName('a');
+    var footnotes = new Array();
+    for (i=0; i<anks.length; i++) {
+	var aClass = anks[i].getAttribute('class');
+	if (aClass == 'footnotelink') {
+	    footnotes.push(anks[i]);
+	}
+    }
+    var footElem = document.getElementById('footnote');
+    if (footnotes.length > 0) {
+	footElem.appendChild(document.createElement('hr'));
+	for (i=0; i<footnotes.length; i++) {
+	    // body
+	    var ref = 'reference-' + (i + 1);
+	    var foot = 'footnote-' + (i + 1);
+	    footnotes[i].setAttribute('id', ref);
+	    footnotes[i].setAttribute('href', '#' + foot);
+	    var footnoteText = footnotes[i].firstChild;
+	    footnotes[i].replaceChild(document.createTextNode('[' + (i + 1) + ']'), footnoteText);
+	    // footnote
+	    var footnoteBody = document.createElement('div');
+	    footnoteBody.setAttribute('id', foot);
+	    footnoteBody.setAttribute('class', 'articleFooter');
+            var sup = document.createElement('sup');
+            footnoteBody.appendChild(sup);
+	    var upLink = document.createElement('a');
+	    upLink.setAttribute('href', '#' + ref);
+	    upLink.appendChild(document.createTextNode('^' + (i + 1)));
+	    sup.appendChild(upLink);
+	    footnoteBody.appendChild(footnoteText);
+	    footElem.appendChild(footnoteBody);
+	}
+	footElem.appendChild(document.createElement('hr'));
+    }
+}")
+
 ;; <page-data> -> <page>
 (define (page-data->page data)
   (make <page>
     :title (base-pagename (ref data 'name))
     :key   (slot-ref data 'name)  :persistent-id (key-of data)
+    :extra-head-elements (script/ (@/ (type "text/javascript")) replace-footnotes-js)
     :content (slot-ref data 'content)
     :ctime (slot-ref data 'ctime) :cuser (slot-ref data 'cuser)
     :mtime (slot-ref data 'mtime) :muser (slot-ref data 'muser)
@@ -463,6 +503,7 @@
 
   (define (footer page)
     `((div (@ (id "page-footer"))
+	   (span (@ (id "footnote")))
            ,@(cond-list
               ((ref page 'ctime)
                => (lambda (t) (format "Created: ~a" (standard-fmt-time t))))
