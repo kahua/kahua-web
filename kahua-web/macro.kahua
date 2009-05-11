@@ -638,3 +638,7 @@
 		       (width "425")
 		       (height "350"))))))))
 
+;; footnote
+
+(define-wiki-macro (footnote text)
+  `((sup (a (@ (href "#") (class "footnotelink") (title ,text)) ,text))))
