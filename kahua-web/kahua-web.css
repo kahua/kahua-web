@@ -83,6 +83,13 @@ div#edit-menu {
   color: #777777;
 }
 
+.footnote {
+  padding-top: 1em;
+  text-align: left;
+  font-size: 80%;
+  line-height: 0.9;
+}
+
 div#page-footer {
   padding-top: 1em;
   text-align: right;
