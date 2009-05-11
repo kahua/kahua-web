@@ -1,3 +1,16 @@
+2009-05-11  ENDO Yasuyuki  <yasuyuki@javaopen.org>
+
+	* kahua-web/kahua-web.kahua (replace-footnotes-js): use class 'footnote'.
+	(standard-page): footnote span element places before page-footer.
+
+	* kahua-web/kahua-web.css: add class 'footnote'.
+
+	* kahua-web/macro.kahua (footnote): add macro.
+
+	* kahua-web/kahua-web.kahua (footer): add footnote 
+	(replace-footnotes-js): add.
+	(page-data->page): add script (replace-footnotes-js).
+
 2009-03-11  ENDO Yasuyuki  <yasuyuki@javaopen.org>
 
 	* kahua-web/kahua-web.kahua (use sxml.serializer): add.
